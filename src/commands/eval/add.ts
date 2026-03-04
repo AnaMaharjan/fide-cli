@@ -6,9 +6,10 @@ import { buildStatementRawIdentifier, type StatementInput } from "@chris-test/fc
 import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 
-const EVAL_DECISION_IRI = "https://example.org/evaluation/decision";
-const EVAL_CONFIDENCE_IRI = "https://example.org/evaluation/confidence";
-const EVAL_REASON_IRI = "https://example.org/evaluation/reason";
+const EVAL_DECISION_IRI = "https://fide.work/profiles/evaluation/v1/decision";
+const EVAL_DECISION_VALUE_IRI_BASE = `${EVAL_DECISION_IRI}/`;
+const EVAL_CONFIDENCE_IRI = "https://fide.work/profiles/evaluation/v1/confidence";
+const EVAL_REASON_IRI = "https://fide.work/profiles/evaluation/v1/reason";
 const VALID_DECISIONS = new Set(["supports", "contradicts", "insufficient"]);
 
 type EvalAddOptions = {
@@ -251,9 +252,9 @@ export async function runEvalAdd(args: string[]): Promise<number> {
           sourceType: "NetworkResource",
         },
         object: {
-          rawIdentifier: options.decision,
-          entityType: "TextLiteral",
-          sourceType: "TextLiteral",
+          rawIdentifier: `${EVAL_DECISION_VALUE_IRI_BASE}${options.decision}`,
+          entityType: "Concept",
+          sourceType: "NetworkResource",
         },
       },
       {
