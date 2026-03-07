@@ -21,7 +21,9 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "build:link": "node ./scripts/build.mjs --link",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "generate:docs": "node ./scripts/generate-docs/cli-reference.mjs",
+    "check:generated:docs": "node ./scripts/generate-docs/cli-reference.mjs --check"
   },
   "dependencies": {
     "@chris-test/evaluation-methods": "workspace:*",

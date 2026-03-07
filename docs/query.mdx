@@ -1,0 +1,9 @@
+---
+title: "fide graph query"
+description: "fide graph query sql --sql \"<query>\" [--json]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide graph query","description":"fide graph query sql --sql \"<query>\" [--json]","usage":["fide graph query sql --sql \"<query>\" [--json]"],"options":[{"name":"--json","required":false},{"name":"--sql","required":true}],"notes":[{"title":"Notes","body":"- direct SQL execution is disabled in this CLI\n- use graph API endpoints once apps/api graph routes are wired"}]}} />

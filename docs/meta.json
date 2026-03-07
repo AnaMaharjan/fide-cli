@@ -1,0 +1,17 @@
+{
+  "title": "CLI",
+  "description": "Generated CLI reference",
+  "root": true,
+  "defaultOpen": false,
+  "icon": "Terminal",
+  "pages": [
+    "index",
+    "eval",
+    "graph",
+    "ingest",
+    "init",
+    "query",
+    "statements",
+    "text"
+  ]
+}
