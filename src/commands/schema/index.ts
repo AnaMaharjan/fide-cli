@@ -14,7 +14,7 @@ function schemaHelp(): string {
     "",
     "Examples:",
     "  fide schema",
-    "  fide schema graph.statements.add --json",
+    "  fide schema graph.add --json",
     "",
     "Agent DX: Use --json for machine-readable schema. Use --help --json on any command for per-command schema.",
     ].join("\n");

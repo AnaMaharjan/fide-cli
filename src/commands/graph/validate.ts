@@ -1,19 +1,23 @@
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { applyFieldMask, printJson, readUtf8 } from "../../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
-import { getRequiredBatchInputPath, parseStatementsInputFormat } from "../../../util/statements/shared.js";
-import { resolveBatchFromInput } from "../../../util/statements/targets/resolve-batch.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { applyFieldMask, printJson, readUtf8 } from "../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../util/schemas.js";
+import { getRequiredBatchInputPath, parseStatementsInputFormat } from "../../util/statements/shared.js";
+import { resolveBatchFromInput } from "../../util/statements/targets/resolve-batch.js";
 
 /**
  * Validate a statements batch input and print the computed root.
  */
 export async function runStatementsValidate(args: string[]): Promise<number> {
+  return runGraphValidate(args);
+}
+
+export async function runGraphValidate(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
-      printJson(COMMAND_SCHEMAS["graph.statements.validate"]);
+      printJson(COMMAND_SCHEMAS["graph.validate"]);
     } else {
-      console.log("Usage: fide graph statements validate --in <input> [--format <json|jsonl|fsd>] [--json] [--fields <mask>]");
+      console.log("Usage: fide graph validate --in <input> [--format <json|jsonl|fsd>] [--json] [--fields <mask>]");
     }
     return 0;
   }

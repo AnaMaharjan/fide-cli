@@ -6,10 +6,10 @@
   "icon": "Terminal",
   "pages": [
     "index",
-    "graph",
+    "graph-command",
     "init",
     "query",
-    "statements",
+    "schema",
     "text"
   ]
 }

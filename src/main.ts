@@ -8,7 +8,7 @@ function helpText(): string {
     "  fide schema [surface] [--json]",
     "",
     "Groups:",
-    "  graph       query | statements",
+    "  graph       add | validate | root | query | status",
     "",
     "Global:",
     "  --json, --output json   Machine-readable output (default when piped)",
@@ -32,7 +32,7 @@ export async function runCli(argv: string[]): Promise<number> {
   const [group, command, ...rest] = argv;
   if (group === "init") {
     const initArgs = [command, ...rest].filter((value): value is string => typeof value === "string");
-    const { runInitCommand } = await import("./commands/graph/statements/init.js");
+    const { runInitCommand } = await import("./commands/graph/init.js");
     return runInitCommand(initArgs);
   }
 

@@ -1,19 +1,23 @@
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { printJson, readUtf8 } from "../../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
-import { getRequiredBatchInputPath, parseStatementsInputFormat } from "../../../util/statements/shared.js";
-import { resolveBatchFromInput } from "../../../util/statements/targets/resolve-batch.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { printJson, readUtf8 } from "../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../util/schemas.js";
+import { getRequiredBatchInputPath, parseStatementsInputFormat } from "../../util/statements/shared.js";
+import { resolveBatchFromInput } from "../../util/statements/targets/resolve-batch.js";
 
 /**
  * Compute and print only the deterministic root for a statements batch.
  */
 export async function runStatementsRoot(args: string[]): Promise<number> {
+  return runGraphRoot(args);
+}
+
+export async function runGraphRoot(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
-      printJson(COMMAND_SCHEMAS["graph.statements.root"]);
+      printJson(COMMAND_SCHEMAS["graph.root"]);
     } else {
-      console.log("Usage: fide graph statements root --in <input> [--format <json|jsonl|fsd>] [--json]");
+      console.log("Usage: fide graph root --in <input> [--format <json|jsonl|fsd>] [--json]");
     }
     return 0;
   }

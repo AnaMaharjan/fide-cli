@@ -22,8 +22,8 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: { ok: "boolean", rows: "array?", error: "string?" },
   },
-  "graph.statements.add": {
-    command: "fide graph statements add",
+  "graph.add": {
+    command: "fide graph add",
     params: [
       { name: "in", type: "string", required: false, description: "Input file path" },
       { name: "stdin", type: "boolean", required: false, description: "Read from stdin" },
@@ -43,8 +43,8 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: { ok: "boolean", root: "string", statementCount: "number", mode: "string", outPath: "string", statementFideIds: "string[]" },
   },
-  "graph.statements.validate": {
-    command: "fide graph statements validate",
+  "graph.validate": {
+    command: "fide graph validate",
     params: [
       { name: "in", type: "string", required: true, description: "Input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -53,13 +53,25 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: { ok: "boolean", statementCount: "number", root: "string" },
   },
-  "graph.statements.root": {
-    command: "fide graph statements root",
+  "graph.root": {
+    command: "fide graph root",
     params: [
       { name: "in", type: "string", required: true, description: "Input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
       { name: "json", type: "boolean", required: false },
     ],
     output: { root: "string" },
+  },
+  "graph.status": {
+    command: "fide graph status",
+    params: [],
+    output: {
+      ok: "boolean",
+      initialized: "boolean",
+      root: "string",
+      fideDir: "string",
+      statementsDir: "string",
+      missing: "string[]",
+    },
   },
 };

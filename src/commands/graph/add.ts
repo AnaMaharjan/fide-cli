@@ -3,15 +3,15 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { buildStatementsWithRoot, statementDoc } from "@chris-test/graph";
 import { parseFideId, type StatementInput } from "@chris-test/fcp";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
-import { statementsHelp } from "./help.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../util/schemas.js";
+import { graphCommandHelp } from "./help.js";
 import {
   detectStatementsInputFormat,
   parseStatementsInputFormat,
-} from "../../../util/statements/shared.js";
-import { mapSingleStatementInput, parseStatementInputsByFormat } from "../../../util/statements/targets/parse-inputs.js";
+} from "../../util/statements/shared.js";
+import { mapSingleStatementInput, parseStatementInputsByFormat } from "../../util/statements/targets/parse-inputs.js";
 
 /**
  * Resolve project statements output directory under `.fide/statements`.
@@ -54,12 +54,13 @@ async function readStdinUtf8(): Promise<string> {
 /**
  * Build a statements batch and write it to `.fide/statements/YYYY/MM/DD/<root>.jsonl`.
  */
-export async function runStatementsAdd(flags: Map<string, string | boolean>): Promise<number> {
+export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
+  const flags = argsOrFlags instanceof Map ? argsOrFlags : parseArgs(argsOrFlags).flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
-      printJson(COMMAND_SCHEMAS["graph.statements.add"]);
+      printJson(COMMAND_SCHEMAS["graph.add"]);
     } else {
-      console.log(statementsHelp());
+      console.log(graphCommandHelp());
     }
     return 0;
   }
@@ -77,30 +78,34 @@ export async function runStatementsAdd(flags: Map<string, string | boolean>): Pr
   const normalize = !hasFlag(flags, "no-normalize");
   const draftMode = hasFlag(flags, "draft");
   if (hasFlag(flags, "out")) {
-    throw new Error("`graph statements add` no longer accepts --out. Output path is auto-generated.");
+    throw new Error("`graph add` no longer accepts --out. Output path is auto-generated.");
   }
 
+  const stdinAvailable = process.stdin.isTTY === false;
   const paramsJson = getStringFlag(flags, "params");
   let statementInputs: StatementInput[] = [];
-  const inputSources = [inPath, useStdin, paramsJson].filter(Boolean).length;
-  if (inputSources > 1) {
-    throw new Error("Use only one of --in, --stdin, or --params.");
-  }
-
-  if (paramsJson) {
-    statementInputs = parseStatementInputsByFormat(paramsJson, formatFlag ?? "json");
-  } else if (inPath) {
+  /**
+   * Agent-first precedence:
+   * 1. --in <file>
+   * 2. --params '<json>'
+   * 3. --stdin (explicit)
+   * 4. Single-statement flags (subject/object/...)
+   * 5. Piped stdin (no flags, non-TTY stdin)
+   */
+  if (inPath) {
     const raw = await readUtf8(inPath);
     const format = formatFlag ?? detectStatementsInputFormat(raw);
     statementInputs = parseStatementInputsByFormat(raw, format);
+  } else if (paramsJson) {
+    statementInputs = parseStatementInputsByFormat(paramsJson, formatFlag ?? "json");
   } else if (useStdin) {
     const raw = await readStdinUtf8();
     const format = formatFlag ?? detectStatementsInputFormat(raw);
     statementInputs = parseStatementInputsByFormat(raw, format);
   } else {
     if (!subject || !subjectType || !subjectSource || !predicate || !object || !objectType || !objectSource) {
-      console.error("Missing required flags for `graph statements add`.");
-      console.error(statementsHelp());
+      console.error("Missing required flags for `graph add`.");
+      console.error(graphCommandHelp());
       return 1;
     }
     statementInputs = [mapSingleStatementInput({
@@ -112,6 +117,15 @@ export async function runStatementsAdd(flags: Map<string, string | boolean>): Pr
       objectType,
       objectSource,
     })];
+    // When no other input source and no single-statement flags are provided,
+    // treat non-TTY stdin as the default agent input path.
+    if (!stdinAvailable) {
+      // Nothing else to read; single-statement flags already handled.
+    } else {
+      const raw = await readStdinUtf8();
+      const format = formatFlag ?? detectStatementsInputFormat(raw);
+      statementInputs = parseStatementInputsByFormat(raw, format);
+    }
   }
 
   const batch = await buildStatementsWithRoot(statementInputs, { normalizeReferenceIdentifier: normalize });

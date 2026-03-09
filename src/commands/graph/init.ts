@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { printJson } from "../../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { printJson } from "../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 
 function initHelp(): string {
   return [
