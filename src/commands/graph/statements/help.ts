@@ -3,6 +3,7 @@ export function statementsHelp(): string {
     "Usage:",
     "  fide graph statements add --subject <raw> --subject-type <type> --subject-source <type> --predicate <iri> --object <raw> --object-type <type> --object-source <type> [--no-normalize] [--json]",
     "  fide graph statements add --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
+    "  fide graph statements add --params '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph statements add --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph statements validate --in <input> [--format <json|jsonl|fsd>] [--json]",
     "  fide graph statements root --in <input> [--format <json|jsonl|fsd>]",

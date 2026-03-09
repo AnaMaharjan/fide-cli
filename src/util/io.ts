@@ -32,3 +32,18 @@ export async function appendUtf8(path: string, content: string): Promise<void> {
 export function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
 }
+
+/**
+ * Apply a comma-separated field mask to an object.
+ * Agent DX: limits response size to protect context window.
+ */
+export function applyFieldMask<T extends Record<string, unknown>>(obj: T, mask: string | null): Partial<T> {
+  if (!mask || !mask.trim()) return obj;
+  const keys = new Set(mask.split(",").map((k) => k.trim()).filter(Boolean));
+  if (keys.size === 0) return obj;
+  const out: Partial<T> = {};
+  for (const k of keys) {
+    if (k in obj) out[k as keyof T] = obj[k as keyof T];
+  }
+  return out;
+}

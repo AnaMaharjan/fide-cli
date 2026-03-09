@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { getStringFlag, hasFlag, parseArgs } from "../../../util/args.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { printJson } from "../../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
 
 function initHelp(): string {
   return [
@@ -14,12 +15,16 @@ function initHelp(): string {
  * @description Initializes a minimal local .fide folder structure.
  */
 export async function runInitCommand(args: string[]): Promise<number> {
-  if (args.includes("--help")) {
-    console.log(initHelp());
+  const { flags } = parseArgs(args);
+  if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
+    if (shouldUseJsonOutput(flags)) {
+      printJson(COMMAND_SCHEMAS.init);
+    } else {
+      console.log(initHelp());
+    }
     return 0;
   }
 
-  const { flags } = parseArgs(args);
   const targetDir = getStringFlag(flags, "dir");
   const root = targetDir ? resolve(process.cwd(), targetDir) : process.cwd();
 
@@ -32,7 +37,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
     await mkdir(directory, { recursive: true });
   }
 
-  if (hasFlag(flags, "json")) {
+  if (shouldUseJsonOutput(flags)) {
     printJson({
       ok: true,
       root,

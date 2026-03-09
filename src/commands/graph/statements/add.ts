@@ -3,8 +3,9 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { buildStatementsWithRoot, statementDoc } from "@chris-test/graph";
 import { parseFideId, type StatementInput } from "@chris-test/fcp";
-import { getStringFlag, hasFlag } from "../../../util/args.js";
-import { printJson, readUtf8, writeUtf8 } from "../../../util/io.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
+import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
 import { statementsHelp } from "./help.js";
 import {
   detectStatementsInputFormat,
@@ -54,6 +55,15 @@ async function readStdinUtf8(): Promise<string> {
  * Build a statements batch and write it to `.fide/statements/YYYY/MM/DD/<root>.jsonl`.
  */
 export async function runStatementsAdd(flags: Map<string, string | boolean>): Promise<number> {
+  if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
+    if (shouldUseJsonOutput(flags)) {
+      printJson(COMMAND_SCHEMAS["graph.statements.add"]);
+    } else {
+      console.log(statementsHelp());
+    }
+    return 0;
+  }
+
   const inPath = getStringFlag(flags, "in");
   const useStdin = hasFlag(flags, "stdin");
   const subject = getStringFlag(flags, "subject");
@@ -70,12 +80,16 @@ export async function runStatementsAdd(flags: Map<string, string | boolean>): Pr
     throw new Error("`graph statements add` no longer accepts --out. Output path is auto-generated.");
   }
 
+  const paramsJson = getStringFlag(flags, "params");
   let statementInputs: StatementInput[] = [];
-  if (inPath && useStdin) {
-    throw new Error("Use either --in or --stdin, not both.");
+  const inputSources = [inPath, useStdin, paramsJson].filter(Boolean).length;
+  if (inputSources > 1) {
+    throw new Error("Use only one of --in, --stdin, or --params.");
   }
 
-  if (inPath) {
+  if (paramsJson) {
+    statementInputs = parseStatementInputsByFormat(paramsJson, formatFlag ?? "json");
+  } else if (inPath) {
     const raw = await readUtf8(inPath);
     const format = formatFlag ?? detectStatementsInputFormat(raw);
     statementInputs = parseStatementInputsByFormat(raw, format);
@@ -159,8 +173,8 @@ export async function runStatementsAdd(flags: Map<string, string | boolean>): Pr
     outPath,
     statementFideIds: batch.statements.map((statement) => statement.statementFideId),
   };
-  if (hasFlag(flags, "json")) {
-    printJson(payload);
+  if (shouldUseJsonOutput(flags)) {
+    printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
   } else {
     console.log(outPath);
   }

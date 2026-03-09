@@ -1,5 +1,6 @@
-import { getStringFlag, hasFlag, parseArgs } from "../../../util/args.js";
-import { printJson, readUtf8 } from "../../../util/io.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
+import { applyFieldMask, printJson, readUtf8 } from "../../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
 import { getRequiredBatchInputPath, parseStatementsInputFormat } from "../../../util/statements/shared.js";
 import { resolveBatchFromInput } from "../../../util/statements/targets/resolve-batch.js";
 
@@ -8,8 +9,12 @@ import { resolveBatchFromInput } from "../../../util/statements/targets/resolve-
  */
 export async function runStatementsValidate(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
-  if (hasFlag(flags, "help")) {
-    console.log("Usage: fide graph statements validate --in <input> [--format <json|jsonl|fsd>] [--json]");
+  if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
+    if (shouldUseJsonOutput(flags)) {
+      printJson(COMMAND_SCHEMAS["graph.statements.validate"]);
+    } else {
+      console.log("Usage: fide graph statements validate --in <input> [--format <json|jsonl|fsd>] [--json] [--fields <mask>]");
+    }
     return 0;
   }
   const inPath = getRequiredBatchInputPath(flags);
@@ -24,8 +29,8 @@ export async function runStatementsValidate(args: string[]): Promise<number> {
     root: parsed.root,
   };
 
-  if (hasFlag(flags, "json")) {
-    printJson(payload);
+  if (shouldUseJsonOutput(flags)) {
+    printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
   } else {
     console.log(`OK statements=${payload.statementCount} root=${payload.root}`);
   }

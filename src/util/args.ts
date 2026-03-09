@@ -60,3 +60,16 @@ export function getStringFlag(
 export function hasFlag(flags: Map<string, string | boolean>, key: string): boolean {
   return flags.has(key);
 }
+
+/**
+ * Determine whether to emit machine-readable JSON output.
+ * Agent DX: prefer JSON when --json, --output json, OUTPUT_FORMAT=json, or stdout is not a TTY (piped).
+ */
+export function shouldUseJsonOutput(flags: Map<string, string | boolean>): boolean {
+  if (hasFlag(flags, "json")) return true;
+  const output = getStringFlag(flags, "output");
+  if (output === "json") return true;
+  if (process.env.OUTPUT_FORMAT === "json") return true;
+  if (typeof process.stdout?.isTTY !== "undefined" && !process.stdout.isTTY) return true;
+  return false;
+}

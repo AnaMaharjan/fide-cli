@@ -1,5 +1,6 @@
-import { getStringFlag, hasFlag, parseArgs } from "../../../util/args.js";
-import { readUtf8 } from "../../../util/io.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
+import { printJson, readUtf8 } from "../../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
 import { getRequiredBatchInputPath, parseStatementsInputFormat } from "../../../util/statements/shared.js";
 import { resolveBatchFromInput } from "../../../util/statements/targets/resolve-batch.js";
 
@@ -8,8 +9,12 @@ import { resolveBatchFromInput } from "../../../util/statements/targets/resolve-
  */
 export async function runStatementsRoot(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
-  if (hasFlag(flags, "help")) {
-    console.log("Usage: fide graph statements root --in <input> [--format <json|jsonl|fsd>]");
+  if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
+    if (shouldUseJsonOutput(flags)) {
+      printJson(COMMAND_SCHEMAS["graph.statements.root"]);
+    } else {
+      console.log("Usage: fide graph statements root --in <input> [--format <json|jsonl|fsd>] [--json]");
+    }
     return 0;
   }
   const inPath = getRequiredBatchInputPath(flags);
@@ -18,6 +23,11 @@ export async function runStatementsRoot(args: string[]): Promise<number> {
 
   const raw = await readUtf8(inPath);
   const parsed = await resolveBatchFromInput(raw, { format });
-  console.log(parsed.root);
+  const payload = { root: parsed.root };
+  if (shouldUseJsonOutput(flags)) {
+    printJson(payload);
+  } else {
+    console.log(parsed.root);
+  }
   return 0;
 }

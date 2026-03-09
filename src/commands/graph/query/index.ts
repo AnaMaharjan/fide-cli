@@ -1,5 +1,6 @@
-import { hasFlag, parseArgs } from "../../../util/args.js";
+import { parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { printJson } from "../../../util/io.js";
+import { COMMAND_SCHEMAS } from "../../../util/schemas.js";
 
 function queryHelp(): string {
   return [
@@ -16,8 +17,15 @@ function queryHelp(): string {
  * Route `fide graph query` command variants.
  */
 export async function runQueryCommand(command: string | undefined, args: string[]): Promise<number> {
+  const { flags } = parseArgs(args);
+  const useJsonHelp = shouldUseJsonOutput(flags);
+
   if (!command || command === "--help" || command === "-h" || command === "help") {
-    console.log(queryHelp());
+    if (useJsonHelp) {
+      printJson(COMMAND_SCHEMAS["graph.query.sql"]);
+    } else {
+      console.log(queryHelp());
+    }
     return 0;
   }
 
@@ -27,14 +35,13 @@ export async function runQueryCommand(command: string | undefined, args: string[
     return 1;
   }
 
-  const { flags } = parseArgs(args);
   const payload = {
     ok: false,
     command: "graph query sql",
     error: "Direct SQL query is not available in this CLI. Use graph API query endpoints.",
   };
 
-  if (hasFlag(flags, "json")) {
+  if (shouldUseJsonOutput(flags)) {
     printJson(payload);
   } else {
     console.error(payload.error);

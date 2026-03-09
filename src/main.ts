@@ -5,14 +5,19 @@ function helpText(): string {
     "Usage:",
     "  fide <group> [command] [flags]",
     "  fide init [flags]",
+    "  fide schema [surface] [--json]",
     "",
     "Groups:",
     "  graph       query | statements",
     "",
     "Global:",
-    "  --json      Machine-readable output when supported",
-    "  --help      Show help",
-  ].join("\n");
+    "  --json, --output json   Machine-readable output (default when piped)",
+    "  OUTPUT_FORMAT=json     Same as --json",
+    "  --help, -h             Show help",
+    "",
+    "Agent DX:",
+    "  fide schema <surface>  Introspect command schemas (--help --json for per-command)",
+    ].join("\n");
 }
 
 /**
@@ -29,6 +34,11 @@ export async function runCli(argv: string[]): Promise<number> {
     const initArgs = [command, ...rest].filter((value): value is string => typeof value === "string");
     const { runInitCommand } = await import("./commands/graph/statements/init.js");
     return runInitCommand(initArgs);
+  }
+
+  if (group === "schema") {
+    const { runSchemaCommand } = await import("./commands/schema/index.js");
+    return runSchemaCommand(command, rest);
   }
 
   switch (group) {
