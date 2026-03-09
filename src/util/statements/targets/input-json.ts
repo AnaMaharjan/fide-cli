@@ -44,19 +44,19 @@ function normalizeAddInputs(parsed: unknown): AddStatementInput[] {
 function mapAddInputsToStatementInputs(inputs: AddStatementInput[]): StatementInput[] {
   return inputs.map((input) => ({
     subject: {
-      rawIdentifier: input.subject,
+      referenceIdentifier: input.subject,
       entityType: input.subjectType as StatementInput["subject"]["entityType"],
-      sourceType: input.subjectSource as StatementInput["subject"]["sourceType"],
+      referenceType: input.subjectSource as StatementInput["subject"]["referenceType"],
     },
     predicate: {
-      rawIdentifier: input.predicate,
+      referenceIdentifier: input.predicate,
       entityType: "Concept",
-      sourceType: "NetworkResource",
+      referenceType: "NetworkResource",
     },
     object: {
-      rawIdentifier: input.object,
+      referenceIdentifier: input.object,
       entityType: input.objectType as StatementInput["object"]["entityType"],
-      sourceType: input.objectSource as StatementInput["object"]["sourceType"],
+      referenceType: input.objectSource as StatementInput["object"]["referenceType"],
     },
   }));
 }

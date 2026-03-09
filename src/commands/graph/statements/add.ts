@@ -100,7 +100,7 @@ export async function runStatementsAdd(flags: Map<string, string | boolean>): Pr
     })];
   }
 
-  const batch = await buildStatementsWithRoot(statementInputs, { normalizeRawIdentifier: normalize });
+  const batch = await buildStatementsWithRoot(statementInputs, { normalizeReferenceIdentifier: normalize });
   const outPath = (() => {
     const { yyyy, mm, dd } = ymdUtc(new Date());
     if (draftMode) {
@@ -113,37 +113,37 @@ export async function runStatementsAdd(flags: Map<string, string | boolean>): Pr
   if (draftMode) {
     const normalizedInputs: StatementInput[] = batch.statements.map((statement) => ({
       subject: {
-        rawIdentifier: statement.subjectRawIdentifier,
+        referenceIdentifier: statement.subjectReferenceIdentifier,
         entityType: parseFideId(statement.subjectFideId).entityType,
-        sourceType: parseFideId(statement.subjectFideId).sourceType,
+        referenceType: parseFideId(statement.subjectFideId).referenceType,
       },
       predicate: {
-        rawIdentifier: statement.predicateRawIdentifier,
+        referenceIdentifier: statement.predicateReferenceIdentifier,
         entityType: "Concept",
-        sourceType: "NetworkResource",
+        referenceType: "NetworkResource",
       },
       object: {
-        rawIdentifier: statement.objectRawIdentifier,
+        referenceIdentifier: statement.objectReferenceIdentifier,
         entityType: parseFideId(statement.objectFideId).entityType,
-        sourceType: parseFideId(statement.objectFideId).sourceType,
+        referenceType: parseFideId(statement.objectFideId).referenceType,
       },
     }));
 
     const baseDoc = statementDoc.v0.formatStatementInputsAsStatementDoc(normalizedInputs, {
       defaults: {
-        subject: { sourceType: "NetworkResource" },
-        object: { sourceType: "NetworkResource" },
+        subject: { referenceType: "NetworkResource" },
+        object: { referenceType: "NetworkResource" },
       },
     });
     output = baseDoc.replace(/^---\n/, "---\ntype: fide-statements\nversion: v0\n");
   } else {
     const wires = batch.statements.map((statement) => ({
       s: statement.subjectFideId,
-      sr: statement.subjectRawIdentifier,
+      sr: statement.subjectReferenceIdentifier,
       p: statement.predicateFideId,
-      pr: statement.predicateRawIdentifier,
+      pr: statement.predicateReferenceIdentifier,
       o: statement.objectFideId,
-      or: statement.objectRawIdentifier,
+      or: statement.objectReferenceIdentifier,
     }));
     output = `${wires.map((wire) => JSON.stringify(wire)).join("\n")}\n`;
   }

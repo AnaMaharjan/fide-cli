@@ -1,11 +1,9 @@
-import { runIngestCommand } from "./ingest/index.js";
 import { runQueryCommand } from "./query/index.js";
 import { runStatementsCommand } from "./statements/command.js";
 
 function graphHelp(): string {
   return [
     "Usage:",
-    "  fide graph ingest <apply|replay> [flags]",
     "  fide graph query sql --sql \"<query>\" [--json] [--allow-write]",
     "  fide graph statements <add|validate|root> [flags]",
   ].join("\n");
@@ -21,10 +19,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
   }
 
   const [subcommand, ...rest] = args;
-
-  if (command === "ingest") {
-    return runIngestCommand(subcommand, rest);
-  }
 
   if (command === "query") {
     return runQueryCommand(subcommand, rest);

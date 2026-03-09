@@ -7,8 +7,7 @@ function helpText(): string {
     "  fide init [flags]",
     "",
     "Groups:",
-    "  graph       ingest | query | statements",
-    "  eval        prompt",
+    "  graph       query | statements",
     "",
     "Global:",
     "  --json      Machine-readable output when supported",
@@ -36,10 +35,6 @@ export async function runCli(argv: string[]): Promise<number> {
     case "graph": {
       const { runGraphCommand } = await import("./commands/graph/index.js");
       return runGraphCommand(command, rest);
-    }
-    case "eval": {
-      const { runEvalCommand } = await import("./commands/eval/index.js");
-      return runEvalCommand(command, rest);
     }
     default:
       console.error(`Unknown group: ${group}`);

@@ -8,7 +8,7 @@ import { parseStatementInputsByFormat } from "./parse-inputs.js";
  */
 export async function resolveBatchFromInput(
   raw: string,
-  options?: { format?: StatementsInputFormat | null; normalizeRawIdentifier?: boolean },
+  options?: { format?: StatementsInputFormat | null; normalizeReferenceIdentifier?: boolean },
 ): Promise<{ root: string; statementCount: number; format: StatementsInputFormat }> {
   const format = options?.format ?? detectStatementsInputFormat(raw);
 
@@ -19,7 +19,7 @@ export async function resolveBatchFromInput(
 
   const statementInputs = parseStatementInputsByFormat(raw, format);
   const batch = await buildStatementsWithRoot(statementInputs, {
-    normalizeRawIdentifier: options?.normalizeRawIdentifier ?? true,
+    normalizeReferenceIdentifier: options?.normalizeReferenceIdentifier ?? true,
   });
 
   return { root: batch.root, statementCount: batch.statements.length, format };

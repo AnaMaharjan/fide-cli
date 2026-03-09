@@ -6,9 +6,7 @@
   "icon": "Terminal",
   "pages": [
     "index",
-    "eval",
     "graph",
-    "ingest",
     "init",
     "query",
     "statements",
