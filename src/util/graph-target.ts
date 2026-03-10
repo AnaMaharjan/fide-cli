@@ -42,6 +42,27 @@ export type ResolvedPostgresGraphTarget = {
 
 export type ResolvedGraphTarget = ResolvedLocalGraphTarget | ResolvedPostgresGraphTarget;
 
+let envLoaded = false;
+
+function ensureGraphEnvLoaded(): void {
+  if (envLoaded) return;
+  envLoaded = true;
+
+  const envPaths = [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), ".env.local"),
+  ];
+
+  for (const envPath of envPaths) {
+    if (!existsSync(envPath)) continue;
+    try {
+      process.loadEnvFile(envPath);
+    } catch {
+      // Ignore malformed/missing env files; explicit process.env always wins.
+    }
+  }
+}
+
 function readSettings(root: string): FideSettings | null {
   const settingsPath = resolve(root, ".fide", "settings.json");
   if (!existsSync(settingsPath)) return null;
@@ -113,6 +134,7 @@ function resolvePostgresTarget(
   settings: FideSettings | null,
   key: string,
 ): ResolvedPostgresGraphTarget {
+  ensureGraphEnvLoaded();
   const configured = getConfiguredGraphTarget(settings, key);
   const postgresTarget = configured.target?.type === "postgres" ? configured.target : null;
   if (!postgresTarget) {

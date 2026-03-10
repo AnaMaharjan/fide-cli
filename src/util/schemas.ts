@@ -10,10 +10,23 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.init": {
     command: "fide graph init",
     params: [
+      { name: "target", type: "string", required: false, description: "Configured graph target key or local directory path" },
       { name: "dir", type: "string", required: false, description: "Target directory (default: cwd)" },
+      { name: "dangerously-drop", type: "boolean", required: false, description: "Postgres only: drop graph tables/types before re-initializing (requires --yes)" },
+      { name: "yes", type: "boolean", required: false, description: "Required confirmation for --dangerously-drop" },
       { name: "json", type: "boolean", required: false, description: "Machine-readable output" },
     ],
-    output: { ok: "boolean", root: "string", created: "string[]" },
+    output: {
+      ok: "boolean",
+      root: "string?",
+      created: "string[]?",
+      target: "string?",
+      key: "string?",
+      schema: "string?",
+      statementsTable: "string?",
+      initialized: "boolean?",
+      dropped: "boolean?",
+    },
   },
   "graph.query": {
     command: "fide graph query",
@@ -103,6 +116,22 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       objectEntityTypeEnum: "string[]",
       objectReferenceTypeEnum: "string[]",
       policyNotes: "string[]",
+    },
+  },
+  "graph.defs": {
+    command: "fide graph defs",
+    params: [
+      { name: "entity", type: "string", required: false, description: "Optional entity type filter (e.g. Person, NetworkResource)" },
+      { name: "json", type: "boolean", required: false },
+    ],
+    output: {
+      ok: "boolean",
+      command: "string",
+      scope: "string",
+      layers: "object",
+      statementRules: "array",
+      entity: "object?",
+      entities: "array?",
     },
   },
 };

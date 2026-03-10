@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { ingestStatements } from "@chris-test/db";
+import { ingestStatements, pgClient } from "@chris-test/db";
 import { buildStatementsWithRoot, parseFideId, statementDoc, type StatementInput } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
@@ -32,6 +32,104 @@ function ymdUtc(date: Date): { yyyy: string; mm: string; dd: string } {
   const iso = date.toISOString().slice(0, 10);
   const [yyyy, mm, dd] = iso.split("-");
   return { yyyy, mm, dd };
+}
+
+function quoteIdent(value: string): string {
+  return `"${value.replaceAll("\"", "\"\"")}"`;
+}
+
+async function ingestStatementsToConfiguredTable(
+  statements: Array<{
+    statementFideId?: `did:fide:0x${string}`;
+    subjectFideId: `did:fide:0x${string}`;
+    subjectReferenceIdentifier: string;
+    predicateFideId: `did:fide:0x${string}`;
+    predicateReferenceIdentifier: string;
+    objectFideId: `did:fide:0x${string}`;
+    objectReferenceIdentifier: string;
+  }>,
+  schema: string,
+  statementsTable: string,
+): Promise<number> {
+  const schemaSql = quoteIdent(schema);
+  const statementsTableSql = quoteIdent(statementsTable);
+  const statementsQualified = `${schemaSql}.${statementsTableSql}`;
+  const referenceIdentifiersQualified = `${schemaSql}."reference_identifiers"`;
+
+  const referenceMap = new Map<string, string>();
+  const statementMap = new Map<string, {
+    statementFingerprint: string;
+    subjectType: string;
+    subjectReferenceType: string;
+    subjectFingerprint: string;
+    predicateFingerprint: string;
+    objectType: string;
+    objectReferenceType: string;
+    objectFingerprint: string;
+  }>();
+
+  for (const statement of statements) {
+    if (!statement.statementFideId) {
+      throw new Error("Invalid statement: missing statementFideId.");
+    }
+    const subject = parseFideId(statement.subjectFideId);
+    const predicate = parseFideId(statement.predicateFideId);
+    const object = parseFideId(statement.objectFideId);
+    const statementId = parseFideId(statement.statementFideId);
+
+    referenceMap.set(subject.fingerprint, statement.subjectReferenceIdentifier);
+    referenceMap.set(predicate.fingerprint, statement.predicateReferenceIdentifier);
+    referenceMap.set(object.fingerprint, statement.objectReferenceIdentifier);
+
+    statementMap.set(statementId.fingerprint, {
+      statementFingerprint: statementId.fingerprint,
+      subjectType: subject.typeChar,
+      subjectReferenceType: subject.referenceChar,
+      subjectFingerprint: subject.fingerprint,
+      predicateFingerprint: predicate.fingerprint,
+      objectType: object.typeChar,
+      objectReferenceType: object.referenceChar,
+      objectFingerprint: object.fingerprint,
+    });
+  }
+
+  for (const [identifierFingerprint, referenceIdentifier] of referenceMap.entries()) {
+    await pgClient.unsafe(
+      `INSERT INTO ${referenceIdentifiersQualified} (identifier_fingerprint, reference_identifier)
+       VALUES ($1, $2)
+       ON CONFLICT (identifier_fingerprint)
+       DO UPDATE SET reference_identifier = EXCLUDED.reference_identifier`,
+      [identifierFingerprint, referenceIdentifier],
+    );
+  }
+
+  for (const row of statementMap.values()) {
+    await pgClient.unsafe(
+      `INSERT INTO ${statementsQualified} (
+        statement_fingerprint,
+        subject_type,
+        subject_reference_type,
+        subject_fingerprint,
+        predicate_fingerprint,
+        object_type,
+        object_reference_type,
+        object_fingerprint
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      ON CONFLICT (statement_fingerprint) DO NOTHING`,
+      [
+        row.statementFingerprint,
+        row.subjectType,
+        row.subjectReferenceType,
+        row.subjectFingerprint,
+        row.predicateFingerprint,
+        row.objectType,
+        row.objectReferenceType,
+        row.objectFingerprint,
+      ],
+    );
+  }
+
+  return statementMap.size;
 }
 
 /**
@@ -118,25 +216,26 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
         `Missing postgres connection for graph target "${graphTarget.key ?? "unknown"}". Set FIDE_GRAPH_DATABASE_URL or configure the target in .fide/settings.json.`,
       );
     }
-    if (graphTarget.schema !== "public" || graphTarget.statementsTable !== "statements") {
-      throw new Error(
-        `Postgres target overrides are not yet supported for writes. Expected public.statements, got ${graphTarget.schema}.${graphTarget.statementsTable}.`,
-      );
-    }
 
     process.env.DATABASE_URL = graphTarget.databaseUrl;
-    const result = await ingestStatements({ statements: batch.statements });
+    const statementCount = graphTarget.schema === "public" && graphTarget.statementsTable === "statements"
+      ? (await ingestStatements({ statements: batch.statements })).statementCount
+      : await ingestStatementsToConfiguredTable(batch.statements, graphTarget.schema, graphTarget.statementsTable);
     const payload = {
       root: batch.root,
-      statementCount: result.statementCount,
+      statementCount,
       mode: "postgres",
       target: "postgres",
       key: graphTarget.key,
+      schema: graphTarget.schema,
+      statementsTable: graphTarget.statementsTable,
     };
     if (shouldUseJsonOutput(flags)) {
       printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
     } else {
-      console.log(`Ingested ${result.statementCount} statements (root=${batch.root}) to postgres target ${graphTarget.key ?? "<unnamed>"}.`);
+      console.log(
+        `Ingested ${statementCount} statements (root=${batch.root}) to postgres target ${graphTarget.key ?? "<unnamed>"} (${graphTarget.schema}.${graphTarget.statementsTable}).`,
+      );
     }
     return 0;
   }
