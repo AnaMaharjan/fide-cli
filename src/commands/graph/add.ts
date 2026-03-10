@@ -55,7 +55,8 @@ async function readStdinUtf8(): Promise<string> {
  * Build a statements batch and write it to `.fide/statements/YYYY/MM/DD/<root>.jsonl`.
  */
 export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
-  const flags = argsOrFlags instanceof Map ? argsOrFlags : parseArgs(argsOrFlags).flags;
+  const parsed = argsOrFlags instanceof Map ? null : parseArgs(argsOrFlags);
+  const flags = argsOrFlags instanceof Map ? argsOrFlags : parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
       printJson(COMMAND_SCHEMAS["graph.add"]);
@@ -101,32 +102,32 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
   }
 
   const stdinAvailable = process.stdin.isTTY === false;
-  const paramsJson = getStringFlag(flags, "params");
   let statementInputs: StatementInput[] = [];
+  const inlineParams = parsed?.positionals?.join(" ");
   /**
    * Agent-first precedence:
    * 1. --in <file>
-   * 2. --params '<json>'
-   * 3. --stdin (explicit)
+   * 2. --stdin (explicit)
+   * 3. inline params (positional JSON)
    * 4. Piped stdin (no flags, non-TTY stdin)
    */
   if (inPath) {
     const raw = await readUtf8(inPath);
     const format = formatFlag ?? detectStatementsInputFormat(raw);
     statementInputs = parseStatementInputsByFormat(raw, format);
-  } else if (paramsJson) {
-    statementInputs = parseStatementInputsByFormat(paramsJson, formatFlag ?? "json");
   } else if (useStdin) {
     const raw = await readStdinUtf8();
     const format = formatFlag ?? detectStatementsInputFormat(raw);
     statementInputs = parseStatementInputsByFormat(raw, format);
+  } else if (inlineParams && inlineParams.trim().length > 0) {
+    statementInputs = parseStatementInputsByFormat(inlineParams, formatFlag ?? "json");
   } else {
     if (!stdinAvailable) {
       const raw = await readStdinUtf8();
       const format = formatFlag ?? detectStatementsInputFormat(raw);
       statementInputs = parseStatementInputsByFormat(raw, format);
     } else {
-      console.error("Missing input for `graph add`. Use `--stdin`, `--in <path>`, or `--params '<json>'`.");
+      console.error("Missing input for `graph add`. Use `--stdin`, `--in <path>`, or pass JSON inline.");
       console.error(graphCommandHelp());
       return 1;
     }
