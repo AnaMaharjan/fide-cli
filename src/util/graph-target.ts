@@ -120,7 +120,7 @@ function resolvePostgresTarget(
   }
   const envKey = postgresTarget?.databaseUrlEnv ?? null;
   const databaseUrlFromSettings = postgresTarget?.databaseUrl ?? null;
-  const schema = postgresTarget?.schema ?? "fide_graph";
+  const schema = postgresTarget?.schema ?? "public";
   const statementsTable = postgresTarget?.statementsTable ?? "statements";
 
   if (process.env.FIDE_GRAPH_DATABASE_URL) {

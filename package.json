@@ -26,6 +26,7 @@
     "check:generated:docs": "node ./scripts/generate-docs/cli-reference.mjs --check"
   },
   "dependencies": {
+    "@chris-test/db": "workspace:*",
     "@chris-test/graph": "workspace:*"
   },
   "devDependencies": {

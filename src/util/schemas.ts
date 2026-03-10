@@ -38,7 +38,14 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "json", type: "boolean", required: false },
       { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,outPath)" },
     ],
-    output: { root: "string", statementCount: "number", mode: "string", outPath: "string" },
+    output: {
+      root: "string",
+      statementCount: "number",
+      mode: "string",
+      outPath: "string?",
+      target: "string?",
+      key: "string?",
+    },
   },
   "graph.validate": {
     command: "fide graph validate",

@@ -16,7 +16,7 @@ export function graphCommandHelp(): string {
     "  - `--target <name>` resolves a configured graph target from `.fide/settings.json`.",
     "  - `--target <path>` resolves a local .fide directory path.",
     "  - Configured postgres targets resolve the database URL from `FIDE_GRAPH_DATABASE_URL` first, then target settings.",
-    "  - `--draft` writes a statement-doc markdown file to .fide/statement-drafts/YYYY/MM/DD/<root>.md.",
+    "  - `--draft` writes a statement-doc markdown file to .fide/statement-drafts/YYYY/MM/DD/<root>.md (local targets only).",
     "  - `graph add` accepts inline JSON (default), `--in`, or `--stdin`.",
     "  - `--stdin`/`--in` can auto-detect json/jsonl/fsd, or use --format to force.",
     "  - `validate`/`root` accept statement-doc inputs and json/jsonl batches.",

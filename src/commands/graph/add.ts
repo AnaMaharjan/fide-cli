@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { ingestStatements } from "@chris-test/db";
 import { buildStatementsWithRoot, parseFideId, statementDoc, type StatementInput } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
@@ -66,31 +67,6 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
   }
 
   const graphTarget = resolveGraphTarget(flags);
-  if (graphTarget.type === "postgres") {
-    const payload = {
-      ok: false,
-      command: "graph add",
-      target: "postgres",
-      key: graphTarget.key,
-      configuredFromSettings: graphTarget.configuredFromSettings,
-      databaseUrlConfigured: Boolean(graphTarget.databaseUrl),
-      databaseUrlSource: graphTarget.databaseUrlSource,
-      databaseUrlEnv: graphTarget.databaseUrlEnv,
-      schema: graphTarget.schema,
-      statementsTable: graphTarget.statementsTable,
-      error: graphTarget.databaseUrl
-        ? "Direct postgres writes are not implemented yet in this CLI."
-        : `Missing postgres connection for graph target "${graphTarget.key ?? "unknown"}". Set FIDE_GRAPH_DATABASE_URL or configure the target in .fide/settings.json.`,
-    };
-    if (shouldUseJsonOutput(flags)) {
-      printJson(payload);
-    } else {
-      console.error(payload.error);
-    }
-    return 1;
-  }
-  const { root } = graphTarget;
-
   const inPath = getStringFlag(flags, "in");
   const useStdin = hasFlag(flags, "stdin");
   const formatFlag = parseStatementsInputFormat(getStringFlag(flags, "format"));
@@ -133,6 +109,39 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
   }
 
   const batch = await buildStatementsWithRoot(statementInputs, { normalizeReferenceIdentifier: normalize });
+  if (graphTarget.type === "postgres") {
+    if (draftMode) {
+      throw new Error("`--draft` is only supported for local graph targets.");
+    }
+    if (!graphTarget.databaseUrl) {
+      throw new Error(
+        `Missing postgres connection for graph target "${graphTarget.key ?? "unknown"}". Set FIDE_GRAPH_DATABASE_URL or configure the target in .fide/settings.json.`,
+      );
+    }
+    if (graphTarget.schema !== "public" || graphTarget.statementsTable !== "statements") {
+      throw new Error(
+        `Postgres target overrides are not yet supported for writes. Expected public.statements, got ${graphTarget.schema}.${graphTarget.statementsTable}.`,
+      );
+    }
+
+    process.env.DATABASE_URL = graphTarget.databaseUrl;
+    const result = await ingestStatements({ statements: batch.statements });
+    const payload = {
+      root: batch.root,
+      statementCount: result.statementCount,
+      mode: "postgres",
+      target: "postgres",
+      key: graphTarget.key,
+    };
+    if (shouldUseJsonOutput(flags)) {
+      printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+    } else {
+      console.log(`Ingested ${result.statementCount} statements (root=${batch.root}) to postgres target ${graphTarget.key ?? "<unnamed>"}.`);
+    }
+    return 0;
+  }
+
+  const { root } = graphTarget;
   const outPath = (() => {
     const { yyyy, mm, dd } = ymdUtc(new Date());
     if (draftMode) {
