@@ -1,8 +1,8 @@
 export function graphCommandHelp(): string {
   return [
     "Usage:",
+    "  fide graph add [--target <key-or-path>] '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph add [--target <key-or-path>] --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
-    "  fide graph add [--target <key-or-path>] --params '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph add [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph validate --in <input> [--format <json|jsonl|fsd>] [--json]",
     "  fide graph root --in <input> [--format <json|jsonl|fsd>] [--json]",
@@ -16,7 +16,7 @@ export function graphCommandHelp(): string {
     "  - `--target <path>` resolves a local .fide directory path.",
     "  - Configured postgres targets resolve the database URL from `FIDE_GRAPH_DATABASE_URL` first, then target settings.",
     "  - `--draft` writes a statement-doc markdown file to .fide/statement-drafts/YYYY/MM/DD/<root>.md.",
-    "  - `graph add` only accepts statement inputs via `--stdin`, `--in`, or `--params`.",
+    "  - `graph add` accepts inline JSON (default), `--in`, or `--stdin`.",
     "  - `--stdin`/`--in` can auto-detect json/jsonl/fsd, or use --format to force.",
     "  - `validate`/`root` accept statement-doc inputs and json/jsonl batches.",
     "  - `status` reports whether the target directory has a .fide folder.",

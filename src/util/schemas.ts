@@ -28,7 +28,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "target", type: "string", required: false, description: "Configured graph target key or local directory path" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "in", type: "string", required: false, description: "Primary agent path: input file path" },
-      { name: "params", type: "string", required: false, description: "Primary agent path: raw JSON payload (array of statement inputs)" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
       { name: "no-normalize", type: "boolean", required: false },
       { name: "draft", type: "boolean", required: false },

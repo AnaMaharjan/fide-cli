@@ -55,8 +55,8 @@ async function readStdinUtf8(): Promise<string> {
  * Build a statements batch and write it to `.fide/statements/YYYY/MM/DD/<root>.jsonl`.
  */
 export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
-  const parsed = argsOrFlags instanceof Map ? null : parseArgs(argsOrFlags);
-  const flags = argsOrFlags instanceof Map ? argsOrFlags : parsed.flags;
+  const parsed = argsOrFlags instanceof Map ? { positionals: [], flags: argsOrFlags } : parseArgs(argsOrFlags);
+  const flags = parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
       printJson(COMMAND_SCHEMAS["graph.add"]);
@@ -103,7 +103,7 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
 
   const stdinAvailable = process.stdin.isTTY === false;
   let statementInputs: StatementInput[] = [];
-  const inlineParams = parsed?.positionals?.join(" ");
+  const inlineParams = parsed.positionals.join(" ");
   /**
    * Agent-first precedence:
    * 1. --in <file>
