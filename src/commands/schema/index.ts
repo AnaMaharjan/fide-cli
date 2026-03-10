@@ -1,6 +1,6 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { printJson } from "../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../util/schemas.js";
+import { COMMAND_SCHEMAS, EXTENDED_SCHEMAS } from "../../util/schemas.js";
 
 const SCHEMAS = COMMAND_SCHEMAS;
 
@@ -43,6 +43,23 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   }
 
   const schema = SCHEMAS[resolvedSurface];
+  const extendedSchema = (EXTENDED_SCHEMAS as Record<string, unknown>)[resolvedSurface];
+  if (!schema && !extendedSchema) {
+    const payload = { ok: false, error: `Unknown surface: ${resolvedSurface}`, surfaces: Object.keys(SCHEMAS) };
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.error(payload.error);
+      console.error("Available surfaces:", Object.keys(SCHEMAS).join(", "));
+    }
+    return 1;
+  }
+
+  if (extendedSchema) {
+    printJson(extendedSchema);
+    return 0;
+  }
+
   if (!schema) {
     const payload = { ok: false, error: `Unknown surface: ${resolvedSurface}`, surfaces: Object.keys(SCHEMAS) };
     if (useJson) {
