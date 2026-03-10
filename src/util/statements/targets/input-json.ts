@@ -1,64 +1,60 @@
 import type { StatementInput } from "@chris-test/fcp";
 
-type AddStatementInput = {
-  subject: string;
-  subjectType: string;
-  subjectSource: string;
-  predicate: string;
-  object: string;
-  objectType: string;
-  objectSource: string;
-};
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStatementRoleInput(
+  value: unknown,
+): value is {
+  referenceIdentifier: string;
+  entityType: string;
+  referenceType: string;
+} {
+  return (
+    isObject(value) &&
+    typeof value.referenceIdentifier === "string" &&
+    typeof value.entityType === "string" &&
+    typeof value.referenceType === "string"
+  );
+}
 
 /**
- * Validate raw JSON payload shape for statements add input.
+ * Validate raw JSON payload shape for `StatementInput[]`.
  */
-function normalizeAddInputs(parsed: unknown): AddStatementInput[] {
+function normalizeStatementInputs(parsed: unknown): StatementInput[] {
   if (!Array.isArray(parsed) || parsed.length === 0) {
     throw new Error("Invalid input payload. Expected non-empty array of statement inputs.");
   }
 
   return parsed.map((item) => {
-    const candidate = item as Partial<AddStatementInput>;
-    if (
-      !candidate.subject || !candidate.subjectType || !candidate.subjectSource ||
-      !candidate.predicate || !candidate.object || !candidate.objectType || !candidate.objectSource
-    ) {
-      throw new Error("Invalid input item. Each item must include subject/subjectType/subjectSource/predicate/object/objectType/objectSource.");
+    if (!isObject(item)) {
+      throw new Error("Invalid input item. Each item must be a statement input object.");
     }
+
+    const { subject, predicate, object } = item;
+    if (!isStatementRoleInput(subject) || !isStatementRoleInput(predicate) || !isStatementRoleInput(object)) {
+      throw new Error("Invalid input item. Each item must include subject, predicate, and object with referenceIdentifier, entityType, and referenceType.");
+    }
+
     return {
-      subject: candidate.subject,
-      subjectType: candidate.subjectType,
-      subjectSource: candidate.subjectSource,
-      predicate: candidate.predicate,
-      object: candidate.object,
-      objectType: candidate.objectType,
-      objectSource: candidate.objectSource,
+      subject: {
+        referenceIdentifier: subject.referenceIdentifier,
+        entityType: subject.entityType as StatementInput["subject"]["entityType"],
+        referenceType: subject.referenceType as StatementInput["subject"]["referenceType"],
+      },
+      predicate: {
+        referenceIdentifier: predicate.referenceIdentifier,
+        entityType: predicate.entityType as StatementInput["predicate"]["entityType"],
+        referenceType: predicate.referenceType as StatementInput["predicate"]["referenceType"],
+      },
+      object: {
+        referenceIdentifier: object.referenceIdentifier,
+        entityType: object.entityType as StatementInput["object"]["entityType"],
+        referenceType: object.referenceType as StatementInput["object"]["referenceType"],
+      },
     };
   });
-}
-
-/**
- * Convert CLI add-input rows into canonical `StatementInput` values.
- */
-function mapAddInputsToStatementInputs(inputs: AddStatementInput[]): StatementInput[] {
-  return inputs.map((input) => ({
-    subject: {
-      referenceIdentifier: input.subject,
-      entityType: input.subjectType as StatementInput["subject"]["entityType"],
-      referenceType: input.subjectSource as StatementInput["subject"]["referenceType"],
-    },
-    predicate: {
-      referenceIdentifier: input.predicate,
-      entityType: "Concept",
-      referenceType: "NetworkResource",
-    },
-    object: {
-      referenceIdentifier: input.object,
-      entityType: input.objectType as StatementInput["object"]["entityType"],
-      referenceType: input.objectSource as StatementInput["object"]["referenceType"],
-    },
-  }));
 }
 
 /**
@@ -71,12 +67,5 @@ export function parseJsonInputs(raw: string): StatementInput[] {
   }
 
   const parsed = JSON.parse(trimmed) as unknown;
-  return mapAddInputsToStatementInputs(normalizeAddInputs(parsed));
-}
-
-/**
- * Map one ad-hoc statement row into a canonical `StatementInput`.
- */
-export function mapSingleStatementInput(input: AddStatementInput): StatementInput {
-  return mapAddInputsToStatementInputs([input])[0];
+  return normalizeStatementInputs(parsed);
 }

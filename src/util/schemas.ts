@@ -11,8 +11,8 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: { ok: "boolean", root: "string", created: "string[]" },
   },
-  "graph.query.sql": {
-    command: "fide graph query sql",
+  "graph.query": {
+    command: "fide graph query",
     params: [
       { name: "sql", type: "string", required: true, description: "SQL query" },
       { name: "json", type: "boolean", required: false, description: "Machine-readable output" },
@@ -25,23 +25,18 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.add": {
     command: "fide graph add",
     params: [
-      { name: "in", type: "string", required: false, description: "Input file path" },
-      { name: "stdin", type: "boolean", required: false, description: "Read from stdin" },
-      { name: "params", type: "string", required: false, description: "Raw JSON payload (array of statement inputs)" },
-      { name: "subject", type: "string", required: false, description: "Subject reference (single-statement mode)" },
-      { name: "subject-type", type: "string", required: false },
-      { name: "subject-source", type: "string", required: false },
-      { name: "predicate", type: "string", required: false },
-      { name: "object", type: "string", required: false },
-      { name: "object-type", type: "string", required: false },
-      { name: "object-source", type: "string", required: false },
+      { name: "local", type: "boolean", required: false, description: "Write to a local .fide workspace target" },
+      { name: "target", type: "string", required: false, description: "Target directory path (overrides cwd and any .fide/settings.json graphDir)" },
+      { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
+      { name: "in", type: "string", required: false, description: "Primary agent path: input file path" },
+      { name: "params", type: "string", required: false, description: "Primary agent path: raw JSON payload (array of statement inputs)" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
       { name: "no-normalize", type: "boolean", required: false },
       { name: "draft", type: "boolean", required: false },
       { name: "json", type: "boolean", required: false },
       { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,outPath)" },
     ],
-    output: { ok: "boolean", root: "string", statementCount: "number", mode: "string", outPath: "string", statementFideIds: "string[]" },
+    output: { root: "string", statementCount: "number", mode: "string", outPath: "string" },
   },
   "graph.validate": {
     command: "fide graph validate",
@@ -64,11 +59,15 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   },
   "graph.status": {
     command: "fide graph status",
-    params: [],
+    params: [
+      { name: "target", type: "string", required: false, description: "Target directory path (overrides cwd and any .fide/settings.json graphDir)" },
+    ],
     output: {
       ok: "boolean",
       initialized: "boolean",
       root: "string",
+      dir: "string",
+      configuredFromSettings: "boolean",
       fideDir: "string",
       statementsDir: "string",
       missing: "string[]",

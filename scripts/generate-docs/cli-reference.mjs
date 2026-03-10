@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { renameSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,6 +42,28 @@ function runCapture(command, args) {
   return result.stdout ?? "";
 }
 
+function postprocessDocs() {
+  const docsDir = resolve(PACKAGE_ROOT, "docs");
+  const oldGraphPath = resolve(docsDir, "graph-command.mdx");
+  const newGraphPath = resolve(docsDir, "graph.mdx");
+  const indexPath = resolve(docsDir, "index.mdx");
+  const metaPath = resolve(docsDir, "meta.json");
+
+  if (existsSync(oldGraphPath)) {
+    renameSync(oldGraphPath, newGraphPath);
+  }
+
+  if (existsSync(indexPath)) {
+    const content = readFileSync(indexPath, "utf8").replaceAll("./graph-command", "./graph");
+    writeFileSync(indexPath, content);
+  }
+
+  if (existsSync(metaPath)) {
+    const content = readFileSync(metaPath, "utf8").replaceAll('"graph-command"', '"graph"');
+    writeFileSync(metaPath, content);
+  }
+}
+
 run("pnpm", [
   "exec",
   "lally",
@@ -64,6 +87,8 @@ run("pnpm", [
   "--component-file-path",
   "src/components/cli-layout/interactive/cli-command-page-interactive.tsx",
 ]);
+
+postprocessDocs();
 
 if (CHECK_MODE) {
   const statusOutput = runCapture("git", ["status", "--porcelain", "--", ...GENERATED_PATHS]).trim();

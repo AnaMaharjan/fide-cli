@@ -6,21 +6,21 @@ import { parseFideId, type StatementInput } from "@chris-test/fcp";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { COMMAND_SCHEMAS } from "../../util/schemas.js";
+import { resolveFideDir } from "../../util/fide-dir.js";
 import { graphCommandHelp } from "./help.js";
 import {
   detectStatementsInputFormat,
   parseStatementsInputFormat,
 } from "../../util/statements/shared.js";
-import { mapSingleStatementInput, parseStatementInputsByFormat } from "../../util/statements/targets/parse-inputs.js";
+import { parseStatementInputsByFormat } from "../../util/statements/targets/parse-inputs.js";
 
 /**
  * Resolve project statements output directory under `.fide/statements`.
  */
-function resolveStatementsDir(): string {
-  const cwd = process.cwd();
-  const fideDir = resolve(cwd, ".fide");
+function resolveStatementsDir(root: string): string {
+  const fideDir = resolve(root, ".fide");
   if (!existsSync(fideDir)) {
-    throw new Error("No .fide folder found in current directory. Run this command from your project root or run `fide init` first.");
+    throw new Error("No .fide folder found in the target directory. Run this command from your project root, configure .fide/settings.json, pass --target <path>, or run `fide init` first.");
   }
   return resolve(fideDir, "statements");
 }
@@ -56,6 +56,7 @@ async function readStdinUtf8(): Promise<string> {
  */
 export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
   const flags = argsOrFlags instanceof Map ? argsOrFlags : parseArgs(argsOrFlags).flags;
+  const { root, configuredFromSettings } = resolveFideDir(flags);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
       printJson(COMMAND_SCHEMAS["graph.add"]);
@@ -65,15 +66,16 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     return 0;
   }
 
+  const targetLocal = hasFlag(flags, "local");
+
+  if (!targetLocal) {
+    console.error("Missing target for `graph add`. Specify `--local` to write to a local .fide folder. Hosted and other targets are not implemented yet.");
+    console.error(graphCommandHelp());
+    return 1;
+  }
+
   const inPath = getStringFlag(flags, "in");
   const useStdin = hasFlag(flags, "stdin");
-  const subject = getStringFlag(flags, "subject");
-  const subjectType = getStringFlag(flags, "subject-type");
-  const subjectSource = getStringFlag(flags, "subject-source");
-  const predicate = getStringFlag(flags, "predicate");
-  const object = getStringFlag(flags, "object");
-  const objectType = getStringFlag(flags, "object-type");
-  const objectSource = getStringFlag(flags, "object-source");
   const formatFlag = parseStatementsInputFormat(getStringFlag(flags, "format"));
   const normalize = !hasFlag(flags, "no-normalize");
   const draftMode = hasFlag(flags, "draft");
@@ -89,8 +91,7 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
    * 1. --in <file>
    * 2. --params '<json>'
    * 3. --stdin (explicit)
-   * 4. Single-statement flags (subject/object/...)
-   * 5. Piped stdin (no flags, non-TTY stdin)
+   * 4. Piped stdin (no flags, non-TTY stdin)
    */
   if (inPath) {
     const raw = await readUtf8(inPath);
@@ -103,28 +104,14 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     const format = formatFlag ?? detectStatementsInputFormat(raw);
     statementInputs = parseStatementInputsByFormat(raw, format);
   } else {
-    if (!subject || !subjectType || !subjectSource || !predicate || !object || !objectType || !objectSource) {
-      console.error("Missing required flags for `graph add`.");
-      console.error(graphCommandHelp());
-      return 1;
-    }
-    statementInputs = [mapSingleStatementInput({
-      subject,
-      subjectType,
-      subjectSource,
-      predicate,
-      object,
-      objectType,
-      objectSource,
-    })];
-    // When no other input source and no single-statement flags are provided,
-    // treat non-TTY stdin as the default agent input path.
     if (!stdinAvailable) {
-      // Nothing else to read; single-statement flags already handled.
-    } else {
       const raw = await readStdinUtf8();
       const format = formatFlag ?? detectStatementsInputFormat(raw);
       statementInputs = parseStatementInputsByFormat(raw, format);
+    } else {
+      console.error("Missing input for `graph add`. Use `--stdin`, `--in <path>`, or `--params '<json>'`.");
+      console.error(graphCommandHelp());
+      return 1;
     }
   }
 
@@ -132,9 +119,9 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
   const outPath = (() => {
     const { yyyy, mm, dd } = ymdUtc(new Date());
     if (draftMode) {
-      return resolve(process.cwd(), ".fide", "statement-drafts", yyyy, mm, dd, `${batch.root}.md`);
+      return resolve(root, ".fide", "statement-drafts", yyyy, mm, dd, `${batch.root}.md`);
     }
-    return resolve(resolveStatementsDir(), yyyy, mm, dd, `${batch.root}.jsonl`);
+    return resolve(resolveStatementsDir(root), yyyy, mm, dd, `${batch.root}.jsonl`);
   })();
 
   let output: string;
@@ -180,12 +167,10 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
   await writeUtf8(outPath, output);
 
   const payload = {
-    ok: true,
     root: batch.root,
     statementCount: batch.statements.length,
     mode: draftMode ? "draft" : "batch",
     outPath,
-    statementFideIds: batch.statements.map((statement) => statement.statementFideId),
   };
   if (shouldUseJsonOutput(flags)) {
     printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));

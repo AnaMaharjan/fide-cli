@@ -1,6 +1,6 @@
 import { runGraphAdd } from "./add.js";
 import { graphCommandHelp } from "./help.js";
-import { runQueryCommand } from "./query/index.js";
+import { runGraphQuery } from "./query.js";
 import { runGraphRoot } from "./root.js";
 import { runGraphStatus } from "./status.js";
 import { runGraphValidate } from "./validate.js";
@@ -13,8 +13,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
     console.log(graphCommandHelp());
     return 0;
   }
-
-  const [subcommand, ...rest] = args;
 
   if (command === "add") {
     return runGraphAdd(args);
@@ -29,11 +27,11 @@ export async function runGraphCommand(command: string | undefined, args: string[
   }
 
   if (command === "query") {
-    return runQueryCommand(subcommand, rest);
+    return runGraphQuery(args);
   }
 
   if (command === "status") {
-    return runGraphStatus();
+    return runGraphStatus(args);
   }
 
   console.error(`Unknown graph command: ${command}`);

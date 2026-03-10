@@ -6,7 +6,7 @@
   "icon": "Terminal",
   "pages": [
     "index",
-    "graph-command",
+    "graph",
     "init",
     "query",
     "schema",
