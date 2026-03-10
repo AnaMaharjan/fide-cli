@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { buildStatementsWithRoot, statementDoc } from "@chris-test/graph";
-import { parseFideId, type StatementInput } from "@chris-test/fcp";
+import { buildStatementsWithRoot, parseFideId, statementDoc, type StatementInput } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { COMMAND_SCHEMAS } from "../../util/schemas.js";

@@ -1,4 +1,4 @@
-import type { StatementInput } from "@chris-test/fcp";
+import type { StatementInput } from "@chris-test/graph";
 import type { StatementsInputFormat } from "../shared.js";
 import { parseJsonInputs } from "./input-json.js";
 import { parseJsonlInputs } from "./input-jsonl.js";

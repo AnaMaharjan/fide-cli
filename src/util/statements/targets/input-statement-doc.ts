@@ -1,5 +1,5 @@
 import { statementDoc } from "@chris-test/graph";
-import type { StatementInput } from "@chris-test/fcp";
+import type { StatementInput } from "@chris-test/graph";
 
 /**
  * Parse statement-doc markdown into canonical `StatementInput[]`.

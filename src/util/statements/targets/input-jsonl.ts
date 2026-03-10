@@ -1,4 +1,4 @@
-import type { StatementInput } from "@chris-test/fcp";
+import type { StatementInput } from "@chris-test/graph";
 import { parseJsonInputs } from "./input-json.js";
 
 /**
