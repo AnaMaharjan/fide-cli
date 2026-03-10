@@ -1,6 +1,7 @@
 export function graphCommandHelp(): string {
   return [
     "Usage:",
+    "  fide graph init [--dir <path>] [--json]",
     "  fide graph add [--target <key-or-path>] '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph add [--target <key-or-path>] --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
     "  fide graph add [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",

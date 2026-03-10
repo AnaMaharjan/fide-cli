@@ -7,7 +7,7 @@ import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 function initHelp(): string {
   return [
     "Usage:",
-    "  fide init [--dir <path>] [--json]",
+    "  fide graph init [--dir <path>] [--json]",
   ].join("\n");
 }
 
@@ -18,7 +18,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
-      printJson(COMMAND_SCHEMAS.init);
+      printJson(COMMAND_SCHEMAS["graph.init"]);
     } else {
       console.log(initHelp());
     }

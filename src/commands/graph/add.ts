@@ -19,7 +19,7 @@ import { parseStatementInputsByFormat } from "../../util/statements/targets/pars
 function resolveStatementsDir(root: string): string {
   const fideDir = resolve(root, ".fide");
   if (!existsSync(fideDir)) {
-    throw new Error("No .fide folder found in the target directory. Run this command from your project root, configure .fide/settings.json, pass --target <path>, or run `fide init` first.");
+    throw new Error("No .fide folder found in the target directory. Run this command from your project root, configure .fide/settings.json, pass --target <path>, or run `fide graph init` first.");
   }
   return resolve(fideDir, "statements");
 }

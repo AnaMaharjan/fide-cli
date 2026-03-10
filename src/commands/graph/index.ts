@@ -1,5 +1,6 @@
 import { runGraphAdd } from "./add.js";
 import { graphCommandHelp } from "./help.js";
+import { runInitCommand } from "./init.js";
 import { runGraphQuery } from "./query.js";
 import { runGraphRoot } from "./root.js";
 import { runGraphStatus } from "./status.js";
@@ -16,6 +17,10 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "add") {
     return runGraphAdd(args);
+  }
+
+  if (command === "init") {
+    return runInitCommand(args);
   }
 
   if (command === "validate") {

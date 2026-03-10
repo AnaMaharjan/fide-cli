@@ -7,8 +7,8 @@ import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 const FIDE_ENTITY_TYPE_ENUM = Object.keys(FIDE_ENTITY_TYPES).sort();
 
 export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ name: string; type: string; required?: boolean; description?: string; enum?: string[] }>; output: Record<string, string> }> = {
-  init: {
-    command: "fide init",
+  "graph.init": {
+    command: "fide graph init",
     params: [
       { name: "dir", type: "string", required: false, description: "Target directory (default: cwd)" },
       { name: "json", type: "boolean", required: false, description: "Machine-readable output" },
