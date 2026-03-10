@@ -25,8 +25,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.add": {
     command: "fide graph add",
     params: [
-      { name: "local", type: "boolean", required: false, description: "Write to a local .fide workspace target" },
-      { name: "target", type: "string", required: false, description: "Target directory path (overrides cwd and any .fide/settings.json graphDir)" },
+      { name: "target", type: "string", required: false, description: "Configured graph target key or local directory path" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "in", type: "string", required: false, description: "Primary agent path: input file path" },
       { name: "params", type: "string", required: false, description: "Primary agent path: raw JSON payload (array of statement inputs)" },
@@ -60,17 +59,24 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.status": {
     command: "fide graph status",
     params: [
-      { name: "target", type: "string", required: false, description: "Target directory path (overrides cwd and any .fide/settings.json graphDir)" },
+      { name: "target", type: "string", required: false, description: "Configured graph target key or local directory path" },
     ],
     output: {
       ok: "boolean",
+      target: "string",
       initialized: "boolean",
-      root: "string",
-      dir: "string",
+      root: "string?",
+      dir: "string?",
       configuredFromSettings: "boolean",
-      fideDir: "string",
-      statementsDir: "string",
+      fideDir: "string?",
+      statementsDir: "string?",
       missing: "string[]",
+      key: "string?",
+      databaseUrlConfigured: "boolean",
+      databaseUrlSource: "string?",
+      databaseUrlEnv: "string?",
+      schema: "string?",
+      statementsTable: "string?",
     },
   },
 };

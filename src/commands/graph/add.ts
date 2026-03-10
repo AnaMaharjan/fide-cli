@@ -6,7 +6,7 @@ import { parseFideId, type StatementInput } from "@chris-test/fcp";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { COMMAND_SCHEMAS } from "../../util/schemas.js";
-import { resolveFideDir } from "../../util/fide-dir.js";
+import { resolveGraphTarget } from "../../util/graph-target.js";
 import { graphCommandHelp } from "./help.js";
 import {
   detectStatementsInputFormat,
@@ -56,7 +56,6 @@ async function readStdinUtf8(): Promise<string> {
  */
 export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
   const flags = argsOrFlags instanceof Map ? argsOrFlags : parseArgs(argsOrFlags).flags;
-  const { root, configuredFromSettings } = resolveFideDir(flags);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     if (shouldUseJsonOutput(flags)) {
       printJson(COMMAND_SCHEMAS["graph.add"]);
@@ -66,13 +65,31 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     return 0;
   }
 
-  const targetLocal = hasFlag(flags, "local");
-
-  if (!targetLocal) {
-    console.error("Missing target for `graph add`. Specify `--local` to write to a local .fide folder. Hosted and other targets are not implemented yet.");
-    console.error(graphCommandHelp());
+  const graphTarget = resolveGraphTarget(flags);
+  if (graphTarget.type === "postgres") {
+    const payload = {
+      ok: false,
+      command: "graph add",
+      target: "postgres",
+      key: graphTarget.key,
+      configuredFromSettings: graphTarget.configuredFromSettings,
+      databaseUrlConfigured: Boolean(graphTarget.databaseUrl),
+      databaseUrlSource: graphTarget.databaseUrlSource,
+      databaseUrlEnv: graphTarget.databaseUrlEnv,
+      schema: graphTarget.schema,
+      statementsTable: graphTarget.statementsTable,
+      error: graphTarget.databaseUrl
+        ? "Direct postgres writes are not implemented yet in this CLI."
+        : `Missing postgres connection for graph target "${graphTarget.key ?? "unknown"}". Set FIDE_GRAPH_DATABASE_URL or configure the target in .fide/settings.json.`,
+    };
+    if (shouldUseJsonOutput(flags)) {
+      printJson(payload);
+    } else {
+      console.error(payload.error);
+    }
     return 1;
   }
+  const { root } = graphTarget;
 
   const inPath = getStringFlag(flags, "in");
   const useStdin = hasFlag(flags, "stdin");
