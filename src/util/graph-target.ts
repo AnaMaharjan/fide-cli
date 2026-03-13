@@ -1,30 +1,27 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { getStringFlag } from "./args.js";
 
-type LegacyFideSettings = {
-  graphDir?: string;
-};
-
-type LocalGraphTargetSettings = {
-  type: "local";
-  dir?: string;
+type FideSettings = {
+  fideDir?: string;
+  graphTargets?: Record<string, PostgresGraphTargetSettings | SqliteGraphTargetSettings>;
 };
 
 type PostgresGraphTargetSettings = {
   type: "postgres";
-  databaseUrl?: string;
-  databaseUrlEnv?: string;
+  connection?: string;
   schema?: string;
   statementsTable?: string;
 };
 
-type FideSettings = LegacyFideSettings & {
-  graphTargets?: Record<string, LocalGraphTargetSettings | PostgresGraphTargetSettings>;
+type SqliteGraphTargetSettings = {
+  type: "sqlite";
+  connection: string;
+  gitignore?: boolean;
 };
 
-export type ResolvedLocalGraphTarget = {
-  type: "local";
+export type ResolvedJsonlGraphTarget = {
+  type: "jsonl";
   root: string;
   configuredFromSettings: boolean;
 };
@@ -34,13 +31,21 @@ export type ResolvedPostgresGraphTarget = {
   key: string | null;
   configuredFromSettings: boolean;
   databaseUrl: string | null;
-  databaseUrlSource: "flag" | "env" | "settings" | "settings-env" | null;
+  databaseUrlSource: "connection" | "connection-env" | null;
   databaseUrlEnv: string | null;
   schema: string;
   statementsTable: string;
 };
 
-export type ResolvedGraphTarget = ResolvedLocalGraphTarget | ResolvedPostgresGraphTarget;
+export type ResolvedSqliteGraphTarget = {
+  type: "sqlite";
+  key: string | null;
+  configuredFromSettings: boolean;
+  file: string;
+  gitignore: boolean | null;
+};
+
+export type ResolvedGraphTarget = ResolvedJsonlGraphTarget | ResolvedPostgresGraphTarget | ResolvedSqliteGraphTarget;
 
 let envLoaded = false;
 
@@ -89,7 +94,7 @@ function isPathLikeTarget(value: string): boolean {
 function getConfiguredGraphTarget(
   settings: FideSettings | null,
   key: string,
-): { key: string | null; target: LocalGraphTargetSettings | PostgresGraphTargetSettings | null } {
+): { key: string | null; target: PostgresGraphTargetSettings | SqliteGraphTargetSettings | null } {
   const target = settings?.graphTargets?.[key] ?? null;
   if (!target) {
     throw new Error(`Unknown graph target in .fide/settings.json: ${key}`);
@@ -105,34 +110,25 @@ function warnIfTargetNameMatchesLocalPath(value: string): void {
   );
 }
 
-function resolveLocalTarget(
+function resolveJsonlTarget(
   flags: Map<string, string | boolean>,
   settings: FideSettings | null,
-  configuredTarget?: LocalGraphTargetSettings | null,
-): ResolvedLocalGraphTarget {
+): ResolvedJsonlGraphTarget {
   const target = getStringFlag(flags, "target");
   if (target && isPathLikeTarget(target)) {
-    return { type: "local", root: resolve(process.cwd(), target), configuredFromSettings: false };
+    return { type: "jsonl", root: resolve(process.cwd(), target), configuredFromSettings: false };
   }
 
   const cwd = process.cwd();
-  if (configuredTarget?.dir) {
+  if (settings?.fideDir) {
     return {
-      type: "local",
-      root: resolve(cwd, configuredTarget.dir),
+      type: "jsonl",
+      root: dirname(resolve(cwd, settings.fideDir)),
       configuredFromSettings: true,
     };
   }
 
-  if (settings?.graphDir) {
-    return {
-      type: "local",
-      root: resolve(cwd, settings.graphDir),
-      configuredFromSettings: true,
-    };
-  }
-
-  return { type: "local", root: cwd, configuredFromSettings: false };
+  return { type: "jsonl", root: cwd, configuredFromSettings: false };
 }
 
 function resolvePostgresTarget(
@@ -145,45 +141,31 @@ function resolvePostgresTarget(
   if (!postgresTarget) {
     throw new Error(`Graph target "${key}" is not a postgres target.`);
   }
-  const envKey = postgresTarget?.databaseUrlEnv ?? null;
-  const databaseUrlFromSettings = postgresTarget?.databaseUrl ?? null;
-  const schema = postgresTarget?.schema ?? "public";
+  const connection = postgresTarget?.connection ?? null;
+  const schema = postgresTarget?.schema ?? "fide_graph";
   const statementsTable = postgresTarget?.statementsTable ?? "statements";
 
-  if (process.env.FIDE_GRAPH_DATABASE_URL) {
+  if (connection?.startsWith("postgres://") || connection?.startsWith("postgresql://")) {
     return {
       type: "postgres",
       key: configured.key,
       configuredFromSettings: true,
-      databaseUrl: process.env.FIDE_GRAPH_DATABASE_URL,
-      databaseUrlSource: "env",
-      databaseUrlEnv: "FIDE_GRAPH_DATABASE_URL",
+      databaseUrl: connection,
+      databaseUrlSource: "connection",
+      databaseUrlEnv: null,
       schema,
       statementsTable,
     };
   }
 
-  if (envKey && process.env[envKey]) {
+  if (connection && process.env[connection]) {
     return {
       type: "postgres",
       key: configured.key,
       configuredFromSettings: true,
-      databaseUrl: process.env[envKey] ?? null,
-      databaseUrlSource: "settings-env",
-      databaseUrlEnv: envKey ?? null,
-      schema,
-      statementsTable,
-    };
-  }
-
-  if (databaseUrlFromSettings) {
-    return {
-      type: "postgres",
-      key: configured.key,
-      configuredFromSettings: true,
-      databaseUrl: databaseUrlFromSettings,
-      databaseUrlSource: "settings",
-      databaseUrlEnv: envKey ?? null,
+      databaseUrl: process.env[connection] ?? null,
+      databaseUrlSource: "connection-env",
+      databaseUrlEnv: connection,
       schema,
       statementsTable,
     };
@@ -195,9 +177,33 @@ function resolvePostgresTarget(
     configuredFromSettings: true,
     databaseUrl: null,
     databaseUrlSource: null,
-    databaseUrlEnv: envKey ?? null,
+    databaseUrlEnv: connection,
     schema,
     statementsTable,
+  };
+}
+
+function resolveSqliteTarget(
+  settings: FideSettings | null,
+  key: string,
+): ResolvedSqliteGraphTarget {
+  const configured = getConfiguredGraphTarget(settings, key);
+  const sqliteTarget = configured.target?.type === "sqlite" ? configured.target : null;
+  if (!sqliteTarget) {
+    throw new Error(`Graph target "${key}" is not a sqlite target.`);
+  }
+  const connection = sqliteTarget.connection;
+  const file = connection.startsWith("/") || connection.startsWith("./") || connection.startsWith("../") || connection.startsWith("~/")
+    ? resolve(process.cwd(), connection)
+    : process.env[connection]
+      ? resolve(process.cwd(), process.env[connection] as string)
+      : resolve(process.cwd(), connection);
+  return {
+    type: "sqlite",
+    key: configured.key,
+    configuredFromSettings: true,
+    file,
+    gitignore: typeof sqliteTarget.gitignore === "boolean" ? sqliteTarget.gitignore : null,
   };
 }
 
@@ -207,7 +213,7 @@ function resolvePostgresTarget(
  * Resolution order:
  * 1. `--target <configured-key>` resolves a configured graph target
  * 2. `--target <path>` resolves a local filesystem target
- * 3. no target flag falls back to local cwd / legacy graphDir
+ * 3. no target falls back to cwd / configured fideDir
  */
 export function resolveGraphTarget(flags: Map<string, string | boolean>): ResolvedGraphTarget {
   const settings = readSettings(process.cwd());
@@ -219,23 +225,23 @@ export function resolveGraphTarget(flags: Map<string, string | boolean>): Resolv
     if (configured.target?.type === "postgres") {
       return resolvePostgresTarget(settings, target);
     }
-    if (configured.target?.type === "local") {
-      return resolveLocalTarget(flags, settings, configured.target);
+    if (configured.target?.type === "sqlite") {
+      return resolveSqliteTarget(settings, target);
     }
   }
 
-  return resolveLocalTarget(flags, settings);
+  return resolveJsonlTarget(flags, settings);
 }
 
 /**
- * Backward-compatible local target resolver for existing command code.
+ * Backward-compatible jsonl target resolver for existing command code.
  */
 export function resolveFideDir(
   flags: Map<string, string | boolean>,
 ): { root: string; configuredFromSettings: boolean } {
   const target = resolveGraphTarget(flags);
-  if (target.type !== "local") {
-    throw new Error("The resolved graph target is postgres, but this command expects a local .fide workspace.");
+  if (target.type !== "jsonl") {
+    throw new Error(`The resolved graph target is ${target.type}, but this command expects a jsonl .fide workspace.`);
   }
   return { root: target.root, configuredFromSettings: target.configuredFromSettings };
 }

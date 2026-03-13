@@ -1,5 +1,5 @@
 type HelpSection = {
-  title: "Usage" | "Commands" | "Flags" | "Notes" | "Examples" | "Surfaces";
+  title: "Usage" | "Commands" | "Flags" | "Modes" | "Notes" | "Examples" | "Surfaces";
   items: string[];
 };
 

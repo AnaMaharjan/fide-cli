@@ -22,7 +22,7 @@ function draftHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Configured graph target key or local directory path",
+          "  --target <key-or-path>   Configured graph target key or jsonl directory path",
           "  --file <inputs>          Read statement inputs from a file",
           "  --stdin                  Read statement inputs from stdin",
           "  --format <json|jsonl|fsd>  Force input format",
@@ -34,7 +34,7 @@ function draftHelp(): string {
         title: "Notes",
         items: [
           "  - Writes a markdown statement draft to .fide/drafts/statements/YYYY/MM/DD/<root>.md.",
-          "  - Local targets only.",
+          "  - Jsonl targets only.",
         ],
       },
     ],
@@ -56,8 +56,8 @@ export async function runGraphDraft(args: string[]): Promise<number> {
   }
 
   const graphTarget = resolveGraphTarget(flags);
-  if (graphTarget.type !== "local") {
-    throw new Error("`graph draft` is only supported for local graph targets.");
+  if (graphTarget.type !== "jsonl") {
+    throw new Error("`graph draft` is only supported for jsonl graph targets.");
   }
 
   const fideDir = resolve(graphTarget.root, ".fide");

@@ -5,6 +5,8 @@ import { hasFlag, parseArgs } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { listConfiguredGraphTargetKeys, resolveGraphTarget, type ResolvedGraphTarget } from "../../util/graph-target.js";
+import { inspectSqliteGraph } from "../../util/sqlite.js";
+import { getSqliteWarnings } from "../../util/sqlite-warning.js";
 
 /**
  * Report whether the current working directory has a `.fide` directory.
@@ -26,7 +28,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
         {
           title: "Flags",
           items: [
-            "  --target <key-or-path>   Configured graph target key or local directory path",
+            "  --target <key-or-path>   Configured graph target key or jsonl directory path",
           ],
         },
         {
@@ -68,8 +70,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           schema: graphTarget.schema,
           statementsTable: graphTarget.statementsTable,
           reachable: false,
-          initialized: false,
-          missing: ["postgres.databaseUrl"],
+          missing: ["postgres.connection"],
         };
       }
 
@@ -196,7 +197,6 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           schema: graphTarget.schema,
           statementsTable: graphTarget.statementsTable,
           reachable: true,
-          initialized: missing.length === 0,
           missing,
         };
       } catch (error) {
@@ -216,7 +216,6 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           schema: graphTarget.schema,
           statementsTable: graphTarget.statementsTable,
           reachable: false,
-          initialized: false,
           missing: ["postgres.connection"],
           error: error instanceof Error ? error.message : String(error),
         };
@@ -225,27 +224,42 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
       }
     }
 
+    if (graphTarget.type === "sqlite") {
+      const inspection = await inspectSqliteGraph(graphTarget.file);
+      return {
+        ok: true,
+        target: "sqlite",
+        key: graphTarget.key,
+        configured: true,
+        reachable: inspection.reachable,
+        file: graphTarget.file,
+        next: graphTarget.key ? {
+          addHelpCommand: "fide graph add -h",
+          addCommand: `fide graph add --target ${graphTarget.key} ...`,
+        } : undefined,
+        missing: inspection.missing,
+        error: inspection.error,
+        warnings: getSqliteWarnings(graphTarget.file, { gitignore: graphTarget.gitignore }),
+      };
+    }
+
     const { root, configuredFromSettings } = graphTarget;
     const fideDir = resolve(root, ".fide");
     const statementsDir = resolve(fideDir, "statements");
 
     const hasFide = existsSync(fideDir);
     const hasStatements = existsSync(statementsDir);
-    const initialized = hasFide;
 
     const missing: string[] = [];
     if (!hasFide) missing.push(".fide");
 
     return {
       ok: true,
-      target: "local",
+      target: "jsonl",
       configured: true,
-      initialized,
       next: {
         addHelpCommand: "fide graph add -h",
-        addCommand: configuredFromSettings
-          ? "fide graph add --target local-dev ..."
-          : "fide graph add ...",
+        addCommand: "fide graph add ...",
       },
       root,
       dir: root,
@@ -254,6 +268,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
       statementsDir,
       statementsDirPresent: hasStatements,
       missing,
+      key: null,
     };
   }
 
@@ -276,7 +291,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     return {
       key,
       type: detailed.target,
-      initialized: detailed.initialized,
+      warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
         statusCommand: `fide graph status ${key}`,
         addHelpCommand: "fide graph add -h",

@@ -7,6 +7,8 @@ import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../ut
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, writeUtf8 } from "../../util/io.js";
 import { resolveGraphTarget } from "../../util/graph-target.js";
+import { ensureSqliteGraphSchema, ingestStatementsToSqlite } from "../../util/sqlite.js";
+import { getSqliteWarnings } from "../../util/sqlite-warning.js";
 import { resolveStatementsBatch, ymdUtc } from "./shared.js";
 
 function addHelp(): string {
@@ -23,7 +25,7 @@ function addHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Configured graph target key or local directory path",
+          "  --target <key-or-path>   Configured graph target key or jsonl directory path",
           "  --file <inputs>          Read statement inputs from a file",
           "  --stdin                  Read statement inputs from stdin",
           "  --format <json|jsonl|fsd>  Force input format",
@@ -176,7 +178,7 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     }
 
     process.env.DATABASE_URL = graphTarget.databaseUrl;
-    const statementCount = graphTarget.schema === "public" && graphTarget.statementsTable === "statements"
+    const statementCount = graphTarget.schema === "fide_graph" && graphTarget.statementsTable === "statements"
       ? (await ingestStatements({ statements: batch.statements })).statementCount
       : await ingestStatementsToConfiguredTable(batch.statements, graphTarget.schema, graphTarget.statementsTable);
     const payload = {
@@ -193,6 +195,29 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     } else {
       console.log(
         `Ingested ${statementCount} statements (root=${batch.root}) to postgres target ${graphTarget.key ?? "<unnamed>"} (${graphTarget.schema}.${graphTarget.statementsTable}).`,
+      );
+    }
+    return 0;
+  }
+
+  if (graphTarget.type === "sqlite") {
+    await mkdir(resolve(graphTarget.file, ".."), { recursive: true });
+    await ensureSqliteGraphSchema(graphTarget.file, { drop: false });
+    const statementCount = await ingestStatementsToSqlite(graphTarget.file, batch.statements);
+    const payload = {
+      root: batch.root,
+      statementCount,
+      mode: "sqlite",
+      target: "sqlite",
+      key: graphTarget.key,
+      file: graphTarget.file,
+      warnings: getSqliteWarnings(graphTarget.file, { gitignore: graphTarget.gitignore }),
+    };
+    if (shouldUseJsonOutput(flags)) {
+      printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+    } else {
+      console.log(
+        `Ingested ${statementCount} statements (root=${batch.root}) to sqlite target ${graphTarget.key ?? "<unnamed>"} (${graphTarget.file}).`,
       );
     }
     return 0;
