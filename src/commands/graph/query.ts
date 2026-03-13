@@ -1,6 +1,5 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { printJson } from "../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 
 function queryHelp(): string {
   return [
@@ -18,14 +17,9 @@ function queryHelp(): string {
  */
 export async function runGraphQuery(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
-  const useJsonHelp = shouldUseJsonOutput(flags);
 
   if (flags.has("help") || flags.has("-h")) {
-    if (useJsonHelp) {
-      printJson(COMMAND_SCHEMAS["graph.query"]);
-    } else {
-      console.log(queryHelp());
-    }
+    console.log(queryHelp());
     return 0;
   }
 

@@ -18,7 +18,7 @@ function quoteIdent(value: string): string {
 }
 
 /**
- * @description Initializes a minimal local .fide folder structure.
+ * @description Initializes the minimal local .fide workspace root.
  */
 export async function runInitCommand(args: string[]): Promise<number> {
   const parsed = parseArgs(args);
@@ -173,7 +173,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
   }
 
   const root = targetDir ? resolve(process.cwd(), targetDir) : target.root;
-  const directories = [resolve(root, ".fide"), resolve(root, ".fide/statements")];
+  const directories = [resolve(root, ".fide")];
 
   for (const directory of directories) {
     await mkdir(directory, { recursive: true });
