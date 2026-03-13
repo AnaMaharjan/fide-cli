@@ -3,9 +3,14 @@ export type ParsedArgs = {
   flags: Map<string, string | boolean>;
 };
 
+const SHORT_FLAG_ALIASES: Record<string, string> = {
+  h: "help",
+  p: "pretty",
+};
+
 /**
  * Parse CLI tokens into positional args and `--flag` values.
- * Supports `--key value`, `--key=value`, and boolean flags.
+ * Supports `--key value`, `--key=value`, short aliases like `-p`, and boolean flags.
  */
 export function parseArgs(args: string[]): ParsedArgs {
   const positionals: string[] = [];
@@ -13,6 +18,14 @@ export function parseArgs(args: string[]): ParsedArgs {
 
   for (let i = 0; i < args.length; i += 1) {
     const token = args[i];
+
+    if (token.startsWith("-") && !token.startsWith("--") && token.length === 2) {
+      const alias = SHORT_FLAG_ALIASES[token.slice(1)];
+      if (alias) {
+        flags.set(alias, true);
+        continue;
+      }
+    }
 
     if (!token.startsWith("--")) {
       positionals.push(token);
@@ -61,15 +74,6 @@ export function hasFlag(flags: Map<string, string | boolean>, key: string): bool
   return flags.has(key);
 }
 
-/**
- * Determine whether to emit machine-readable JSON output.
- * Agent DX: prefer JSON when --json, --output json, OUTPUT_FORMAT=json, or stdout is not a TTY (piped).
- */
 export function shouldUseJsonOutput(flags: Map<string, string | boolean>): boolean {
-  if (hasFlag(flags, "json")) return true;
-  const output = getStringFlag(flags, "output");
-  if (output === "json") return true;
-  if (process.env.OUTPUT_FORMAT === "json") return true;
-  if (typeof process.stdout?.isTTY !== "undefined" && !process.stdout.isTTY) return true;
-  return false;
+  return !hasFlag(flags, "pretty");
 }

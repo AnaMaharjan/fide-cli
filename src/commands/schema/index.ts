@@ -7,16 +7,16 @@ const SCHEMAS = COMMAND_SCHEMAS;
 function schemaHelp(): string {
   return [
     "Usage:",
-    "  fide schema [surface] [--json]",
+    "  fide schema [surface] [--pretty|-p]",
     "",
     "Surfaces:",
     ...Object.keys(SCHEMAS).map((k) => `  ${k}`),
     "",
     "Examples:",
     "  fide schema",
-    "  fide schema graph.add --json",
+    "  fide schema graph.add",
     "",
-    "Agent DX: Use --json for machine-readable schema. Use --help --json on any command for per-command schema.",
+    "Agent DX: JSON is the default output. Use --pretty or -p for human-readable output.",
     ].join("\n");
 }
 

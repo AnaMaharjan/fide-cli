@@ -14,7 +14,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "dir", type: "string", required: false, description: "Target directory (default: cwd)" },
       { name: "dangerously-drop", type: "boolean", required: false, description: "Postgres only: drop graph tables/types before re-initializing (requires --yes)" },
       { name: "yes", type: "boolean", required: false, description: "Required confirmation for --dangerously-drop" },
-      { name: "json", type: "boolean", required: false, description: "Machine-readable output" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
       ok: "boolean",
@@ -32,7 +32,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide graph query",
     params: [
       { name: "sql", type: "string", required: true, description: "SQL query" },
-      { name: "json", type: "boolean", required: false, description: "Machine-readable output" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
       { name: "allow-write", type: "boolean", required: false, description: "Allow write queries" },
       { name: "fields", type: "string", required: false, description: "Comma-separated field mask (e.g. id,name)" },
       { name: "page-size", type: "number", required: false, description: "Page size for pagination" },
@@ -48,7 +48,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
       { name: "no-normalize", type: "boolean", required: false },
       { name: "draft", type: "boolean", required: false },
-      { name: "json", type: "boolean", required: false },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
       { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,outPath)" },
     ],
     output: {
@@ -65,7 +65,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     params: [
       { name: "in", type: "string", required: true, description: "Input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
-      { name: "json", type: "boolean", required: false },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
       { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,statementCount)" },
     ],
     output: { ok: "boolean", statementCount: "number", root: "string" },
@@ -75,7 +75,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     params: [
       { name: "in", type: "string", required: true, description: "Input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
-      { name: "json", type: "boolean", required: false },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: { root: "string" },
   },
@@ -122,7 +122,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide graph defs",
     params: [
       { name: "entity", type: "string", required: false, description: "Optional entity type filter (e.g. Person, NetworkResource)" },
-      { name: "json", type: "boolean", required: false },
     ],
     output: {
       ok: "boolean",

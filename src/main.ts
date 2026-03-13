@@ -4,18 +4,15 @@ function helpText(): string {
     "",
     "Usage:",
     "  fide <group> [command] [flags]",
-    "  fide schema [surface] [--json]",
+    "  fide docs <path>",
+    "  fide schema [surface]",
     "",
     "Groups:",
     "  graph       init | add | validate | root | query | status | defs",
     "",
     "Global:",
-    "  --json, --output json   Machine-readable output (default when piped)",
-    "  OUTPUT_FORMAT=json     Same as --json",
+    "  --pretty, -p           Human-readable text output (default is JSON)",
     "  --help, -h             Show help",
-    "",
-    "Agent DX:",
-    "  fide schema <surface>  Introspect command schemas (--help --json for per-command)",
     ].join("\n");
 }
 
@@ -32,6 +29,11 @@ export async function runCli(argv: string[]): Promise<number> {
   if (group === "schema") {
     const { runSchemaCommand } = await import("./commands/schema/index.js");
     return runSchemaCommand(command, rest);
+  }
+
+  if (group === "docs") {
+    const { runDocsCommand } = await import("./commands/docs.js");
+    return runDocsCommand([command, ...rest].filter((value): value is string => Boolean(value)));
   }
 
   switch (group) {

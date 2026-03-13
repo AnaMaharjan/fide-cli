@@ -17,7 +17,7 @@ export async function runGraphRoot(args: string[]): Promise<number> {
     if (shouldUseJsonOutput(flags)) {
       printJson(COMMAND_SCHEMAS["graph.root"]);
     } else {
-      console.log("Usage: fide graph root --in <input> [--format <json|jsonl|fsd>] [--json]");
+      console.log("Usage: fide graph root --in <input> [--format <json|jsonl|fsd>] [--pretty]");
     }
     return 0;
   }

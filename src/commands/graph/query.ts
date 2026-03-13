@@ -5,7 +5,7 @@ import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 function queryHelp(): string {
   return [
     "Usage:",
-    "  fide graph query --sql \"<query>\" [--json]",
+    "  fide graph query --sql \"<query>\" [--allow-write] [--pretty]",
     "",
     "Notes:",
     "  - direct SQL execution is disabled in this CLI",

@@ -9,8 +9,8 @@ import { resolveGraphTarget } from "../../util/graph-target.js";
 function initHelp(): string {
   return [
     "Usage:",
-    "  fide graph init [--target <key-or-path>] [--dir <path>] [--json]",
-    "  fide graph init --target <postgres-key> --dangerously-drop --yes [--json]",
+    "  fide graph init [--target <key-or-path>] [--dir <path>] [--pretty]",
+    "  fide graph init --target <postgres-key> --dangerously-drop --yes [--pretty]",
   ].join("\n");
 }
 

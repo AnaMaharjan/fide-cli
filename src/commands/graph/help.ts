@@ -1,16 +1,16 @@
 export function graphCommandHelp(): string {
   return [
     "Usage:",
-    "  fide graph init [--target <key-or-path>] [--dir <path>] [--json]",
-    "  fide graph init --target <postgres-key> --dangerously-drop --yes [--json]",
-    "  fide graph add [--target <key-or-path>] '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
-    "  fide graph add [--target <key-or-path>] --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
-    "  fide graph add [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--json] [--draft]",
-    "  fide graph validate --in <input> [--format <json|jsonl|fsd>] [--json]",
-    "  fide graph root --in <input> [--format <json|jsonl|fsd>] [--json]",
+    "  fide graph init [--target <key-or-path>] [--dir <path>] [--pretty|-p]",
+    "  fide graph init --target <postgres-key> --dangerously-drop --yes [--pretty|-p]",
+    "  fide graph add [--target <key-or-path>] '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
+    "  fide graph add [--target <key-or-path>] --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
+    "  fide graph add [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
+    "  fide graph validate --in <input> [--format <json|jsonl|fsd>] [--pretty|-p]",
+    "  fide graph root --in <input> [--format <json|jsonl|fsd>] [--pretty|-p]",
     "  fide graph status [--target <key-or-path>]",
-    "  fide graph query --sql \"<query>\" [--json] [--allow-write]",
-    "  fide graph defs [--entity <EntityType>] [--json]",
+    "  fide graph query --sql \"<query>\" [--allow-write] [--pretty|-p]",
+    "  fide graph defs [--entity <EntityType>]",
     "",
     "Notes:",
     "  - Normalization is ON by default for `graph add`.",
@@ -25,6 +25,6 @@ export function graphCommandHelp(): string {
     "  - `--stdin`/`--in` can auto-detect json/jsonl/fsd, or use --format to force.",
     "  - `validate`/`root` accept statement-doc inputs and json/jsonl batches.",
     "  - `status` reports whether the target directory has a .fide folder.",
-    "  - `defs` returns compact graph statement/entity guidance for agents.",
+    "  - `defs` returns compact graph statement/entity guidance for agents and defaults to JSON output.",
   ].join("\n");
 }

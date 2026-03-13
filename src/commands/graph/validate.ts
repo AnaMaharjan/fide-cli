@@ -17,7 +17,7 @@ export async function runGraphValidate(args: string[]): Promise<number> {
     if (shouldUseJsonOutput(flags)) {
       printJson(COMMAND_SCHEMAS["graph.validate"]);
     } else {
-      console.log("Usage: fide graph validate --in <input> [--format <json|jsonl|fsd>] [--json] [--fields <mask>]");
+      console.log("Usage: fide graph validate --in <input> [--format <json|jsonl|fsd>] [--fields <mask>] [--pretty]");
     }
     return 0;
   }

@@ -1,5 +1,5 @@
 import { FIDE_ENTITY_TYPES, type FideEntityTypeName } from "@chris-test/graph";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
 import { printJson } from "../../util/io.js";
 import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 
@@ -12,7 +12,7 @@ type EntitySummary = {
   standardFit: string;
   standards: readonly string[];
   allowedReferenceTypes: string[];
-  docsPath: string;
+  path: string;
 };
 
 function toSlug(value: string): string {
@@ -47,33 +47,28 @@ function buildEntitySummary(name: FideEntityTypeName): EntitySummary {
     standardFit: spec.standardFit,
     standards: spec.standards,
     allowedReferenceTypes: allowedReferenceTypesFor(name),
-    docsPath: `/vocabulary/definitions/${toSlug(name)}`,
+    path: `/vocabulary/definitions/${toSlug(name)}`,
   };
 }
 
 function defsHelp(): string {
   return [
     "Usage:",
-    "  fide graph defs [--entity <EntityType>] [--json]",
-    "  fide graph defs <EntityType> [--json]",
+    "  fide graph defs [--entity <EntityType>]",
+    "  fide graph defs <EntityType>",
     "",
     "Examples:",
-    "  fide graph defs --json",
-    "  fide graph defs --entity NetworkResource --json",
-    "  fide graph defs Person --json",
+    "  fide graph defs",
+    "  fide graph defs --entity NetworkResource",
+    "  fide graph defs Person",
   ].join("\n");
 }
 
 export async function runGraphDefs(args: string[] = []): Promise<number> {
   const { flags, positionals } = parseArgs(args);
-  const useJson = shouldUseJsonOutput(flags);
 
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    if (useJson) {
-      printJson(COMMAND_SCHEMAS["graph.defs"]);
-    } else {
-      console.log(defsHelp());
-    }
+    console.log(defsHelp());
     return 0;
   }
 
@@ -89,12 +84,7 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
         error: `Unknown entity type: ${requestedEntityRaw}`,
         validEntityTypes: entityNames,
       };
-      if (useJson) {
-        printJson(payload);
-      } else {
-        console.error(payload.error);
-        console.error(`Valid entity types: ${entityNames.join(", ")}`);
-      }
+      printJson(payload);
       return 1;
     }
 
@@ -102,6 +92,9 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
       ok: true,
       command: "fide graph defs",
       scope: "graph-defs.v1",
+      next: {
+        docsCommand: "fide docs <path>",
+      },
       layers: {
         fideId: "/fide-id",
         vocabulary: "/vocabulary",
@@ -112,26 +105,22 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
         {
           id: "fcp.predicate.concept-network-resource",
           requirement: "Predicate must use entityType=Concept and referenceType=NetworkResource.",
-          docsPath: "/fcp/specification/statements",
+          path: "/fcp/specification/statements",
         },
         {
           id: "fcp.predicate.disallow-schema-identifier",
           requirement: "Predicate referenceIdentifier must not be schema:identifier.",
-          docsPath: "/fcp/specification/statements",
+          path: "/fcp/specification/statements",
         },
         {
           id: "fcp.predicate.disallow-schema-sameAs",
           requirement: "Predicate referenceIdentifier must not be schema:sameAs; use owl:sameAs.",
-          docsPath: "/fcp/specification/statements",
+          path: "/fcp/specification/statements",
         },
       ],
     };
 
-    if (useJson) {
-      printJson(payload);
-    } else {
-      console.log(JSON.stringify(payload, null, 2));
-    }
+    printJson(payload);
     return 0;
   }
 
@@ -139,6 +128,9 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
     ok: true,
     command: "fide graph defs",
     scope: "graph-defs.v1",
+    next: {
+      docsCommand: "fide docs <path>",
+    },
     layers: {
       fideId: "/fide-id",
       vocabulary: "/vocabulary",
@@ -148,26 +140,22 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
       {
         id: "fcp.predicate.concept-network-resource",
         requirement: "Predicate must use entityType=Concept and referenceType=NetworkResource.",
-        docsPath: "/fcp/specification/statements",
+        path: "/fcp/specification/statements",
       },
       {
         id: "fcp.predicate.disallow-schema-identifier",
         requirement: "Predicate referenceIdentifier must not be schema:identifier.",
-        docsPath: "/fcp/specification/statements",
+        path: "/fcp/specification/statements",
       },
       {
         id: "fcp.predicate.disallow-schema-sameAs",
         requirement: "Predicate referenceIdentifier must not be schema:sameAs; use owl:sameAs.",
-        docsPath: "/fcp/specification/statements",
+        path: "/fcp/specification/statements",
       },
     ],
     entities,
   };
 
-  if (useJson) {
-    printJson(payload);
-  } else {
-    console.log(JSON.stringify(payload, null, 2));
-  }
+  printJson(payload);
   return 0;
 }
