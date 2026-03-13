@@ -38,7 +38,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.query": {
     command: "fide graph query",
     params: [
-      { name: "target", type: "string", required: false, description: "Configured graph target key or jsonl directory path" },
+      { name: "target", type: "string", required: false, description: "Configured sqlite or postgres target key" },
       { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
       { name: "file", type: "string", required: false, description: "Read SQL from a file" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },

@@ -25,7 +25,7 @@ function queryHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Configured graph target key or jsonl directory path",
+          "  --target <key>           Configured sqlite or postgres target key",
           "  --file <query.sql>       Read SQL from a file",
           "  --stdin                  Read SQL from stdin",
           "  --allow-write            Allow write SQL",

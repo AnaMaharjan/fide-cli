@@ -44,22 +44,22 @@ function runCapture(command, args) {
 
 function postprocessDocs() {
   const docsDir = resolve(PACKAGE_ROOT, "docs");
-  const oldGraphPath = resolve(docsDir, "graph-command.mdx");
-  const newGraphPath = resolve(docsDir, "graph.mdx");
+  const oldTextPath = resolve(docsDir, "text.mdx");
+  const newCliPath = resolve(docsDir, "fide.mdx");
   const indexPath = resolve(docsDir, "index.mdx");
   const metaPath = resolve(docsDir, "meta.json");
 
-  if (existsSync(oldGraphPath)) {
-    renameSync(oldGraphPath, newGraphPath);
+  if (existsSync(oldTextPath)) {
+    renameSync(oldTextPath, newCliPath);
   }
 
   if (existsSync(indexPath)) {
-    const content = readFileSync(indexPath, "utf8").replaceAll("./graph-command", "./graph");
+    const content = readFileSync(indexPath, "utf8").replaceAll("./text", "./fide");
     writeFileSync(indexPath, content);
   }
 
   if (existsSync(metaPath)) {
-    const content = readFileSync(metaPath, "utf8").replaceAll('"graph-command"', '"graph"');
+    const content = readFileSync(metaPath, "utf8").replaceAll('"text"', '"fide"');
     writeFileSync(metaPath, content);
   }
 }
