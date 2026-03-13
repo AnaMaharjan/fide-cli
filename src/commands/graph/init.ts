@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { pgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { printJson } from "../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 import { resolveGraphTarget } from "../../util/graph-target.js";
 
 function initHelp(): string {
@@ -25,11 +24,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
   const parsed = parseArgs(args);
   const flags = parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    if (shouldUseJsonOutput(flags)) {
-      printJson(COMMAND_SCHEMAS["graph.init"]);
-    } else {
-      console.log(initHelp());
-    }
+    console.log(initHelp());
     return 0;
   }
 

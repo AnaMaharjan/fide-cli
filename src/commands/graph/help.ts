@@ -6,8 +6,7 @@ export function graphCommandHelp(): string {
     "  fide graph add [--target <key-or-path>] '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
     "  fide graph add [--target <key-or-path>] --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
     "  fide graph add [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
-    "  fide graph validate --in <input> [--format <json|jsonl|fsd>] [--pretty|-p]",
-    "  fide graph root --in <input> [--format <json|jsonl|fsd>] [--pretty|-p]",
+    "  fide graph check --in <input> [--format <json|jsonl|fsd>] [--fields <mask>] [--pretty|-p]",
     "  fide graph status [--target <key-or-path>]",
     "  fide graph query --sql \"<query>\" [--allow-write] [--pretty|-p]",
     "  fide graph defs [--entity <EntityType>]",
@@ -23,7 +22,7 @@ export function graphCommandHelp(): string {
     "  - `--draft` writes a statement-doc markdown file to .fide/statement-drafts/YYYY/MM/DD/<root>.md (local targets only).",
     "  - `graph add` accepts inline JSON (default), `--in`, or `--stdin`.",
     "  - `--stdin`/`--in` can auto-detect json/jsonl/fsd, or use --format to force.",
-    "  - `validate`/`root` accept statement-doc inputs and json/jsonl batches.",
+    "  - `check` accepts statement-doc inputs and json/jsonl batches, then returns statementCount and root.",
     "  - `status` reports whether the target directory has a .fide folder.",
     "  - `defs` returns compact graph statement/entity guidance for agents and defaults to JSON output.",
   ].join("\n");

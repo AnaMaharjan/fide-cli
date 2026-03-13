@@ -8,7 +8,7 @@ function helpText(): string {
     "  fide schema [surface]",
     "",
     "Groups:",
-    "  graph       init | add | validate | root | query | status | defs",
+    "  graph       init | add | check | query | status | defs",
     "",
     "Global:",
     "  --pretty, -p           Human-readable text output (default is JSON)",

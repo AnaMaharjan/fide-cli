@@ -60,8 +60,8 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       key: "string?",
     },
   },
-  "graph.validate": {
-    command: "fide graph validate",
+  "graph.check": {
+    command: "fide graph check",
     params: [
       { name: "in", type: "string", required: true, description: "Input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -69,15 +69,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,statementCount)" },
     ],
     output: { ok: "boolean", statementCount: "number", root: "string" },
-  },
-  "graph.root": {
-    command: "fide graph root",
-    params: [
-      { name: "in", type: "string", required: true, description: "Input file path" },
-      { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: { root: "string" },
   },
   "graph.status": {
     command: "fide graph status",

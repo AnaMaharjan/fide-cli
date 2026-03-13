@@ -5,7 +5,6 @@ import { ingestStatements, pgClient } from "@chris-test/db";
 import { buildStatementsWithRoot, parseFideId, statementDoc, type StatementInput } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../util/schemas.js";
 import { resolveGraphTarget } from "../../util/graph-target.js";
 import { graphCommandHelp } from "./help.js";
 import {
@@ -156,11 +155,7 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
   const parsed = argsOrFlags instanceof Map ? { positionals: [], flags: argsOrFlags } : parseArgs(argsOrFlags);
   const flags = parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    if (shouldUseJsonOutput(flags)) {
-      printJson(COMMAND_SCHEMAS["graph.add"]);
-    } else {
-      console.log(graphCommandHelp());
-    }
+    console.log(graphCommandHelp());
     return 0;
   }
 
