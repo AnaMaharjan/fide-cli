@@ -1,5 +1,5 @@
 import { runGraphAdd } from "./add.js";
-import { runGraphCheck } from "./check.js";
+import { runGraphDraft } from "./draft.js";
 import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
 import { runInitCommand } from "./init.js";
@@ -19,12 +19,12 @@ export async function runGraphCommand(command: string | undefined, args: string[
     return runGraphAdd(args);
   }
 
-  if (command === "init") {
-    return runInitCommand(args);
+  if (command === "draft") {
+    return runGraphDraft(args);
   }
 
-  if (command === "check") {
-    return runGraphCheck(args);
+  if (command === "init") {
+    return runInitCommand(args);
   }
 
   if (command === "query") {

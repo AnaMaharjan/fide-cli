@@ -1,3 +1,4 @@
+import { extname } from "node:path";
 import { getStringFlag } from "../../util/args.js";
 
 export type StatementsInputFormat = "json" | "jsonl" | "fsd";
@@ -35,13 +36,24 @@ export function detectStatementsInputFormat(raw: string): StatementsInputFormat 
 }
 
 /**
- * Resolve required `--in` flag for commands that require a file input path.
+ * Infer statements input format from a file extension when possible.
+ */
+export function detectStatementsInputFormatFromFilePath(filePath: string): StatementsInputFormat | null {
+  const extension = extname(filePath).toLowerCase();
+  if (extension === ".json") return "json";
+  if (extension === ".jsonl") return "jsonl";
+  if (extension === ".fsd" || extension === ".md" || extension === ".mdx") return "fsd";
+  return null;
+}
+
+/**
+ * Resolve required `--file` flag for commands that require a file input path.
  */
 export function getRequiredBatchInputPath(flags: Map<string, string | boolean>): string | null {
-  const inPath = getStringFlag(flags, "in");
-  if (!inPath) {
-    console.error("Missing required flag: --in <input>");
+  const filePath = getStringFlag(flags, "file");
+  if (!filePath) {
+    console.error("Missing required flag: --file <input>");
     return null;
   }
-  return inPath;
+  return filePath;
 }

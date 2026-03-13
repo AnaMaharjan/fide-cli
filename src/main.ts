@@ -1,19 +1,37 @@
+import { renderHelp } from "./util/help.js";
+
 function helpText(): string {
   return [
     "fide CLI",
     "",
-    "Usage:",
-    "  fide <group> [command] [flags]",
-    "  fide docs <path>",
-    "  fide schema [surface]",
-    "",
-    "Groups:",
-    "  graph       init | add | check | query | status | defs",
-    "",
-    "Global:",
-    "  --pretty, -p           Human-readable text output (default is JSON)",
-    "  --help, -h             Show help",
-    ].join("\n");
+    renderHelp({
+      sections: [
+        {
+          title: "Usage",
+          items: [
+            "  fide <group> [command] [flags]",
+            "  fide docs <path>",
+            "  fide schema [surface]",
+          ],
+        },
+        {
+          title: "Commands",
+          items: [
+            "  graph    init | add | draft | query | status | defs",
+            "  docs     Resolve canonical docs pointers to local source content",
+            "  schema   Introspect command schemas",
+          ],
+        },
+        {
+          title: "Flags",
+          items: [
+            "  --pretty, -p   Human-readable text output (default is JSON)",
+            "  --help, -h     Show help",
+          ],
+        },
+      ],
+    }),
+  ].join("\n");
 }
 
 /**

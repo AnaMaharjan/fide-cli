@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hasFlag, parseArgs } from "../util/args.js";
+import { renderHelp } from "../util/help.js";
 import { printJson } from "../util/io.js";
+import { errorResponse, okResponse } from "../util/response.js";
 
 type DocsMapping = {
   prefix: string;
@@ -36,14 +38,23 @@ const DOCS_MAPPINGS: DocsMapping[] = [
 ];
 
 function docsHelp(): string {
-  return [
-    "Usage:",
-    "  fide docs <path>",
-    "",
-    "Examples:",
-    "  fide docs /fcp/specification/statements",
-    "  fide docs /vocabulary/definitions/network-resource",
-  ].join("\n");
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide docs <path>",
+        ],
+      },
+      {
+        title: "Examples",
+        items: [
+          "  fide docs /fcp/specification/statements",
+          "  fide docs /vocabulary/definitions/network-resource",
+        ],
+      },
+    ],
+  });
 }
 
 function parseFrontmatter(raw: string): { title: string | null; description: string | null; body: string } {
@@ -111,21 +122,20 @@ export async function runDocsCommand(args: string[]): Promise<number> {
 
   const doc = readDoc(docsPath);
   if (!doc) {
-    printJson({
-      ok: false,
-      error: `Unknown docs path: ${docsPath}`,
+    printJson(errorResponse("docs.v1", `Unknown docs path: ${docsPath}`, {
       supportedPrefixes: DOCS_MAPPINGS.map((entry) => entry.prefix),
-    });
+    }, { command: "fide docs" }));
     return 1;
   }
 
-  printJson({
-    ok: true,
+  printJson(okResponse("docs.v1", {
     path: doc.path,
     title: doc.title,
     description: doc.description,
     body: doc.body,
     filePath: doc.filePath,
-  });
+  }, {
+    command: "fide docs",
+  }));
   return 0;
 }

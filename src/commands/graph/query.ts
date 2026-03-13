@@ -1,15 +1,33 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 
 function queryHelp(): string {
-  return [
-    "Usage:",
-    "  fide graph query --sql \"<query>\" [--allow-write] [--pretty]",
-    "",
-    "Notes:",
-    "  - direct SQL execution is disabled in this CLI",
-    "  - use graph API query endpoints once apps/api graph routes are wired",
-  ].join("\n");
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide graph query --sql \"<query>\" [--allow-write]",
+        ],
+      },
+      {
+        title: "Flags",
+        items: [
+          "  --sql \"<query>\"         SQL query",
+          "  --allow-write            Allow write queries",
+          "  --pretty, -p             Human-readable output",
+        ],
+      },
+      {
+        title: "Notes",
+        items: [
+          "  - Direct SQL execution is currently disabled in this CLI.",
+          "  - Use graph API query endpoints once apps/api graph routes are wired.",
+        ],
+      },
+    ],
+  });
 }
 
 /**

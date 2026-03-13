@@ -1,7 +1,8 @@
 import { FIDE_ENTITY_TYPES, type FideEntityTypeName } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
+import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
-import { COMMAND_SCHEMAS } from "../../util/schemas.js";
+import { errorResponse, okResponse } from "../../util/response.js";
 
 type EntitySummary = {
   name: FideEntityTypeName;
@@ -52,16 +53,31 @@ function buildEntitySummary(name: FideEntityTypeName): EntitySummary {
 }
 
 function defsHelp(): string {
-  return [
-    "Usage:",
-    "  fide graph defs [--entity <EntityType>]",
-    "  fide graph defs <EntityType>",
-    "",
-    "Examples:",
-    "  fide graph defs",
-    "  fide graph defs --entity NetworkResource",
-    "  fide graph defs Person",
-  ].join("\n");
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide graph defs [--entity <EntityType>]",
+          "  fide graph defs <EntityType>",
+        ],
+      },
+      {
+        title: "Flags",
+        items: [
+          "  --entity <EntityType>    Optional entity type filter",
+        ],
+      },
+      {
+        title: "Examples",
+        items: [
+          "  fide graph defs",
+          "  fide graph defs --entity NetworkResource",
+          "  fide graph defs Person",
+        ],
+      },
+    ],
+  });
 }
 
 export async function runGraphDefs(args: string[] = []): Promise<number> {
@@ -79,22 +95,14 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
   if (requestedEntityRaw) {
     const parsed = parseEntityName(requestedEntityRaw);
     if (!parsed) {
-      const payload = {
-        ok: false,
-        error: `Unknown entity type: ${requestedEntityRaw}`,
+      const payload = errorResponse("graph-defs.v1", `Unknown entity type: ${requestedEntityRaw}`, {
         validEntityTypes: entityNames,
-      };
+      }, { command: "fide graph defs" });
       printJson(payload);
       return 1;
     }
 
-    const payload = {
-      ok: true,
-      command: "fide graph defs",
-      scope: "graph-defs.v1",
-      next: {
-        docsCommand: "fide docs <path>",
-      },
+    const payload = okResponse("graph-defs.v1", {
       layers: {
         fideId: "/fide-id",
         vocabulary: "/vocabulary",
@@ -118,19 +126,18 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
           path: "/fcp/specification/statements",
         },
       ],
-    };
+    }, {
+      command: "fide graph defs",
+      next: {
+        docsCommand: "fide docs <path>",
+      },
+    });
 
     printJson(payload);
     return 0;
   }
 
-  const payload = {
-    ok: true,
-    command: "fide graph defs",
-    scope: "graph-defs.v1",
-    next: {
-      docsCommand: "fide docs <path>",
-    },
+  const payload = okResponse("graph-defs.v1", {
     layers: {
       fideId: "/fide-id",
       vocabulary: "/vocabulary",
@@ -154,7 +161,12 @@ export async function runGraphDefs(args: string[] = []): Promise<number> {
       },
     ],
     entities,
-  };
+  }, {
+    command: "fide graph defs",
+    next: {
+      docsCommand: "fide docs <path>",
+    },
+  });
 
   printJson(payload);
   return 0;

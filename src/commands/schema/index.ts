@@ -1,23 +1,39 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
+import { errorResponse, okResponse } from "../../util/response.js";
 import { COMMAND_SCHEMAS, EXTENDED_SCHEMAS } from "../../util/schemas.js";
 
 const SCHEMAS = COMMAND_SCHEMAS;
 
 function schemaHelp(): string {
-  return [
-    "Usage:",
-    "  fide schema [surface] [--pretty|-p]",
-    "",
-    "Surfaces:",
-    ...Object.keys(SCHEMAS).map((k) => `  ${k}`),
-    "",
-    "Examples:",
-    "  fide schema",
-    "  fide schema graph.add",
-    "",
-    "Agent DX: JSON is the default output. Use --pretty or -p for human-readable output.",
-    ].join("\n");
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide schema [surface] [--pretty|-p]",
+        ],
+      },
+      {
+        title: "Examples",
+        items: [
+          "  fide schema",
+          "  fide schema graph.add",
+        ],
+      },
+      {
+        title: "Notes",
+        items: [
+          "  - JSON is the default output. Use --pretty or -p for human-readable output.",
+        ],
+      },
+      {
+        title: "Surfaces",
+        items: Object.keys(SCHEMAS).map((k) => `  ${k}`),
+      },
+    ],
+  });
 }
 
 /**
@@ -32,10 +48,19 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   }
   const { flags } = parseArgs(resolvedArgs);
   const useJson = shouldUseJsonOutput(flags);
+  const explicitHelp = resolvedSurface === "--help" || resolvedSurface === "-h" || resolvedSurface === "help"
+    || flags.has("help");
 
-  if (!resolvedSurface || resolvedSurface === "--help" || resolvedSurface === "-h" || resolvedSurface === "help") {
-    if (useJson) {
-      printJson({ surfaces: Object.keys(SCHEMAS), schemas: SCHEMAS });
+  if (!resolvedSurface || explicitHelp) {
+    if (explicitHelp) {
+      console.log(schemaHelp());
+    } else if (useJson) {
+      printJson(okResponse("schema-index.v1", {
+        surfaces: Object.keys(SCHEMAS),
+        schemas: SCHEMAS,
+      }, {
+        command: "fide schema",
+      }));
     } else {
       console.log(schemaHelp());
     }
@@ -45,7 +70,11 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   const schema = SCHEMAS[resolvedSurface];
   const extendedSchema = (EXTENDED_SCHEMAS as Record<string, unknown>)[resolvedSurface];
   if (!schema && !extendedSchema) {
-    const payload = { ok: false, error: `Unknown surface: ${resolvedSurface}`, surfaces: Object.keys(SCHEMAS) };
+    const payload = errorResponse("schema-index.v1", `Unknown surface: ${resolvedSurface}`, {
+      surfaces: Object.keys(SCHEMAS),
+    }, {
+      command: "fide schema",
+    });
     if (useJson) {
       printJson(payload);
     } else {
@@ -56,12 +85,21 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   }
 
   if (extendedSchema) {
-    printJson(extendedSchema);
+    printJson(okResponse("schema-surface.v1", {
+      surface: resolvedSurface,
+      schema: extendedSchema,
+    }, {
+      command: "fide schema",
+    }));
     return 0;
   }
 
   if (!schema) {
-    const payload = { ok: false, error: `Unknown surface: ${resolvedSurface}`, surfaces: Object.keys(SCHEMAS) };
+    const payload = errorResponse("schema-index.v1", `Unknown surface: ${resolvedSurface}`, {
+      surfaces: Object.keys(SCHEMAS),
+    }, {
+      command: "fide schema",
+    });
     if (useJson) {
       printJson(payload);
     } else {
@@ -72,7 +110,12 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   }
 
   if (useJson) {
-    printJson(schema);
+    printJson(okResponse("schema-surface.v1", {
+      surface: resolvedSurface,
+      schema,
+    }, {
+      command: "fide schema",
+    }));
   } else {
     console.log(JSON.stringify(schema, null, 2));
   }

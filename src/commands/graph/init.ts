@@ -2,15 +2,39 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { resolveGraphTarget } from "../../util/graph-target.js";
 
 function initHelp(): string {
-  return [
-    "Usage:",
-    "  fide graph init [--target <key-or-path>] [--dir <path>] [--pretty]",
-    "  fide graph init --target <postgres-key> --dangerously-drop --yes [--pretty]",
-  ].join("\n");
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide graph init [--target <key-or-path>] [--dir <path>]",
+          "  fide graph init --target <postgres-key> --dangerously-drop --yes",
+        ],
+      },
+      {
+        title: "Flags",
+        items: [
+          "  --target <key-or-path>   Configured graph target key or local directory path",
+          "  --dir <path>             Local-only target directory override",
+          "  --dangerously-drop       Postgres only: drop graph tables/types before re-initializing",
+          "  --yes                    Required with --dangerously-drop",
+          "  --pretty, -p             Human-readable output",
+        ],
+      },
+      {
+        title: "Notes",
+        items: [
+          "  - Local init creates only the .fide workspace root.",
+          "  - Postgres init bootstraps the configured graph schema and tables.",
+        ],
+      },
+    ],
+  });
 }
 
 function quoteIdent(value: string): string {
@@ -77,26 +101,26 @@ export async function runInitCommand(args: string[]): Promise<number> {
       $$;
     `);
 
-    await pgClient`
-      CREATE TABLE IF NOT EXISTS reference_identifiers (
+    await pgClient.unsafe(`
+      CREATE TABLE IF NOT EXISTS ${referenceIdentifiersQualified} (
         identifier_fingerprint CHAR(36) PRIMARY KEY,
         reference_identifier TEXT NOT NULL
       );
-    `;
+    `);
 
-    await pgClient`
-      CREATE TABLE IF NOT EXISTS statements (
+    await pgClient.unsafe(`
+      CREATE TABLE IF NOT EXISTS ${statementsQualified} (
         statement_fingerprint CHAR(36) PRIMARY KEY,
-        subject_type entity_type NOT NULL,
-        subject_reference_type entity_type NOT NULL,
+        subject_type ${entityTypeQualified} NOT NULL,
+        subject_reference_type ${entityTypeQualified} NOT NULL,
         subject_fingerprint CHAR(36) NOT NULL,
         predicate_fingerprint CHAR(36) NOT NULL,
-        object_type entity_type NOT NULL,
-        object_reference_type entity_type NOT NULL,
+        object_type ${entityTypeQualified} NOT NULL,
+        object_reference_type ${entityTypeQualified} NOT NULL,
         object_fingerprint CHAR(36) NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-    `;
+    `);
 
     await pgClient.unsafe(`
       DO $$

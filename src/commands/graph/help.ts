@@ -1,29 +1,34 @@
+import { renderHelp } from "../../util/help.js";
+
 export function graphCommandHelp(): string {
-  return [
-    "Usage:",
-    "  fide graph init [--target <key-or-path>] [--dir <path>] [--pretty|-p]",
-    "  fide graph init --target <postgres-key> --dangerously-drop --yes [--pretty|-p]",
-    "  fide graph add [--target <key-or-path>] '<json>' [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
-    "  fide graph add [--target <key-or-path>] --in <inputs> [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
-    "  fide graph add [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>] [--no-normalize] [--pretty|-p] [--draft]",
-    "  fide graph check --in <input> [--format <json|jsonl|fsd>] [--fields <mask>] [--pretty|-p]",
-    "  fide graph status [--target <key-or-path>]",
-    "  fide graph query --sql \"<query>\" [--allow-write] [--pretty|-p]",
-    "  fide graph defs [--entity <EntityType>]",
-    "",
-    "Notes:",
-    "  - Normalization is ON by default for `graph add`.",
-    "  - Without `--target`, graph commands default to the local current working directory unless `.fide/settings.json` provides a legacy graphDir override.",
-    "  - `--target <name>` resolves a configured graph target from `.fide/settings.json`.",
-    "  - `--target <path>` resolves a local .fide directory path.",
-    "  - Configured postgres targets resolve the database URL from `FIDE_GRAPH_DATABASE_URL` first, then target settings.",
-    "  - `graph init --target <postgres-key>` bootstraps required postgres graph tables (safe, no drops).",
-    "  - `--dangerously-drop --yes` resets postgres graph tables before re-initializing.",
-    "  - `--draft` writes a statement-doc markdown file to .fide/statement-drafts/YYYY/MM/DD/<root>.md (local targets only).",
-    "  - `graph add` accepts inline JSON (default), `--in`, or `--stdin`.",
-    "  - `--stdin`/`--in` can auto-detect json/jsonl/fsd, or use --format to force.",
-    "  - `check` accepts statement-doc inputs and json/jsonl batches, then returns statementCount and root.",
-    "  - `status` reports whether the target directory has a .fide folder.",
-    "  - `defs` returns compact graph statement/entity guidance for agents and defaults to JSON output.",
-  ].join("\n");
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide graph <command> [flags]",
+        ],
+      },
+      {
+        title: "Commands",
+        items: [
+          "  init     Initialize a local or postgres graph target",
+          "  add      Write canonical statements",
+          "  draft    Write a markdown statement draft",
+          "  status   Show target status",
+          "  query    Query graph data",
+          "  defs     Show graph statement/entity definitions",
+        ],
+      },
+      {
+        title: "Notes",
+        items: [
+          "  - `--target <name>` resolves a configured graph target from `.fide/settings.json`.",
+          "  - `--target <path>` resolves a local .fide directory path.",
+          "  - Without `--target`, graph commands default to the local current working directory.",
+          "  - Run `fide graph <command> -h` for command-specific help.",
+        ],
+      },
+    ],
+  });
 }

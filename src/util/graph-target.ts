@@ -71,6 +71,11 @@ function readSettings(root: string): FideSettings | null {
   return JSON.parse(raw) as FideSettings;
 }
 
+export function listConfiguredGraphTargetKeys(root: string = process.cwd()): string[] {
+  const settings = readSettings(root);
+  return Object.keys(settings?.graphTargets ?? {});
+}
+
 function isPathLikeTarget(value: string): boolean {
   return (
     value.startsWith("/") ||
