@@ -18,6 +18,7 @@ function helpText(): string {
         {
           title: "Commands",
           items: [
+            "  app      init",
             "  graph    init | run | add | draft | query | status | defs",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
@@ -59,6 +60,10 @@ export async function runCli(argv: string[]): Promise<number> {
     }
 
     switch (group) {
+      case "app": {
+        const { runAppCommand } = await import("./commands/app/index.js");
+        return await runAppCommand(command, rest);
+      }
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);

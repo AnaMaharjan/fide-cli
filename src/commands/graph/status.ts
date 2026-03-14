@@ -4,7 +4,7 @@ import { createPgClient } from "@chris-test/db";
 import { hasFlag, parseArgs } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
-import { listConfiguredGraphTargetKeys, resolveGraphTarget, type ResolvedGraphTarget } from "../../util/graph/target.js";
+import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, listConfiguredGraphTargetKeys, resolveGraphTarget, type ResolvedGraphTarget } from "../../util/graph/target.js";
 import { inspectSqliteGraph } from "../../util/graph/sqlite.js";
 import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 
@@ -68,7 +68,6 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           databaseUrlSource: graphTarget.databaseUrlSource,
           databaseUrlEnv: graphTarget.databaseUrlEnv,
           schema: graphTarget.schema,
-          statementsTable: graphTarget.statementsTable,
           recipe: graphTarget.recipe,
           lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
           lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
@@ -124,40 +123,40 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
             FROM information_schema.tables
             WHERE table_schema = ${graphTarget.schema}
               AND (
-                table_name = 'reference_identifiers'
-                OR table_name = ${graphTarget.statementsTable}
+                table_name = ${GRAPH_REFERENCE_IDENTIFIERS_TABLE}
+                OR table_name = ${GRAPH_STATEMENTS_TABLE}
               )
             ORDER BY table_name
           `
           : [];
         const presentTables = new Set(tableRows.map((row) => row.table_name));
 
-        const referenceIdentifierColumns = presentTables.has("reference_identifiers")
+        const referenceIdentifierColumns = presentTables.has(GRAPH_REFERENCE_IDENTIFIERS_TABLE)
           ? (await client<{ column_name: string }[]>`
             SELECT column_name
             FROM information_schema.columns
             WHERE table_schema = ${graphTarget.schema}
-              AND table_name = 'reference_identifiers'
+              AND table_name = ${GRAPH_REFERENCE_IDENTIFIERS_TABLE}
             ORDER BY ordinal_position
           `).map((row) => row.column_name)
           : [];
-        const statementsColumns = presentTables.has(graphTarget.statementsTable)
+        const statementsColumns = presentTables.has(GRAPH_STATEMENTS_TABLE)
           ? (await client<{ column_name: string }[]>`
             SELECT column_name
             FROM information_schema.columns
             WHERE table_schema = ${graphTarget.schema}
-              AND table_name = ${graphTarget.statementsTable}
+              AND table_name = ${GRAPH_STATEMENTS_TABLE}
             ORDER BY ordinal_position
           `).map((row) => row.column_name)
           : [];
-        const statementConstraintRows = presentTables.has(graphTarget.statementsTable)
+        const statementConstraintRows = presentTables.has(GRAPH_STATEMENTS_TABLE)
           ? await client<{ conname: string }[]>`
             SELECT c.conname
             FROM pg_constraint c
             INNER JOIN pg_class t ON c.conrelid = t.oid
             INNER JOIN pg_namespace n ON t.relnamespace = n.oid
             WHERE n.nspname = ${graphTarget.schema}
-              AND t.relname = ${graphTarget.statementsTable}
+              AND t.relname = ${GRAPH_STATEMENTS_TABLE}
               AND (
                 c.conname = 'chk_subject_protocol_self_sourced'
                 OR c.conname = 'chk_object_protocol_self_sourced'
@@ -170,19 +169,19 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
         const missing: string[] = [];
         if (!schemaExists) missing.push(`schema.${graphTarget.schema}`);
         if (!entityTypeExists) missing.push(`${graphTarget.schema}.entity_type`);
-        if (!presentTables.has("reference_identifiers")) {
-          missing.push(`${graphTarget.schema}.reference_identifiers`);
+        if (!presentTables.has(GRAPH_REFERENCE_IDENTIFIERS_TABLE)) {
+          missing.push(`${graphTarget.schema}.${GRAPH_REFERENCE_IDENTIFIERS_TABLE}`);
         }
-        if (!presentTables.has(graphTarget.statementsTable)) {
-          missing.push(`${graphTarget.schema}.${graphTarget.statementsTable}`);
+        if (!presentTables.has(GRAPH_STATEMENTS_TABLE)) {
+          missing.push(`${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}`);
         }
 
         const missingReferenceIdentifierColumns = expectedReferenceIdentifierColumns.filter((column) => !referenceIdentifierColumns.includes(column));
         const missingStatementsColumns = expectedStatementsColumns.filter((column) => !statementsColumns.includes(column));
         const missingStatementConstraints = expectedStatementConstraints.filter((name) => !presentStatementConstraints.has(name));
-        missing.push(...missingReferenceIdentifierColumns.map((column) => `${graphTarget.schema}.reference_identifiers.${column}`));
-        missing.push(...missingStatementsColumns.map((column) => `${graphTarget.schema}.${graphTarget.statementsTable}.${column}`));
-        missing.push(...missingStatementConstraints.map((name) => `${graphTarget.schema}.${graphTarget.statementsTable}.${name}`));
+        missing.push(...missingReferenceIdentifierColumns.map((column) => `${graphTarget.schema}.${GRAPH_REFERENCE_IDENTIFIERS_TABLE}.${column}`));
+        missing.push(...missingStatementsColumns.map((column) => `${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}.${column}`));
+        missing.push(...missingStatementConstraints.map((name) => `${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}.${name}`));
 
         return {
           ok: true,
@@ -198,7 +197,6 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           databaseUrlSource: graphTarget.databaseUrlSource,
           databaseUrlEnv: graphTarget.databaseUrlEnv,
           schema: graphTarget.schema,
-          statementsTable: graphTarget.statementsTable,
           recipe: graphTarget.recipe,
           lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
           lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
@@ -220,7 +218,6 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           databaseUrlSource: graphTarget.databaseUrlSource,
           databaseUrlEnv: graphTarget.databaseUrlEnv,
           schema: graphTarget.schema,
-          statementsTable: graphTarget.statementsTable,
           recipe: graphTarget.recipe,
           lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
           lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,

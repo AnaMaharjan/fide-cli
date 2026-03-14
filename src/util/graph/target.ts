@@ -4,6 +4,7 @@ import { getStringFlag } from "../args.js";
 
 export type FideSettings = {
   graphTargets?: Record<string, LocalGraphTargetSettings | PostgresGraphTargetSettings | SqliteGraphTargetSettings>;
+  appTargets?: Record<string, { type: "postgres"; connection?: string; schema: string }>;
 };
 
 export type GraphRecipeStep = {
@@ -12,6 +13,8 @@ export type GraphRecipeStep = {
 };
 
 export type GraphRecipe = GraphRecipeStep[];
+export const GRAPH_STATEMENTS_TABLE = "statements";
+export const GRAPH_REFERENCE_IDENTIFIERS_TABLE = "reference_identifiers";
 
 export type GraphRunState = {
   metadata?: {
@@ -69,7 +72,6 @@ export type ResolvedPostgresGraphTarget = {
   databaseUrlSource: "connection" | "connection-env" | null;
   databaseUrlEnv: string | null;
   schema: string;
-  statementsTable: string;
   recipe: GraphRecipe | null;
   runState: GraphRunState | null;
 };
@@ -265,7 +267,6 @@ function resolvePostgresTarget(
   }
   const connection = postgresTarget?.connection ?? null;
   const schema = postgresTarget.schema;
-  const statementsTable = "statements";
   const recipe = postgresTarget?.recipe ?? null;
   const runState = normalizeGraphRunState(postgresTarget?.metadata ? { metadata: postgresTarget.metadata } : null);
 
@@ -278,7 +279,6 @@ function resolvePostgresTarget(
       databaseUrlSource: "connection",
       databaseUrlEnv: null,
       schema,
-      statementsTable,
       recipe,
       runState,
     };
@@ -293,7 +293,6 @@ function resolvePostgresTarget(
       databaseUrlSource: "connection-env",
       databaseUrlEnv: connection,
       schema,
-      statementsTable,
       recipe,
       runState,
     };
@@ -307,7 +306,6 @@ function resolvePostgresTarget(
     databaseUrlSource: null,
     databaseUrlEnv: connection,
     schema,
-    statementsTable,
     recipe,
     runState,
   };

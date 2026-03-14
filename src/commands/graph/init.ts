@@ -5,7 +5,7 @@ import { pgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
-import { resolveGraphTarget, validateGraphSettings, type FideSettings, type GraphRecipe } from "../../util/graph/target.js";
+import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, resolveGraphTarget, validateGraphSettings, type FideSettings, type GraphRecipe } from "../../util/graph/target.js";
 import { ensureSqliteGraphSchema } from "../../util/graph/sqlite.js";
 import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 
@@ -177,9 +177,9 @@ export async function runInitCommand(args: string[]): Promise<number> {
 
     process.env.DATABASE_URL = target.databaseUrl;
     const schemaSql = quoteIdent(target.schema);
-    const statementsTableSql = quoteIdent(target.statementsTable);
+    const statementsTableSql = quoteIdent(GRAPH_STATEMENTS_TABLE);
     const statementsQualified = `${schemaSql}.${statementsTableSql}`;
-    const referenceIdentifiersQualified = `${schemaSql}."reference_identifiers"`;
+    const referenceIdentifiersQualified = `${schemaSql}.${quoteIdent(GRAPH_REFERENCE_IDENTIFIERS_TABLE)}`;
     const entityTypeQualified = `${schemaSql}."entity_type"`;
 
     if (dangerouslyDrop) {
@@ -239,7 +239,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
           INNER JOIN pg_namespace n ON t.relnamespace = n.oid
           WHERE c.conname = 'chk_subject_protocol_self_sourced'
             AND n.nspname = '${target.schema.replaceAll("'", "''")}'
-            AND t.relname = '${target.statementsTable.replaceAll("'", "''")}'
+            AND t.relname = '${GRAPH_STATEMENTS_TABLE.replaceAll("'", "''")}'
         ) THEN
           ALTER TABLE ${statementsQualified}
           ADD CONSTRAINT chk_subject_protocol_self_sourced CHECK (
@@ -261,7 +261,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
           INNER JOIN pg_namespace n ON t.relnamespace = n.oid
           WHERE c.conname = 'chk_object_protocol_self_sourced'
             AND n.nspname = '${target.schema.replaceAll("'", "''")}'
-            AND t.relname = '${target.statementsTable.replaceAll("'", "''")}'
+            AND t.relname = '${GRAPH_STATEMENTS_TABLE.replaceAll("'", "''")}'
         ) THEN
           ALTER TABLE ${statementsQualified}
           ADD CONSTRAINT chk_object_protocol_self_sourced CHECK (
@@ -278,14 +278,13 @@ export async function runInitCommand(args: string[]): Promise<number> {
       target: "postgres",
       key: target.key,
       schema: target.schema,
-      statementsTable: target.statementsTable,
       recipe: target.recipe,
       dropped: dangerouslyDrop,
     };
     if (shouldUseJsonOutput(flags)) {
       printJson(payload);
     } else {
-      console.log(`Initialized postgres graph target ${target.key ?? "<unnamed>"} at ${target.schema}.${target.statementsTable}`);
+      console.log(`Initialized postgres graph target ${target.key ?? "<unnamed>"} at ${target.schema}.${GRAPH_STATEMENTS_TABLE}`);
     }
     return 0;
   }

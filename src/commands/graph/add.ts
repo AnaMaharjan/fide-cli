@@ -6,7 +6,7 @@ import { parseFideId } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, writeUtf8 } from "../../util/io.js";
-import { resolveGraphTarget } from "../../util/graph/target.js";
+import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, resolveGraphTarget } from "../../util/graph/target.js";
 import { ensureSqliteGraphSchema, ingestStatementsToSqlite } from "../../util/graph/sqlite.js";
 import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { resolveStatementsBatch, ymdUtc } from "./shared.js";
@@ -63,12 +63,11 @@ async function ingestStatementsToConfiguredTable(
     objectReferenceIdentifier: string;
   }>,
   schema: string,
-  statementsTable: string,
 ): Promise<number> {
   const schemaSql = quoteIdent(schema);
-  const statementsTableSql = quoteIdent(statementsTable);
+  const statementsTableSql = quoteIdent(GRAPH_STATEMENTS_TABLE);
   const statementsQualified = `${schemaSql}.${statementsTableSql}`;
-  const referenceIdentifiersQualified = `${schemaSql}."reference_identifiers"`;
+  const referenceIdentifiersQualified = `${schemaSql}.${quoteIdent(GRAPH_REFERENCE_IDENTIFIERS_TABLE)}`;
 
   const referenceMap = new Map<string, string>();
   const statementMap = new Map<string, {
@@ -180,7 +179,6 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     const statementCount = await ingestStatementsToConfiguredTable(
       batch.statements,
       graphTarget.schema,
-      graphTarget.statementsTable,
     );
     const payload = {
       root: batch.root,
@@ -189,13 +187,12 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
       target: "postgres",
       key: graphTarget.key,
       schema: graphTarget.schema,
-      statementsTable: graphTarget.statementsTable,
     };
     if (shouldUseJsonOutput(flags)) {
       printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
     } else {
       console.log(
-        `Ingested ${statementCount} statements (root=${batch.root}) to postgres target ${graphTarget.key ?? "<unnamed>"} (${graphTarget.schema}.${graphTarget.statementsTable}).`,
+        `Ingested ${statementCount} statements (root=${batch.root}) to postgres target ${graphTarget.key ?? "<unnamed>"} (${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}).`,
       );
     }
     return 0;

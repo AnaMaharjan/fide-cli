@@ -5,7 +5,7 @@ import { createPgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson } from "../../util/io.js";
-import { resolveGraphTarget, validateGraphSettings, type FideSettings, type GraphRecipeStep, type ResolvedGraphTarget } from "../../util/graph/target.js";
+import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, resolveGraphTarget, validateGraphSettings, type FideSettings, type GraphRecipeStep, type ResolvedGraphTarget } from "../../util/graph/target.js";
 import {
   appendSqliteGraphFromResolvedStatements,
   ensureSqliteGraphSchema,
@@ -100,8 +100,7 @@ function sameGraphLocation(a: ResolvedGraphTarget, b: ResolvedGraphTarget): bool
   }
   if (a.type === "postgres" && b.type === "postgres") {
     return a.databaseUrl === b.databaseUrl
-      && a.schema === b.schema
-      && a.statementsTable === b.statementsTable;
+      && a.schema === b.schema;
   }
   return false;
 }
@@ -147,14 +146,13 @@ async function queryPostgresResolvedStatements(
 async function clearPostgresGraph(
   databaseUrl: string,
   schema: string,
-  statementsTable: string,
 ): Promise<void> {
   const client = createPgClient(databaseUrl);
   try {
     await client.begin(async (tx) => {
       await tx.unsafe(`SET LOCAL search_path TO ${quoteIdent(schema)};`);
-      await tx.unsafe(`DELETE FROM ${quoteIdent(statementsTable)};`);
-      await tx.unsafe(`DELETE FROM "reference_identifiers";`);
+      await tx.unsafe(`DELETE FROM ${quoteIdent(GRAPH_STATEMENTS_TABLE)};`);
+      await tx.unsafe(`DELETE FROM ${quoteIdent(GRAPH_REFERENCE_IDENTIFIERS_TABLE)};`);
     });
   } finally {
     await client.end({ timeout: 1 });
@@ -164,7 +162,6 @@ async function clearPostgresGraph(
 async function appendResolvedStatementsToPostgres(
   databaseUrl: string,
   schema: string,
-  statementsTable: string,
   statements: ResolvedStatementRow[],
 ): Promise<number> {
   const client = createPgClient(databaseUrl);
@@ -173,25 +170,25 @@ async function appendResolvedStatementsToPostgres(
       await tx.unsafe(`SET LOCAL search_path TO ${quoteIdent(schema)};`);
       for (const statement of statements) {
         await tx.unsafe(
-          `INSERT INTO "reference_identifiers" (identifier_fingerprint, reference_identifier)
+          `INSERT INTO ${quoteIdent(GRAPH_REFERENCE_IDENTIFIERS_TABLE)} (identifier_fingerprint, reference_identifier)
            VALUES ($1, $2)
            ON CONFLICT (identifier_fingerprint) DO NOTHING`,
           [statement.subject_fingerprint, statement.subject_reference_identifier],
         );
         await tx.unsafe(
-          `INSERT INTO "reference_identifiers" (identifier_fingerprint, reference_identifier)
+          `INSERT INTO ${quoteIdent(GRAPH_REFERENCE_IDENTIFIERS_TABLE)} (identifier_fingerprint, reference_identifier)
            VALUES ($1, $2)
            ON CONFLICT (identifier_fingerprint) DO NOTHING`,
           [statement.predicate_fingerprint, statement.predicate_reference_identifier],
         );
         await tx.unsafe(
-          `INSERT INTO "reference_identifiers" (identifier_fingerprint, reference_identifier)
+          `INSERT INTO ${quoteIdent(GRAPH_REFERENCE_IDENTIFIERS_TABLE)} (identifier_fingerprint, reference_identifier)
            VALUES ($1, $2)
            ON CONFLICT (identifier_fingerprint) DO NOTHING`,
           [statement.object_fingerprint, statement.object_reference_identifier],
         );
         await tx.unsafe(
-          `INSERT INTO ${quoteIdent(statementsTable)} (
+          `INSERT INTO ${quoteIdent(GRAPH_STATEMENTS_TABLE)} (
             statement_fingerprint,
             subject_type,
             subject_reference_type,
@@ -279,7 +276,7 @@ export async function runGraphRun(args: string[]): Promise<number> {
     if (!target.databaseUrl) {
       throw new Error(`Missing postgres connection for graph target "${target.key ?? "unknown"}".`);
     }
-    await clearPostgresGraph(target.databaseUrl, target.schema, target.statementsTable);
+    await clearPostgresGraph(target.databaseUrl, target.schema);
   } else {
     await ensureSqliteGraphSchema(target.file, { drop: false });
     await replaceSqliteGraphFromResolvedStatements(target.file, []);
@@ -300,7 +297,7 @@ export async function runGraphRun(args: string[]): Promise<number> {
       if (!target.databaseUrl) {
         throw new Error(`Missing postgres connection for graph target "${target.key ?? "unknown"}".`);
       }
-      await appendResolvedStatementsToPostgres(target.databaseUrl, target.schema, target.statementsTable, uniqueRows);
+      await appendResolvedStatementsToPostgres(target.databaseUrl, target.schema, uniqueRows);
     } else {
       await appendSqliteGraphFromResolvedStatements(target.file, uniqueRows);
     }
@@ -315,7 +312,6 @@ export async function runGraphRun(args: string[]): Promise<number> {
       target: "postgres",
       key: target.key,
       schema: target.schema,
-      statementsTable: target.statementsTable,
       statementCount: totalStatementCount,
       steps,
       lastRunAt,

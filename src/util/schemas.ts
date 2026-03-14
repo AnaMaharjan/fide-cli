@@ -7,6 +7,25 @@ import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 const FIDE_ENTITY_TYPE_ENUM = Object.keys(FIDE_ENTITY_TYPES).sort();
 
 export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ name: string; type: string; required?: boolean; description?: string; enum?: string[] }>; output: Record<string, string> }> = {
+  "app.init": {
+    command: "fide app init",
+    params: [
+      { name: "target", type: "string", required: false, description: "Existing app target key or new target name" },
+      { name: "connection", type: "string", required: false, description: "Connection value or env var name for the postgres app target" },
+      { name: "schema", type: "string", required: false, description: "App schema name (default: fide_graph_app)" },
+      { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved app schema before re-initializing (requires --yes)" },
+      { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      ok: "boolean",
+      target: "string",
+      key: "string?",
+      schema: "string",
+      created: "string[]",
+      dropped: "boolean",
+    },
+  },
   "graph.init": {
     command: "fide graph init",
     params: [
@@ -28,7 +47,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       key: "string?",
       file: "string?",
       schema: "string?",
-      statementsTable: "string?",
       recipe: "array<{ from: string, sql: string }>?",
       dropped: "boolean?",
       gitignorePath: "string?",
@@ -52,7 +70,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       key: "string?",
       file: "string?",
       schema: "string?",
-      statementsTable: "string?",
       rowCount: "number?",
       rows: "array?",
       warnings: "string[]?",
@@ -72,7 +89,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       key: "string?",
       file: "string?",
       schema: "string?",
-      statementsTable: "string?",
       statementCount: "number",
       steps: "array<{ from: string, statementCount: number }>",
       warnings: "string[]?",
@@ -141,7 +157,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       databaseUrlEnv: "string?",
       reachable: "boolean?",
       schema: "string?",
-      statementsTable: "string?",
       recipe: "array<{ from: string, sql: string }>?",
       lastRunAt: "string?",
       lastRunStatementsAdded: "number?",

@@ -120,7 +120,6 @@ export async function runGraphQuery(args: string[]): Promise<number> {
         target: "postgres",
         key: graphTarget.key,
         schema: graphTarget.schema,
-        statementsTable: graphTarget.statementsTable,
         rowCount: rows.length,
         rows,
       };
