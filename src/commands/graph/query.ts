@@ -2,9 +2,9 @@ import { createPgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, readUtf8 } from "../../util/io.js";
-import { resolveGraphTarget } from "../../util/graph-target.js";
-import { executeSqliteQuery } from "../../util/sqlite.js";
-import { getSqliteWarnings } from "../../util/sqlite-warning.js";
+import { resolveGraphTarget } from "../../util/graph/target.js";
+import { executeSqliteQuery } from "../../util/graph/sqlite.js";
+import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { readStdinUtf8 } from "./shared.js";
 
 function quoteIdent(value: string): string {
@@ -99,8 +99,8 @@ export async function runGraphQuery(args: string[]): Promise<number> {
   }
 
   const graphTarget = resolveGraphTarget(flags);
-  if (graphTarget.type === "jsonl") {
-    throw new Error("`graph query` does not support jsonl targets. Use a configured sqlite or postgres target.");
+  if (graphTarget.type === "local") {
+    throw new Error("`graph query` does not support local targets. Use a configured sqlite or postgres target.");
   }
 
   if (graphTarget.type === "postgres") {

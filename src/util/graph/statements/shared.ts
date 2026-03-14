@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import { getStringFlag } from "../../util/args.js";
+import { getStringFlag } from "../../args.js";
 
 export type StatementsInputFormat = "json" | "jsonl" | "fsd";
 

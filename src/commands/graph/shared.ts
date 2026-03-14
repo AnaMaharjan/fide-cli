@@ -4,8 +4,8 @@ import {
   detectStatementsInputFormat,
   detectStatementsInputFormatFromFilePath,
   parseStatementsInputFormat,
-} from "../../util/statements/shared.js";
-import { parseStatementInputsByFormat } from "../../util/statements/targets/parse-inputs.js";
+} from "../../util/graph/statements/shared.js";
+import { parseStatementInputsByFormat } from "../../util/graph/statements/targets/parse-inputs.js";
 import { buildStatementsWithRoot, type StatementInput } from "@chris-test/graph";
 
 /**

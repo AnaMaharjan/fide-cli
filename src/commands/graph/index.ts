@@ -4,6 +4,7 @@ import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
 import { runInitCommand } from "./init.js";
 import { runGraphQuery } from "./query.js";
+import { runGraphRun } from "./run.js";
 import { runGraphStatus } from "./status.js";
 
 /**
@@ -29,6 +30,10 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "query") {
     return runGraphQuery(args);
+  }
+
+  if (command === "run") {
+    return runGraphRun(args);
   }
 
   if (command === "status") {

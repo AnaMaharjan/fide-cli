@@ -1,14 +1,14 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { ingestStatements, pgClient } from "@chris-test/db";
+import { pgClient } from "@chris-test/db";
 import { parseFideId } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, writeUtf8 } from "../../util/io.js";
-import { resolveGraphTarget } from "../../util/graph-target.js";
-import { ensureSqliteGraphSchema, ingestStatementsToSqlite } from "../../util/sqlite.js";
-import { getSqliteWarnings } from "../../util/sqlite-warning.js";
+import { resolveGraphTarget } from "../../util/graph/target.js";
+import { ensureSqliteGraphSchema, ingestStatementsToSqlite } from "../../util/graph/sqlite.js";
+import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { resolveStatementsBatch, ymdUtc } from "./shared.js";
 
 function addHelp(): string {
@@ -25,7 +25,7 @@ function addHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Configured graph target key or jsonl directory path",
+          "  --target <key-or-path>   Configured graph target key or local workspace path",
           "  --file <inputs>          Read statement inputs from a file",
           "  --stdin                  Read statement inputs from stdin",
           "  --format <json|jsonl|fsd>  Force input format",
@@ -111,8 +111,7 @@ async function ingestStatementsToConfiguredTable(
     await pgClient.unsafe(
       `INSERT INTO ${referenceIdentifiersQualified} (identifier_fingerprint, reference_identifier)
        VALUES ($1, $2)
-       ON CONFLICT (identifier_fingerprint)
-       DO UPDATE SET reference_identifier = EXCLUDED.reference_identifier`,
+       ON CONFLICT (identifier_fingerprint) DO NOTHING`,
       [identifierFingerprint, referenceIdentifier],
     );
   }
@@ -178,9 +177,11 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     }
 
     process.env.DATABASE_URL = graphTarget.databaseUrl;
-    const statementCount = graphTarget.schema === "fide_graph" && graphTarget.statementsTable === "statements"
-      ? (await ingestStatements({ statements: batch.statements })).statementCount
-      : await ingestStatementsToConfiguredTable(batch.statements, graphTarget.schema, graphTarget.statementsTable);
+    const statementCount = await ingestStatementsToConfiguredTable(
+      batch.statements,
+      graphTarget.schema,
+      graphTarget.statementsTable,
+    );
     const payload = {
       root: batch.root,
       statementCount,
@@ -247,6 +248,7 @@ export async function runGraphAdd(argsOrFlags: string[] | Map<string, string | b
     statementCount: batch.statements.length,
     mode: "batch",
     outPath,
+    warnings: getLocalWorkspaceWarnings(root, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
     printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));

@@ -12,7 +12,8 @@ export function graphCommandHelp(): string {
       {
         title: "Commands",
         items: [
-          "  init     Initialize a jsonl, postgres, or sqlite graph target",
+          "  init     Initialize a local, postgres, or sqlite graph target",
+          "  run      Execute a configured graph recipe into a target graph",
           "  add      Write canonical statements",
           "  draft    Write a markdown statement draft",
           "  status   Show target status",
@@ -24,9 +25,9 @@ export function graphCommandHelp(): string {
         title: "Notes",
         items: [
           "  - `--target <name>` resolves a configured graph target from `.fide/settings.json`.",
-          "  - `--target <path>` resolves a jsonl .fide directory path.",
-          "  - Without `--target`, graph commands default to the current working directory as a jsonl target.",
-          "  - Supported configured graph target types: jsonl, postgres, sqlite.",
+          "  - `--target <path>` resolves a local .fide workspace path.",
+          "  - Without `--target`, graph commands default to the configured local target or the current working directory.",
+          "  - Supported configured graph target types: local, postgres, sqlite.",
           "  - Run `fide graph <command> -h` for command-specific help.",
         ],
       },

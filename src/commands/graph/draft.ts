@@ -5,7 +5,8 @@ import { parseFideId, statementDoc, type StatementInput } from "@chris-test/grap
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, writeUtf8 } from "../../util/io.js";
-import { resolveGraphTarget } from "../../util/graph-target.js";
+import { resolveGraphTarget } from "../../util/graph/target.js";
+import { getLocalWorkspaceWarnings } from "../../util/graph/local-disk-warning.js";
 import { resolveStatementsBatch, ymdUtc } from "./shared.js";
 
 function draftHelp(): string {
@@ -22,7 +23,7 @@ function draftHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Configured graph target key or jsonl directory path",
+          "  --target <key-or-path>   Configured graph target key or local workspace path",
           "  --file <inputs>          Read statement inputs from a file",
           "  --stdin                  Read statement inputs from stdin",
           "  --format <json|jsonl|fsd>  Force input format",
@@ -56,8 +57,8 @@ export async function runGraphDraft(args: string[]): Promise<number> {
   }
 
   const graphTarget = resolveGraphTarget(flags);
-  if (graphTarget.type !== "jsonl") {
-    throw new Error("`graph draft` is only supported for jsonl graph targets.");
+  if (graphTarget.type !== "local") {
+    throw new Error("`graph draft` is only supported for local graph targets.");
   }
 
   const fideDir = resolve(graphTarget.root, ".fide");
@@ -101,6 +102,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     statementCount: batch.statements.length,
     mode: "draft",
     outPath,
+    warnings: getLocalWorkspaceWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
     printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));

@@ -18,7 +18,7 @@ function helpText(): string {
         {
           title: "Commands",
           items: [
-            "  graph    init | add | draft | query | status | defs",
+            "  graph    init | run | add | draft | query | status | defs",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
           ],

@@ -24,6 +24,21 @@ type SqliteQueryResult = {
   rows: unknown[];
 };
 
+export type ResolvedStatementRow = {
+  statement_fingerprint: string;
+  subject_type: string;
+  subject_reference_type: string;
+  subject_fingerprint: string;
+  predicate_fingerprint: string;
+  object_type: string;
+  object_reference_type: string;
+  object_fingerprint: string;
+  created_at: string;
+  subject_reference_identifier: string;
+  predicate_reference_identifier: string;
+  object_reference_identifier: string;
+};
+
 const EXPECTED_REFERENCE_IDENTIFIER_COLUMNS = [
   "identifier_fingerprint",
   "reference_identifier",
@@ -74,6 +89,38 @@ export async function executeSqliteQuery(file: string, sql: string, options?: { 
     return {
       rows: db.prepare(sql).all() as unknown[],
     };
+  } finally {
+    db.close();
+  }
+}
+
+export async function querySqliteResolvedStatements(file: string, sql: string): Promise<ResolvedStatementRow[]> {
+  const { DatabaseSync } = await loadSqliteModule();
+  const db = new DatabaseSync(file);
+  try {
+    return db.prepare(`
+      WITH selected AS (${sql})
+      SELECT
+        s.statement_fingerprint,
+        s.subject_type,
+        s.subject_reference_type,
+        s.subject_fingerprint,
+        s.predicate_fingerprint,
+        s.object_type,
+        s.object_reference_type,
+        s.object_fingerprint,
+        s.created_at,
+        subj.reference_identifier AS subject_reference_identifier,
+        pred.reference_identifier AS predicate_reference_identifier,
+        obj.reference_identifier AS object_reference_identifier
+      FROM selected s
+      INNER JOIN reference_identifiers subj
+        ON subj.identifier_fingerprint = s.subject_fingerprint
+      INNER JOIN reference_identifiers pred
+        ON pred.identifier_fingerprint = s.predicate_fingerprint
+      INNER JOIN reference_identifiers obj
+        ON obj.identifier_fingerprint = s.object_fingerprint
+    `).all() as ResolvedStatementRow[];
   } finally {
     db.close();
   }
@@ -239,6 +286,122 @@ export async function ingestStatementsToSqlite(file: string, statements: GraphSt
           object.typeChar,
           object.referenceChar,
           object.fingerprint,
+        );
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+
+    return statements.length;
+  } finally {
+    db.close();
+  }
+}
+
+export async function replaceSqliteGraphFromResolvedStatements(
+  file: string,
+  statements: ResolvedStatementRow[],
+): Promise<number> {
+  const { DatabaseSync } = await loadSqliteModule();
+  const db = new DatabaseSync(file);
+  try {
+    const insertReferenceIdentifier = db.prepare(`
+      INSERT INTO reference_identifiers (identifier_fingerprint, reference_identifier)
+      VALUES (?, ?)
+      ON CONFLICT(identifier_fingerprint) DO NOTHING
+    `);
+    const insertStatement = db.prepare(`
+      INSERT INTO statements (
+        statement_fingerprint,
+        subject_type,
+        subject_reference_type,
+        subject_fingerprint,
+        predicate_fingerprint,
+        object_type,
+        object_reference_type,
+        object_fingerprint,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(statement_fingerprint) DO NOTHING
+    `);
+
+    db.exec("BEGIN");
+    try {
+      db.exec("DELETE FROM statements;");
+      db.exec("DELETE FROM reference_identifiers;");
+      for (const statement of statements) {
+        insertReferenceIdentifier.run(statement.subject_fingerprint, statement.subject_reference_identifier);
+        insertReferenceIdentifier.run(statement.predicate_fingerprint, statement.predicate_reference_identifier);
+        insertReferenceIdentifier.run(statement.object_fingerprint, statement.object_reference_identifier);
+        insertStatement.run(
+          statement.statement_fingerprint,
+          statement.subject_type,
+          statement.subject_reference_type,
+          statement.subject_fingerprint,
+          statement.predicate_fingerprint,
+          statement.object_type,
+          statement.object_reference_type,
+          statement.object_fingerprint,
+          statement.created_at,
+        );
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+
+    return statements.length;
+  } finally {
+    db.close();
+  }
+}
+
+export async function appendSqliteGraphFromResolvedStatements(
+  file: string,
+  statements: ResolvedStatementRow[],
+): Promise<number> {
+  const { DatabaseSync } = await loadSqliteModule();
+  const db = new DatabaseSync(file);
+  try {
+    const insertReferenceIdentifier = db.prepare(`
+      INSERT INTO reference_identifiers (identifier_fingerprint, reference_identifier)
+      VALUES (?, ?)
+      ON CONFLICT(identifier_fingerprint) DO NOTHING
+    `);
+    const insertStatement = db.prepare(`
+      INSERT INTO statements (
+        statement_fingerprint,
+        subject_type,
+        subject_reference_type,
+        subject_fingerprint,
+        predicate_fingerprint,
+        object_type,
+        object_reference_type,
+        object_fingerprint,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(statement_fingerprint) DO NOTHING
+    `);
+
+    db.exec("BEGIN");
+    try {
+      for (const statement of statements) {
+        insertReferenceIdentifier.run(statement.subject_fingerprint, statement.subject_reference_identifier);
+        insertReferenceIdentifier.run(statement.predicate_fingerprint, statement.predicate_reference_identifier);
+        insertReferenceIdentifier.run(statement.object_fingerprint, statement.object_reference_identifier);
+        insertStatement.run(
+          statement.statement_fingerprint,
+          statement.subject_type,
+          statement.subject_reference_type,
+          statement.subject_fingerprint,
+          statement.predicate_fingerprint,
+          statement.object_type,
+          statement.object_reference_type,
+          statement.object_fingerprint,
+          statement.created_at,
         );
       }
       db.exec("COMMIT");

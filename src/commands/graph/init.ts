@@ -5,14 +5,9 @@ import { pgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
-import { resolveGraphTarget } from "../../util/graph-target.js";
-import { ensureSqliteGraphSchema } from "../../util/sqlite.js";
-import { getSqliteWarnings } from "../../util/sqlite-warning.js";
-
-type InitSettings = {
-  fideDir?: string;
-  graphTargets?: Record<string, Record<string, unknown>>;
-};
+import { resolveGraphTarget, validateGraphSettings, type FideSettings, type GraphRecipe } from "../../util/graph/target.js";
+import { ensureSqliteGraphSchema } from "../../util/graph/sqlite.js";
+import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 
 function initHelp(): string {
   return renderHelp({
@@ -22,20 +17,20 @@ function initHelp(): string {
         items: [
           "  fide graph init",
           "  fide graph init --target <key-or-path>",
-          "  fide graph init --type postgres --connection <value> [--target <name>] [--schema <name>] [--statements-table <name>]",
-          "  fide graph init --type sqlite --connection <value> [--target <name>]",
+          "  fide graph init --type postgres --connection <value> [--target <name>] [--schema <name>] [--recipe <json>]",
+          "  fide graph init --type sqlite --connection <value> [--target <name>] [--recipe <json>]",
           "  fide graph init --target <key-or-path> --dangerously-drop --yes",
         ],
       },
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Existing target key, jsonl directory path, or new target name with --type",
+          "  --target <key-or-path>   Existing target key, local workspace path, or new target name with --type",
           "  --type <postgres|sqlite> Create a configured graph target before initializing it",
           "  --connection <value>     Connection value or env var name for postgres/sqlite targets",
           "  --schema <name>          Postgres schema name (default: fide_graph)",
-          "  --statements-table <name>  Postgres statements table name (default: statements)",
-          "  --gitignore              Add generated jsonl/sqlite outputs to .gitignore",
+          "  --recipe <json>          JSON array of { from, sql } recipe steps for a derived graph target",
+          "  --gitignore              Add generated local/sqlite outputs to .gitignore",
           "  --dangerously-drop       Reset the resolved graph target before re-initializing",
           "  --yes                    Confirm --dangerously-drop",
           "  --pretty, -p             Human-readable output",
@@ -47,6 +42,7 @@ function initHelp(): string {
           "  fide graph init",
           "  fide graph init --target primary",
           "  fide graph init --type sqlite --connection .tmp/fide-graph.sqlite",
+          "  fide graph init --type postgres --target combined --connection FIDE_GRAPH_DATABASE_URL --recipe '[{\"from\":\"primary\",\"sql\":\"SELECT * FROM statements\"}]'",
           "  fide graph init --type sqlite --connection .tmp/fide-graph.sqlite --gitignore",
         ],
       },
@@ -103,13 +99,22 @@ async function createConfiguredTarget(flags: Map<string, string | boolean>): Pro
 
   const key = requestedTarget ?? type;
   const connection = getStringFlag(flags, "connection");
+  const recipeFlag = getStringFlag(flags, "recipe");
   if (!connection) {
     throw new Error("Missing required flag: --connection <value>.");
+  }
+  let recipe: GraphRecipe | undefined;
+  if (recipeFlag) {
+    try {
+      recipe = JSON.parse(recipeFlag) as GraphRecipe;
+    } catch {
+      throw new Error("Invalid --recipe value. Expected JSON like '[{\"from\":\"primary\",\"sql\":\"SELECT * FROM statements\"}]'.");
+    }
   }
 
   const settingsPath = resolve(process.cwd(), ".fide", "settings.json");
   const current = existsSync(settingsPath)
-    ? JSON.parse(await readFile(settingsPath, "utf8")) as InitSettings
+    ? JSON.parse(await readFile(settingsPath, "utf8")) as FideSettings
     : {};
   const graphTargets = current.graphTargets ?? {};
   if (graphTargets[key]) {
@@ -125,21 +130,23 @@ async function createConfiguredTarget(flags: Map<string, string | boolean>): Pro
       type,
       connection,
       schema: getStringFlag(flags, "schema") ?? "fide_graph",
-      statementsTable: getStringFlag(flags, "statements-table") ?? "statements",
+      ...(recipe ? { recipe } : {}),
     }
     : {
       type,
       connection,
+      ...(recipe ? { recipe } : {}),
     };
 
   current.graphTargets = graphTargets;
+  validateGraphSettings(current);
   await mkdir(resolve(settingsPath, ".."), { recursive: true });
   await writeFile(settingsPath, `${JSON.stringify(current, null, 2)}\n`, "utf8");
   return key;
 }
 
 /**
- * @description Initializes the minimal jsonl .fide workspace root.
+ * @description Initializes the minimal local .fide workspace root.
  */
 export async function runInitCommand(args: string[]): Promise<number> {
   const parsed = parseArgs(args);
@@ -272,6 +279,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
       key: target.key,
       schema: target.schema,
       statementsTable: target.statementsTable,
+      recipe: target.recipe,
       dropped: dangerouslyDrop,
     };
     if (shouldUseJsonOutput(flags)) {
@@ -308,6 +316,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
         target: "sqlite",
         key: target.key,
         file: target.file,
+        recipe: target.recipe,
         dropped: dangerouslyDrop,
         gitignorePath: gitignore?.path,
         gitignoreAdded: gitignore?.added ?? [],
@@ -359,6 +368,7 @@ export async function runInitCommand(args: string[]): Promise<number> {
       dropped: dangerouslyDrop,
       gitignorePath: gitignore?.path,
       gitignoreAdded: gitignore?.added ?? [],
+      warnings: getLocalWorkspaceWarnings(root, { gitignore: target.gitignore }),
     });
   } else {
     console.log(`Initialized .fide workspace at ${root}`);

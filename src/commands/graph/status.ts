@@ -4,9 +4,9 @@ import { createPgClient } from "@chris-test/db";
 import { hasFlag, parseArgs } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
-import { listConfiguredGraphTargetKeys, resolveGraphTarget, type ResolvedGraphTarget } from "../../util/graph-target.js";
-import { inspectSqliteGraph } from "../../util/sqlite.js";
-import { getSqliteWarnings } from "../../util/sqlite-warning.js";
+import { listConfiguredGraphTargetKeys, resolveGraphTarget, type ResolvedGraphTarget } from "../../util/graph/target.js";
+import { inspectSqliteGraph } from "../../util/graph/sqlite.js";
+import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 
 /**
  * Report whether the current working directory has a `.fide` directory.
@@ -28,7 +28,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
         {
           title: "Flags",
           items: [
-            "  --target <key-or-path>   Configured graph target key or jsonl directory path",
+            "  --target <key-or-path>   Configured graph target key or local workspace path",
           ],
         },
         {
@@ -69,6 +69,9 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           databaseUrlEnv: graphTarget.databaseUrlEnv,
           schema: graphTarget.schema,
           statementsTable: graphTarget.statementsTable,
+          recipe: graphTarget.recipe,
+          lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
+          lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
           reachable: false,
           missing: ["postgres.connection"],
         };
@@ -196,6 +199,9 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           databaseUrlEnv: graphTarget.databaseUrlEnv,
           schema: graphTarget.schema,
           statementsTable: graphTarget.statementsTable,
+          recipe: graphTarget.recipe,
+          lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
+          lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
           reachable: true,
           missing,
         };
@@ -215,6 +221,9 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           databaseUrlEnv: graphTarget.databaseUrlEnv,
           schema: graphTarget.schema,
           statementsTable: graphTarget.statementsTable,
+          recipe: graphTarget.recipe,
+          lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
+          lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
           reachable: false,
           missing: ["postgres.connection"],
           error: error instanceof Error ? error.message : String(error),
@@ -233,6 +242,9 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
         configured: true,
         reachable: inspection.reachable,
         file: graphTarget.file,
+        recipe: graphTarget.recipe,
+        lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
+        lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
         next: graphTarget.key ? {
           addHelpCommand: "fide graph add -h",
           addCommand: `fide graph add --target ${graphTarget.key} ...`,
@@ -244,10 +256,10 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     }
 
     const { root, configuredFromSettings } = graphTarget;
-    const fideDir = resolve(root, ".fide");
-    const statementsDir = resolve(fideDir, "statements");
+    const workspaceDir = resolve(root, ".fide");
+    const statementsDir = resolve(workspaceDir, "statements");
 
-    const hasFide = existsSync(fideDir);
+    const hasFide = existsSync(workspaceDir);
     const hasStatements = existsSync(statementsDir);
 
     const missing: string[] = [];
@@ -255,20 +267,21 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
 
     return {
       ok: true,
-      target: "jsonl",
+      target: "local",
       configured: true,
       next: {
         addHelpCommand: "fide graph add -h",
         addCommand: "fide graph add ...",
       },
       root,
-      dir: root,
+      connection: graphTarget.connection ?? root,
       configuredFromSettings,
-      fideDir,
+      workspaceDir,
       statementsDir,
       statementsDirPresent: hasStatements,
       missing,
-      key: null,
+      key: graphTarget.key,
+      warnings: getLocalWorkspaceWarnings(root, { gitignore: graphTarget.gitignore }),
     };
   }
 

@@ -10,12 +10,12 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.init": {
     command: "fide graph init",
     params: [
-      { name: "target", type: "string", required: false, description: "Existing target key, jsonl directory path, or new target name with --type" },
+      { name: "target", type: "string", required: false, description: "Existing target key, local workspace path, or new target name with --type" },
       { name: "type", type: "string", required: false, description: "Create and initialize a configured graph target", enum: ["postgres", "sqlite"] },
       { name: "connection", type: "string", required: false, description: "Connection value or env var name for postgres/sqlite targets" },
       { name: "schema", type: "string", required: false, description: "Postgres schema name (default: fide_graph)" },
-      { name: "statements-table", type: "string", required: false, description: "Postgres statements table name (default: statements)" },
-      { name: "gitignore", type: "boolean", required: false, description: "Add generated jsonl/sqlite outputs to .gitignore" },
+      { name: "recipe", type: "string", required: false, description: "Optional JSON recipe array of { from, sql } steps for a derived graph target" },
+      { name: "gitignore", type: "boolean", required: false, description: "Add generated local/sqlite outputs to .gitignore" },
       { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved graph target before re-initializing (requires --yes)" },
       { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -29,6 +29,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       file: "string?",
       schema: "string?",
       statementsTable: "string?",
+      recipe: "array<{ from: string, sql: string }>?",
       dropped: "boolean?",
       gitignorePath: "string?",
       gitignoreAdded: "string[]?",
@@ -58,10 +59,29 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       error: "string?",
     },
   },
+  "graph.run": {
+    command: "fide graph run",
+    params: [
+      { name: "target", type: "string", required: true, description: "Configured sqlite or postgres target key with a recipe" },
+      { name: "fields", type: "string", required: false, description: "Output field mask (e.g. target,statementCount,steps)" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      ok: "boolean",
+      target: "string",
+      key: "string?",
+      file: "string?",
+      schema: "string?",
+      statementsTable: "string?",
+      statementCount: "number",
+      steps: "array<{ from: string, statementCount: number }>",
+      warnings: "string[]?",
+    },
+  },
   "graph.add": {
     command: "fide graph add",
     params: [
-      { name: "target", type: "string", required: false, description: "Configured graph target key or jsonl directory path" },
+      { name: "target", type: "string", required: false, description: "Configured graph target key or local workspace path" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "file", type: "string", required: false, description: "Primary agent path: input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -83,7 +103,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.draft": {
     command: "fide graph draft",
     params: [
-      { name: "target", type: "string", required: false, description: "Configured graph target key or jsonl directory path" },
+      { name: "target", type: "string", required: false, description: "Configured graph target key or local workspace path" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "file", type: "string", required: false, description: "Primary agent path: input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -101,16 +121,16 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.status": {
     command: "fide graph status",
     params: [
-      { name: "target", type: "string", required: false, description: "Optional configured graph target key or jsonl directory path; omitted means all configured targets" },
+      { name: "target", type: "string", required: false, description: "Optional configured graph target key or local workspace path; omitted means all configured targets" },
     ],
     output: {
       ok: "boolean",
       target: "string?",
       configured: "boolean?",
       root: "string?",
-      dir: "string?",
+      connection: "string?",
       configuredFromSettings: "boolean?",
-      fideDir: "string?",
+      workspaceDir: "string?",
       statementsDir: "string?",
       statementsDirPresent: "boolean?",
       missing: "string[]?",
@@ -122,6 +142,9 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       reachable: "boolean?",
       schema: "string?",
       statementsTable: "string?",
+      recipe: "array<{ from: string, sql: string }>?",
+      lastRunAt: "string?",
+      lastRunStatementsAdded: "number?",
       error: "string?",
       warnings: "string[]?",
       next: "object?",

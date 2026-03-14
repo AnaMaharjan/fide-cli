@@ -8,6 +8,7 @@ export type CliErrorPayload = {
     message: string;
     hint?: string;
     didYouMean?: string;
+    details?: Record<string, unknown>;
   };
   next?: Record<string, unknown>;
 };
@@ -99,6 +100,66 @@ function graphDefsNext(path = "/vocabulary"): Record<string, string> {
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function getNestedRecord(value: unknown, key: string): Record<string, unknown> | null {
+  const record = asRecord(value);
+  return record ? asRecord(record[key]) : null;
+}
+
+function getStringField(value: unknown, key: string): string | undefined {
+  const record = asRecord(value);
+  const field = record?.[key];
+  return typeof field === "string" && field.length > 0 ? field : undefined;
+}
+
+function getDbErrorInfo(err: unknown): {
+  message: string;
+  code?: string;
+  details?: Record<string, unknown>;
+} | null {
+  const record = asRecord(err);
+  if (!record) return null;
+
+  const cause = getNestedRecord(err, "cause");
+  const code = getStringField(err, "code") ?? getStringField(cause, "code");
+  const detail = getStringField(err, "detail") ?? getStringField(cause, "detail");
+  const constraint = getStringField(err, "constraint") ?? getStringField(cause, "constraint");
+  const table = getStringField(err, "table") ?? getStringField(cause, "table");
+  const column = getStringField(err, "column") ?? getStringField(cause, "column");
+  const dbMessage =
+    getStringField(cause, "message") ??
+    getStringField(err, "message");
+
+  if (!dbMessage) return null;
+
+  const wrappedQueryFailure = dbMessage.startsWith("Failed query:");
+  if (!wrappedQueryFailure && !code && !detail && !constraint && !table && !column) {
+    return null;
+  }
+
+  const details: Record<string, unknown> = {};
+  if (code) details.dbCode = code;
+  if (detail) details.dbDetail = detail;
+  if (constraint) details.constraint = constraint;
+  if (table) details.table = table;
+  if (column) details.column = column;
+
+  const message = detail
+    ? `Database query failed: ${detail}`
+    : wrappedQueryFailure
+      ? `Database query failed: ${dbMessage.replace(/^Failed query:\s*/u, "").split("\n")[0]}`
+      : `Database query failed: ${dbMessage}`;
+
+  return {
+    message,
+    code,
+    details: Object.keys(details).length > 0 ? details : undefined,
+  };
+}
+
 function normalizeCliError(err: unknown, scope: string): CliErrorPayload {
   const message = err instanceof Error ? err.message : String(err);
 
@@ -138,6 +199,19 @@ function normalizeCliError(err: unknown, scope: string): CliErrorPayload {
     };
   }
 
+  const dbError = getDbErrorInfo(err);
+  if (dbError) {
+    return {
+      ok: false,
+      scope,
+      error: {
+        code: "database_error",
+        message: dbError.message,
+        ...(dbError.details ? { details: dbError.details } : {}),
+      },
+    };
+  }
+
   return {
     ok: false,
     scope,
@@ -164,6 +238,11 @@ export function printCliError(err: unknown, options: CliErrorOptions): void {
     }
     if (payload.next?.docsCommand) {
       console.error(`Docs: ${payload.next.docsCommand}`);
+    }
+    if (payload.error.details) {
+      for (const [key, value] of Object.entries(payload.error.details)) {
+        console.error(`${key}: ${String(value)}`);
+      }
     }
     return;
   }
