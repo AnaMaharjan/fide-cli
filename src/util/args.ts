@@ -8,6 +8,17 @@ const SHORT_FLAG_ALIASES: Record<string, string> = {
   p: "pretty",
 };
 
+const BOOLEAN_FLAGS = new Set([
+  "allow-write",
+  "dangerously-drop",
+  "gitignore",
+  "help",
+  "no-normalize",
+  "pretty",
+  "stdin",
+  "yes",
+]);
+
 /**
  * Parse CLI tokens into positional args and `--flag` values.
  * Supports `--key value`, `--key=value`, short aliases like `-p`, and boolean flags.
@@ -42,6 +53,11 @@ export function parseArgs(args: string[]): ParsedArgs {
     }
 
     const key = keyValue;
+    if (BOOLEAN_FLAGS.has(key)) {
+      flags.set(key, true);
+      continue;
+    }
+
     const next = args[i + 1];
     if (!next || next.startsWith("--")) {
       flags.set(key, true);
