@@ -1,11 +1,10 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { createPgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson } from "../../util/io.js";
-import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, resolveGraphTarget, validateGraphSettings, type FideSettings, type GraphRecipeStep, type ResolvedGraphTarget } from "../../util/graph/target.js";
+import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, resolveStoreTarget, validateGraphSettings, type FideSettings, type GraphRecipeStep, type ResolvedGraphTarget } from "../../util/graph/target.js";
 import {
   appendSqliteGraphFromResolvedStatements,
   ensureSqliteGraphSchema,
@@ -14,24 +13,25 @@ import {
   type ResolvedStatementRow,
 } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
+import { readJsonFile, resolveSettingsPath } from "../../util/workspace.js";
 
 function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
-function runHelp(): string {
+function materializeHelp(): string {
   return renderHelp({
     sections: [
       {
         title: "Usage",
         items: [
-          "  fide graph run --target <key>",
+          "  fide store materialize --store <name>",
         ],
       },
       {
         title: "Flags",
         items: [
-          "  --target <key>           Configured sqlite or postgres target key with a recipe",
+          "  --store <name>           Configured sqlite or postgres store target name with a recipe",
           "  --fields <mask>          Output field mask (e.g. target,statementCount,steps)",
           "  --pretty, -p             Human-readable output",
         ],
@@ -39,7 +39,7 @@ function runHelp(): string {
       {
         title: "Examples",
         items: [
-          "  fide graph run --target combined",
+          "  fide store materialize --store combined",
         ],
       },
       {
@@ -62,17 +62,15 @@ function renderRecipeSql(sql: string, lastRunAt: string | null): string {
   return sql.replaceAll("$lastRunAt", `'${escapeSqlString(resolvedLastRunAt)}'`);
 }
 
-async function writeGraphRunState(key: string, lastRunAt: string, lastRunStatementsAdded: number): Promise<void> {
-  const settingsPath = resolve(process.cwd(), ".fide", "settings.json");
-  const current = existsSync(settingsPath)
-    ? JSON.parse(await readFile(settingsPath, "utf8")) as FideSettings
-    : {};
-  current.graphTargets = current.graphTargets ?? {};
-  const target = current.graphTargets[key];
+async function writeStoreRunState(key: string, lastRunAt: string, lastRunStatementsAdded: number): Promise<void> {
+  const settingsPath = resolveSettingsPath(process.cwd());
+  const current = readJsonFile<FideSettings>(settingsPath) ?? {};
+  current.storeTargets = current.storeTargets ?? {};
+  const target = current.storeTargets[key];
   if (!target) {
-    throw new Error(`Unknown graph target in .fide/settings.json: ${key}`);
+    throw new Error(`Unknown store target in settings.json: ${key}`);
   }
-  current.graphTargets[key] = {
+  current.storeTargets[key] = {
     ...target,
     metadata: {
       lastRunAt,
@@ -84,11 +82,8 @@ async function writeGraphRunState(key: string, lastRunAt: string, lastRunStateme
 }
 
 function assertRecipeTarget(target: ResolvedGraphTarget): asserts target is Extract<ResolvedGraphTarget, { type: "postgres" | "sqlite" }> {
-  if (target.type === "local") {
-    throw new Error("`graph run` does not support local targets. Use a configured sqlite or postgres target with a recipe.");
-  }
   if (!target.recipe || target.recipe.length === 0) {
-    throw new Error(`Graph target "${target.key ?? "unknown"}" has no recipe.`);
+    throw new Error(`Store target "${target.key ?? "unknown"}" has no recipe.`);
   }
 }
 
@@ -224,11 +219,8 @@ async function queryRecipeStep(
   step: GraphRecipeStep,
   lastRunAt: string | null,
 ): Promise<{ source: ResolvedGraphTarget; rows: ResolvedStatementRow[] }> {
-  const flags = new Map<string, string | boolean>([["target", step.from]]);
-  const source = resolveGraphTarget(flags);
-  if (source.type === "local") {
-    throw new Error(`Recipe step source "${step.from}" must be a configured sqlite or postgres target.`);
-  }
+  const flags = new Map<string, string | boolean>([["store", step.from]]);
+  const source = resolveStoreTarget(flags);
   const sql = renderRecipeSql(step.sql, lastRunAt);
 
   if (source.type === "postgres") {
@@ -247,34 +239,37 @@ async function queryRecipeStep(
   };
 }
 
-export async function runGraphRun(args: string[]): Promise<number> {
+export async function runStoreMaterialize(args: string[]): Promise<number> {
   const parsed = parseArgs(args);
   const flags = parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    console.log(runHelp());
+    console.log(materializeHelp());
     return 0;
   }
+  if (!flags.has("store")) {
+    throw new Error("Missing required flag: --store <name>.");
+  }
 
-  const target = resolveGraphTarget(flags);
+  const target = resolveStoreTarget(flags);
   assertRecipeTarget(target);
   const recipe = target.recipe;
   if (!recipe) {
-    throw new Error(`Graph target "${target.key ?? "unknown"}" has no recipe.`);
+    throw new Error(`Store target "${target.key ?? "unknown"}" has no recipe.`);
   }
   const previousLastRunAt = target.runState?.metadata?.lastRunAt ?? null;
 
   for (const step of recipe) {
-    const source = resolveGraphTarget(new Map<string, string | boolean>([["target", step.from]]));
+    const source = resolveStoreTarget(new Map<string, string | boolean>([["store", step.from]]));
     if (sameGraphLocation(target, source)) {
       throw new Error(
-        `Graph target "${target.key ?? "unknown"}" recipe step source "${step.from}" points at the same physical graph as the target.`,
+        `Store target "${target.key ?? "unknown"}" recipe step source "${step.from}" points at the same physical store as the target.`,
       );
     }
   }
 
   if (target.type === "postgres") {
     if (!target.databaseUrl) {
-      throw new Error(`Missing postgres connection for graph target "${target.key ?? "unknown"}".`);
+      throw new Error(`Missing postgres connection for store target "${target.key ?? "unknown"}".`);
     }
     await clearPostgresGraph(target.databaseUrl, target.schema);
   } else {
@@ -295,7 +290,7 @@ export async function runGraphRun(args: string[]): Promise<number> {
     });
     if (target.type === "postgres") {
       if (!target.databaseUrl) {
-        throw new Error(`Missing postgres connection for graph target "${target.key ?? "unknown"}".`);
+        throw new Error(`Missing postgres connection for store target "${target.key ?? "unknown"}".`);
       }
       await appendResolvedStatementsToPostgres(target.databaseUrl, target.schema, uniqueRows);
     } else {
@@ -328,7 +323,7 @@ export async function runGraphRun(args: string[]): Promise<number> {
     };
 
   if (target.key) {
-    await writeGraphRunState(target.key, lastRunAt, totalStatementCount);
+    await writeStoreRunState(target.key, lastRunAt, totalStatementCount);
   }
 
   if (shouldUseJsonOutput(flags)) {

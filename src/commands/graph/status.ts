@@ -1,18 +1,11 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { createPgClient } from "@chris-test/db";
 import { hasFlag, parseArgs } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
-import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, listConfiguredGraphTargetKeys, resolveGraphTarget, type ResolvedGraphTarget } from "../../util/graph/target.js";
-import { inspectSqliteGraph } from "../../util/graph/sqlite.js";
-import { getLocalWorkspaceWarnings, getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
+import { resolveGraphTarget } from "../../util/graph/target.js";
+import { getLocalWorkspaceWarnings } from "../../util/graph/local-disk-warning.js";
 
-/**
- * Report whether the current working directory has a `.fide` directory.
- *
- * Agent-first: JSON is always the default output format, even in TTY.
- */
 export async function runGraphStatus(args: string[] = []): Promise<number> {
   const { flags, positionals } = parseArgs(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
@@ -22,19 +15,21 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           title: "Usage",
           items: [
             "  fide graph status [target]",
-            "  fide graph status --target <key-or-path>",
+            "  fide graph status --target <path>",
           ],
         },
         {
           title: "Flags",
           items: [
-            "  --target <key-or-path>   Configured graph target key or local workspace path",
+            "  --target <path>  Local workspace path override",
           ],
         },
         {
           title: "Notes",
           items: [
-            "  - With no target, returns all configured graph targets.",
+            "  - `fide graph status` reports local workspace status.",
+            "  - Uses `FIDE_DIR` or the nearest `.fide` directory when `--target` is omitted.",
+            "  - Use `fide store status` for configured sqlite/postgres backends.",
           ],
         },
       ],
@@ -52,267 +47,37 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     flags.set("target", positionals[0]);
   }
 
-  async function statusForTarget(graphTarget: ResolvedGraphTarget) {
-    if (graphTarget.type === "postgres") {
-      if (!graphTarget.databaseUrl) {
-        return {
-          ok: true,
-          target: "postgres",
-          key: graphTarget.key,
-          next: graphTarget.key ? {
-            addHelpCommand: "fide graph add -h",
-            addCommand: `fide graph add --target ${graphTarget.key} ...`,
-          } : undefined,
-          configuredFromSettings: graphTarget.configuredFromSettings,
-          databaseUrlConfigured: false,
-          databaseUrlSource: graphTarget.databaseUrlSource,
-          databaseUrlEnv: graphTarget.databaseUrlEnv,
-          schema: graphTarget.schema,
-          recipe: graphTarget.recipe,
-          lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
-          lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
-          reachable: false,
-          missing: ["postgres.connection"],
-        };
-      }
-
-      const expectedReferenceIdentifierColumns = [
-        "identifier_fingerprint",
-        "reference_identifier",
-      ];
-      const expectedStatementsColumns = [
-        "statement_fingerprint",
-        "subject_type",
-        "subject_reference_type",
-        "subject_fingerprint",
-        "predicate_fingerprint",
-        "object_type",
-        "object_reference_type",
-        "object_fingerprint",
-        "created_at",
-      ];
-      const expectedStatementConstraints = [
-        "chk_subject_protocol_self_sourced",
-        "chk_object_protocol_self_sourced",
-      ];
-
-      const client = createPgClient(graphTarget.databaseUrl);
-      try {
-        await client`SELECT 1`;
-        const schemaRows = await client<{ exists: boolean }[]>`
-          SELECT EXISTS (
-            SELECT 1
-            FROM information_schema.schemata
-            WHERE schema_name = ${graphTarget.schema}
-          ) AS exists
-        `;
-        const schemaExists = Boolean(schemaRows[0]?.exists);
-        const typeRows = await client<{ exists: boolean }[]>`
-          SELECT EXISTS (
-            SELECT 1
-            FROM pg_type t
-            INNER JOIN pg_namespace n ON t.typnamespace = n.oid
-            WHERE t.typname = 'entity_type' AND n.nspname = ${graphTarget.schema}
-          ) AS exists
-        `;
-        const entityTypeExists = Boolean(typeRows[0]?.exists);
-
-        const tableRows = schemaExists
-          ? await client<{ table_name: string }[]>`
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = ${graphTarget.schema}
-              AND (
-                table_name = ${GRAPH_REFERENCE_IDENTIFIERS_TABLE}
-                OR table_name = ${GRAPH_STATEMENTS_TABLE}
-              )
-            ORDER BY table_name
-          `
-          : [];
-        const presentTables = new Set(tableRows.map((row) => row.table_name));
-
-        const referenceIdentifierColumns = presentTables.has(GRAPH_REFERENCE_IDENTIFIERS_TABLE)
-          ? (await client<{ column_name: string }[]>`
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_schema = ${graphTarget.schema}
-              AND table_name = ${GRAPH_REFERENCE_IDENTIFIERS_TABLE}
-            ORDER BY ordinal_position
-          `).map((row) => row.column_name)
-          : [];
-        const statementsColumns = presentTables.has(GRAPH_STATEMENTS_TABLE)
-          ? (await client<{ column_name: string }[]>`
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_schema = ${graphTarget.schema}
-              AND table_name = ${GRAPH_STATEMENTS_TABLE}
-            ORDER BY ordinal_position
-          `).map((row) => row.column_name)
-          : [];
-        const statementConstraintRows = presentTables.has(GRAPH_STATEMENTS_TABLE)
-          ? await client<{ conname: string }[]>`
-            SELECT c.conname
-            FROM pg_constraint c
-            INNER JOIN pg_class t ON c.conrelid = t.oid
-            INNER JOIN pg_namespace n ON t.relnamespace = n.oid
-            WHERE n.nspname = ${graphTarget.schema}
-              AND t.relname = ${GRAPH_STATEMENTS_TABLE}
-              AND (
-                c.conname = 'chk_subject_protocol_self_sourced'
-                OR c.conname = 'chk_object_protocol_self_sourced'
-              )
-            ORDER BY c.conname
-          `
-          : [];
-        const presentStatementConstraints = new Set(statementConstraintRows.map((row) => row.conname));
-
-        const missing: string[] = [];
-        if (!schemaExists) missing.push(`schema.${graphTarget.schema}`);
-        if (!entityTypeExists) missing.push(`${graphTarget.schema}.entity_type`);
-        if (!presentTables.has(GRAPH_REFERENCE_IDENTIFIERS_TABLE)) {
-          missing.push(`${graphTarget.schema}.${GRAPH_REFERENCE_IDENTIFIERS_TABLE}`);
-        }
-        if (!presentTables.has(GRAPH_STATEMENTS_TABLE)) {
-          missing.push(`${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}`);
-        }
-
-        const missingReferenceIdentifierColumns = expectedReferenceIdentifierColumns.filter((column) => !referenceIdentifierColumns.includes(column));
-        const missingStatementsColumns = expectedStatementsColumns.filter((column) => !statementsColumns.includes(column));
-        const missingStatementConstraints = expectedStatementConstraints.filter((name) => !presentStatementConstraints.has(name));
-        missing.push(...missingReferenceIdentifierColumns.map((column) => `${graphTarget.schema}.${GRAPH_REFERENCE_IDENTIFIERS_TABLE}.${column}`));
-        missing.push(...missingStatementsColumns.map((column) => `${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}.${column}`));
-        missing.push(...missingStatementConstraints.map((name) => `${graphTarget.schema}.${GRAPH_STATEMENTS_TABLE}.${name}`));
-
-        return {
-          ok: true,
-          target: "postgres",
-          key: graphTarget.key,
-          next: graphTarget.key ? {
-            addHelpCommand: "fide graph add -h",
-            addCommand: `fide graph add --target ${graphTarget.key} ...`,
-          } : undefined,
-          configured: true,
-          configuredFromSettings: graphTarget.configuredFromSettings,
-          databaseUrlConfigured: true,
-          databaseUrlSource: graphTarget.databaseUrlSource,
-          databaseUrlEnv: graphTarget.databaseUrlEnv,
-          schema: graphTarget.schema,
-          recipe: graphTarget.recipe,
-          lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
-          lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
-          reachable: true,
-          missing,
-        };
-      } catch (error) {
-        return {
-          ok: true,
-          target: "postgres",
-          key: graphTarget.key,
-          next: graphTarget.key ? {
-            addHelpCommand: "fide graph add -h",
-            addCommand: `fide graph add --target ${graphTarget.key} ...`,
-          } : undefined,
-          configured: true,
-          configuredFromSettings: graphTarget.configuredFromSettings,
-          databaseUrlConfigured: true,
-          databaseUrlSource: graphTarget.databaseUrlSource,
-          databaseUrlEnv: graphTarget.databaseUrlEnv,
-          schema: graphTarget.schema,
-          recipe: graphTarget.recipe,
-          lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
-          lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
-          reachable: false,
-          missing: ["postgres.connection"],
-          error: error instanceof Error ? error.message : String(error),
-        };
-      } finally {
-        await client.end({ timeout: 1 });
-      }
-    }
-
-    if (graphTarget.type === "sqlite") {
-      const inspection = await inspectSqliteGraph(graphTarget.file);
-      return {
-        ok: true,
-        target: "sqlite",
-        key: graphTarget.key,
-        configured: true,
-        reachable: inspection.reachable,
-        file: graphTarget.file,
-        recipe: graphTarget.recipe,
-        lastRunAt: graphTarget.runState?.metadata?.lastRunAt,
-        lastRunStatementsAdded: graphTarget.runState?.metadata?.lastRunStatementsAdded,
-        next: graphTarget.key ? {
-          addHelpCommand: "fide graph add -h",
-          addCommand: `fide graph add --target ${graphTarget.key} ...`,
-        } : undefined,
-        missing: inspection.missing,
-        error: inspection.error,
-        warnings: getSqliteWarnings(graphTarget.file, { gitignore: graphTarget.gitignore }),
-      };
-    }
-
-    const { root, configuredFromSettings } = graphTarget;
-    const workspaceDir = resolve(root, ".fide");
-    const statementsDir = resolve(workspaceDir, "statements");
-
-    const hasFide = existsSync(workspaceDir);
-    const hasStatements = existsSync(statementsDir);
-
-    const missing: string[] = [];
-    if (!hasFide) missing.push(".fide");
-
-    return {
-      ok: true,
-      target: "local",
-      configured: true,
-      next: {
-        addHelpCommand: "fide graph add -h",
-        addCommand: "fide graph add ...",
-      },
-      root,
-      connection: graphTarget.connection ?? root,
-      configuredFromSettings,
-      workspaceDir,
-      statementsDir,
-      statementsDirPresent: hasStatements,
-      missing,
-      key: graphTarget.key,
-      warnings: getLocalWorkspaceWarnings(root, { gitignore: graphTarget.gitignore }),
-    };
+  const graphTarget = resolveGraphTarget(flags);
+  if (graphTarget.type !== "local") {
+    throw new Error("`fide graph status` only supports local workspaces. Use `fide store status` for configured sqlite/postgres targets.");
   }
 
-  if (flags.has("target")) {
-    printJson(await statusForTarget(resolveGraphTarget(flags)));
-    return 0;
-  }
+  const { root, configuredFromSettings } = graphTarget;
+  const workspaceDir = resolve(root, ".fide");
+  const statementsDir = resolve(workspaceDir, "statements");
+  const hasFide = existsSync(workspaceDir);
+  const hasStatements = existsSync(statementsDir);
 
-  const configuredKeys = listConfiguredGraphTargetKeys();
-  if (configuredKeys.length === 0) {
-    printJson(await statusForTarget(resolveGraphTarget(flags)));
-    return 0;
-  }
-
-  const targets = await Promise.all(configuredKeys.map(async (key) => {
-    const targetFlags = new Map(flags);
-    targetFlags.set("target", key);
-    const target = resolveGraphTarget(targetFlags);
-    const detailed = await statusForTarget(target);
-    return {
-      key,
-      type: detailed.target,
-      warnings: "warnings" in detailed ? detailed.warnings : undefined,
-      next: {
-        statusCommand: `fide graph status ${key}`,
-        addHelpCommand: "fide graph add -h",
-        addCommand: `fide graph add --target ${key} ...`,
-      },
-    };
-  }));
+  const missing: string[] = [];
+  if (!hasFide) missing.push(".fide");
 
   printJson({
     ok: true,
-    targets,
+    target: "local",
+    configured: true,
+    next: {
+      writeHelpCommand: "fide graph write -h",
+      writeCommand: "fide graph write ...",
+    },
+    root,
+    connection: graphTarget.connection ?? root,
+    configuredFromSettings,
+    workspaceDir,
+    statementsDir,
+    statementsDirPresent: hasStatements,
+    missing,
+    key: graphTarget.key,
+    warnings: getLocalWorkspaceWarnings(root, { gitignore: graphTarget.gitignore }),
   });
   return 0;
 }

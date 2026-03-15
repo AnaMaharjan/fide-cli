@@ -16,12 +16,23 @@ function helpText(): string {
           ],
         },
         {
-          title: "Commands",
+          title: "Groups",
           items: [
-            "  app      init",
-            "  graph    init | run | add | draft | query | status | defs",
+            "  app      Saved query storage and query-run metadata",
+            "  graph    Statement authoring, local workspace setup, and graph definitions",
+            "  store    Configured sqlite/postgres backends and materialization",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
+          ],
+        },
+        {
+          title: "Workflows",
+          items: [
+            "  fide graph init                       Initialize a local .fide workspace",
+            "  fide graph write '<json>'             Write statement inputs into the local workspace",
+            "  fide store init --type sqlite ...     Initialize a configured backend target",
+            "  fide store sql --store primary 'select * from statements limit 10'",
+            "  fide store materialize --store combined",
           ],
         },
         {
@@ -67,6 +78,10 @@ export async function runCli(argv: string[]): Promise<number> {
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);
+      }
+      case "store": {
+        const { runStoreCommand } = await import("./commands/store/index.js");
+        return await runStoreCommand(command, rest);
       }
       default:
         throw new Error(`Unknown group: ${group}. Run \`fide --help\` to see available commands.`);

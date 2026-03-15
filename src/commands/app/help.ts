@@ -19,8 +19,8 @@ export function appCommandHelp(): string {
       {
         title: "Notes",
         items: [
-          "  - App targets are configured under `appTargets` in `.fide/settings.json`.",
-          "  - App storage is separate from canonical graph storage in `graphTargets`.",
+          "  - App targets are configured under `appTargets` in `settings.json` inside the resolved Fide workspace.",
+          "  - App storage is separate from configured backend storage in `storeTargets`.",
           "  - Run `fide app <command> -h` for command-specific help.",
         ],
       },

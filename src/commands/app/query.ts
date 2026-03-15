@@ -91,7 +91,7 @@ export async function runAppQuery(args: string[]): Promise<number> {
   const appTarget = resolveAppTarget(flags);
   if (!appTarget.databaseUrl) {
     throw new Error(
-      `Missing postgres connection for app target "${appTarget.key ?? "unknown"}". Configure the target in .fide/settings.json or set the referenced env var.`,
+      `Missing postgres connection for app target "${appTarget.key ?? "unknown"}". Configure the target in settings.json or set the referenced env var.`,
     );
   }
 

@@ -6,7 +6,7 @@ Fide command-line interface.
 
 - `fide init`
 - `fide graph statements <add|validate|root>`
-- `fide graph query`
+- `fide store sql`
 
 ## Scope
 

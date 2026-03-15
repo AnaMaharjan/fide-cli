@@ -15,15 +15,15 @@ function draftHelp(): string {
       {
         title: "Usage",
         items: [
-          "  fide graph draft [--target <key-or-path>] <json>",
-          "  fide graph draft [--target <key-or-path>] --file <inputs> [--format <json|jsonl|fsd>]",
-          "  fide graph draft [--target <key-or-path>] --stdin [--format <json|jsonl|fsd>]",
+          "  fide graph draft [--target <path>] <json>",
+          "  fide graph draft [--target <path>] --file <inputs> [--format <json|jsonl|fsd>]",
+          "  fide graph draft [--target <path>] --stdin [--format <json|jsonl|fsd>]",
         ],
       },
       {
         title: "Flags",
         items: [
-          "  --target <key-or-path>   Configured graph target key or local workspace path",
+          "  --target <path>          Local workspace path",
           "  --file <inputs>          Read statement inputs from a file",
           "  --stdin                  Read statement inputs from stdin",
           "  --format <json|jsonl|fsd>  Force input format",
@@ -58,12 +58,12 @@ export async function runGraphDraft(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`graph draft` is only supported for local graph targets.");
+    throw new Error("`graph draft` is only supported for local workspaces.");
   }
 
   const fideDir = resolve(graphTarget.root, ".fide");
   if (!existsSync(fideDir)) {
-    throw new Error("No .fide folder found in the target directory. Run this command from your project root, configure .fide/settings.json, pass --target <path>, or run `fide graph init` first.");
+    throw new Error("No .fide folder found in the target directory. Run this command from your project root, set FIDE_DIR, pass --target <path>, or run `fide graph init` first.");
   }
 
   const normalizedInputs: StatementInput[] = batch.statements.map((statement) => ({

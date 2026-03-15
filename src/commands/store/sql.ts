@@ -2,30 +2,30 @@ import { createPgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, readUtf8 } from "../../util/io.js";
-import { resolveGraphTarget } from "../../util/graph/target.js";
+import { resolveStoreTarget } from "../../util/graph/target.js";
 import { executeSqliteQuery } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
-import { readStdinUtf8 } from "./shared.js";
+import { readStdinUtf8 } from "../graph/shared.js";
 
 function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
-function queryHelp(): string {
+function sqlHelp(): string {
   return renderHelp({
     sections: [
       {
         title: "Usage",
         items: [
-          "  fide graph query [--target <key-or-path>] <sql>",
-          "  fide graph query [--target <key-or-path>] --file <query.sql>",
-          "  fide graph query [--target <key-or-path>] --stdin",
+          "  fide store sql --store <name> <sql>",
+          "  fide store sql --store <name> --file <query.sql>",
+          "  fide store sql --store <name> --stdin",
         ],
       },
       {
         title: "Flags",
         items: [
-          "  --target <key>           Configured sqlite or postgres target key",
+          "  --store <name>           Configured sqlite or postgres store target name",
           "  --file <query.sql>       Read SQL from a file",
           "  --stdin                  Read SQL from stdin",
           "  --allow-write            Allow write SQL",
@@ -36,9 +36,9 @@ function queryHelp(): string {
       {
         title: "Examples",
         items: [
-          "  fide graph query --target primary 'select * from statements limit 10'",
-          "  fide graph query --target sqlite 'select * from statements limit 10'",
-          "  fide graph query --target primary --file queries/statements.sql",
+          "  fide store sql --store primary 'select * from statements limit 10'",
+          "  fide store sql --store sqlite 'select * from statements limit 10'",
+          "  fide store sql --store primary --file queries/statements.sql",
         ],
       },
     ],
@@ -78,18 +78,21 @@ async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typ
   return { parsed, sql: "" };
 }
 
-export async function runGraphQuery(args: string[]): Promise<number> {
+export async function runStoreSql(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args);
   if (hasFlag(initialParsed.flags, "help")) {
-    console.log(queryHelp());
+    console.log(sqlHelp());
     return 0;
   }
 
   const { parsed, sql } = await resolveQuerySql(args);
   const flags = parsed.flags;
+  if (!flags.has("store")) {
+    throw new Error("Missing required flag: --store <name>.");
+  }
   if (!sql.trim()) {
-    console.error("Missing SQL for `graph query`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
-    console.error(queryHelp());
+    console.error("Missing SQL for `store sql`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
+    console.error(sqlHelp());
     return 1;
   }
 
@@ -98,15 +101,12 @@ export async function runGraphQuery(args: string[]): Promise<number> {
     throw new Error("Write SQL requires `--allow-write`.");
   }
 
-  const graphTarget = resolveGraphTarget(flags);
-  if (graphTarget.type === "local") {
-    throw new Error("`graph query` does not support local targets. Use a configured sqlite or postgres target.");
-  }
+  const graphTarget = resolveStoreTarget(flags);
 
   if (graphTarget.type === "postgres") {
     if (!graphTarget.databaseUrl) {
       throw new Error(
-        `Missing postgres connection for graph target "${graphTarget.key ?? "unknown"}". Set FIDE_GRAPH_DATABASE_URL or configure the target in .fide/settings.json.`,
+        `Missing postgres connection for store target "${graphTarget.key ?? "unknown"}". Configure the target in settings.json or set the referenced env var.`,
       );
     }
     const client = createPgClient(graphTarget.databaseUrl);

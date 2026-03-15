@@ -1,11 +1,9 @@
-import { runGraphAdd } from "./add.js";
 import { runGraphDraft } from "./draft.js";
 import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
 import { runInitCommand } from "./init.js";
-import { runGraphQuery } from "./query.js";
-import { runGraphRun } from "./run.js";
 import { runGraphStatus } from "./status.js";
+import { runGraphWrite } from "./write.js";
 
 /**
  * Route `fide graph <command>` subcommands.
@@ -16,8 +14,8 @@ export async function runGraphCommand(command: string | undefined, args: string[
     return 0;
   }
 
-  if (command === "add") {
-    return runGraphAdd(args);
+  if (command === "write") {
+    return runGraphWrite(args);
   }
 
   if (command === "draft") {
@@ -26,14 +24,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "init") {
     return runInitCommand(args);
-  }
-
-  if (command === "query") {
-    return runGraphQuery(args);
-  }
-
-  if (command === "run") {
-    return runGraphRun(args);
   }
 
   if (command === "status") {

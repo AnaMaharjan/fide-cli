@@ -7,6 +7,7 @@ import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { type FideSettings, validateGraphSettings } from "../../util/graph/target.js";
 import { resolveAppTarget, validateAppSettings, type FideAppSettings } from "../../util/app/target.js";
+import { readJsonFile, resolveSettingsPath } from "../../util/workspace.js";
 
 function initHelp(): string {
   return renderHelp({
@@ -59,16 +60,14 @@ async function createConfiguredAppTarget(flags: Map<string, string | boolean>): 
   }
 
   const key = requestedTarget ?? "postgres";
-  const settingsPath = resolve(process.cwd(), ".fide", "settings.json");
-  const current = existsSync(settingsPath)
-    ? JSON.parse(await readFile(settingsPath, "utf8")) as FideSettings & FideAppSettings
-    : {};
+  const settingsPath = resolveSettingsPath(process.cwd());
+  const current = readJsonFile<FideSettings & FideAppSettings>(settingsPath) ?? {};
 
   const appTargets = current.appTargets ?? {};
   if (appTargets[key]) {
     throw new Error(
       requestedTarget
-        ? `App target "${key}" already exists in .fide/settings.json.`
+        ? `App target "${key}" already exists in settings.json.`
         : `Default app target name "${key}" already exists. Pass --target <target-name>.`,
     );
   }
@@ -108,7 +107,7 @@ export async function runAppInit(args: string[]): Promise<number> {
   }
   if (!target.databaseUrl) {
     throw new Error(
-      `Missing postgres connection for app target "${target.key ?? "unknown"}". Configure the target in .fide/settings.json or set the referenced env var.`,
+      `Missing postgres connection for app target "${target.key ?? "unknown"}". Configure the target in settings.json or set the referenced env var.`,
     );
   }
 

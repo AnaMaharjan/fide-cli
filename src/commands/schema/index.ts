@@ -19,7 +19,8 @@ function schemaHelp(): string {
         title: "Examples",
         items: [
           "  fide schema",
-          "  fide schema graph.add",
+          "  fide schema graph.write",
+          "  fide schema store.sql",
         ],
       },
       {
