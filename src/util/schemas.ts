@@ -44,10 +44,11 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       outPath: "string",
     },
   },
-  "graph.query.write": {
-    command: "fide graph query write",
+  "graph.write.query": {
+    command: "fide graph write --query",
     params: [
       { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
+      { name: "query", type: "boolean", required: true, description: "Write a saved query file instead of statement inputs" },
       { name: "store", type: "string", required: true, description: "Statement store key for this query file" },
       { name: "name", type: "string", required: true, description: "Query file name without .sql" },
       { name: "description", type: "string", required: false, description: "Optional query description header" },

@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { getStringFlag } from "../args.js";
 import { ensureFideEnvLoaded, readJsonFile, resolveFideDir as resolveConfiguredFideDir, resolveSettingsPath, resolveFideRoot } from "../fide-dir.js";
+import { type QueryStoreSettings, validateQueryStoreSettings } from "../query/target.js";
 
 export type GraphRecipeStep = {
   from: string;
@@ -45,12 +46,6 @@ type FideJsonlStatementStoreSettings = {
   connection: string;
   recipe?: GraphRecipe;
   metadata?: GraphRunState["metadata"];
-};
-
-export type QueryStoreSettings = {
-  type: "postgres";
-  connection?: string;
-  schema: string;
 };
 
 export type FideSettings = {
@@ -173,16 +168,7 @@ export function validateGraphSettings(settings: FideSettings): void {
     if (!store.recipe) continue;
     validateRecipe(key, store.recipe, statementStores);
   }
-
-  const queryStores = settings.queryStores ?? {};
-  for (const [key, store] of Object.entries(queryStores)) {
-    if (store.type !== "postgres") {
-      throw new Error(`Query store "${key}" must use type "postgres".`);
-    }
-    if (typeof store.schema !== "string" || store.schema.trim().length === 0) {
-      throw new Error(`Query store "${key}" must include schema in settings.json.`);
-    }
-  }
+  validateQueryStoreSettings(settings);
 }
 
 export function listConfiguredStoreTargetKeys(root: string = process.cwd()): string[] {

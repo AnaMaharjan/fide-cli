@@ -14,7 +14,9 @@ import {
 } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
-import { readLocalQueryDefinitions, replaceQueryStoreQueries, resolveQueryStore } from "../../util/query-store.js";
+import { readLocalQueries } from "../../util/query/files.js";
+import { replaceQueryStoreQueries } from "../../util/query/postgres.js";
+import { resolveQueryStore } from "../../util/query/target.js";
 
 function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;
@@ -226,7 +228,7 @@ export async function runStoreBuild(args: string[]): Promise<number> {
     queryFlags.set("query-store", String(flags.get("queries")));
     const queryStore = resolveQueryStore(queryFlags);
     const graphTarget = resolveGraphTarget(flags);
-    const queries = await readLocalQueryDefinitions(graphTarget.root);
+    const queries = await readLocalQueries(graphTarget.root);
     const queryCount = await replaceQueryStoreQueries(queryStore, queries);
     const payload = {
       ok: true,
