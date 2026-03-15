@@ -13,6 +13,7 @@ export function appCommandHelp(): string {
         title: "Commands",
         items: [
           "  init     Initialize app storage for saved queries and query runs",
+          "  query    Save a named graph query into app storage",
         ],
       },
       {

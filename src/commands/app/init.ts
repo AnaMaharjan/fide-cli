@@ -25,7 +25,7 @@ function initHelp(): string {
         items: [
           "  --target <name>         Existing app target key or new target name",
           "  --connection <value>    Connection value or env var name for the postgres app target",
-          "  --schema <name>         App schema name (default: fide_graph_app)",
+          "  --schema <name>         App schema name (default: fide_app)",
           "  --dangerously-drop      Reset the resolved app schema before re-initializing",
           "  --yes                   Confirm --dangerously-drop",
           "  --pretty, -p            Human-readable output",
@@ -36,7 +36,7 @@ function initHelp(): string {
         items: [
           "  fide app init --connection FIDE_GRAPH_DATABASE_URL_SB",
           "  fide app init --target primary --connection FIDE_GRAPH_DATABASE_URL_SB",
-          "  fide app init --target primary --schema fide_graph_app",
+          "  fide app init --target primary --schema fide_app",
         ],
       },
     ],
@@ -76,7 +76,7 @@ async function createConfiguredAppTarget(flags: Map<string, string | boolean>): 
   appTargets[key] = {
     type: "postgres",
     connection,
-    schema: getStringFlag(flags, "schema") ?? "fide_graph_app",
+    schema: getStringFlag(flags, "schema") ?? "fide_app",
   };
 
   current.appTargets = appTargets;
@@ -132,9 +132,15 @@ export async function runAppInit(args: string[]): Promise<number> {
       graph_id TEXT NOT NULL,
       sql TEXT NOT NULL,
       description TEXT,
+      fields JSONB NOT NULL DEFAULT '{}'::jsonb,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await pgClient.unsafe(`
+    ALTER TABLE ${queriesTableQualified}
+    ADD COLUMN IF NOT EXISTS fields JSONB NOT NULL DEFAULT '{}'::jsonb;
   `);
 
   await pgClient.unsafe(`
@@ -142,6 +148,7 @@ export async function runAppInit(args: string[]): Promise<number> {
       id BIGSERIAL PRIMARY KEY,
       query_id BIGINT REFERENCES ${queriesTableQualified}(id) ON DELETE CASCADE,
       graph_id TEXT NOT NULL,
+      sql TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL,
       row_count INTEGER,
       result_json JSONB,
@@ -149,6 +156,11 @@ export async function runAppInit(args: string[]): Promise<number> {
       started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       finished_at TIMESTAMPTZ
     );
+  `);
+
+  await pgClient.unsafe(`
+    ALTER TABLE ${runsTableQualified}
+    ADD COLUMN IF NOT EXISTS sql TEXT NOT NULL DEFAULT '';
   `);
 
   const useJson = shouldUseJsonOutput(flags);

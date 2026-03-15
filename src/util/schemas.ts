@@ -12,7 +12,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     params: [
       { name: "target", type: "string", required: false, description: "Existing app target key or new target name" },
       { name: "connection", type: "string", required: false, description: "Connection value or env var name for the postgres app target" },
-      { name: "schema", type: "string", required: false, description: "App schema name (default: fide_graph_app)" },
+      { name: "schema", type: "string", required: false, description: "App schema name (default: fide_app)" },
       { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved app schema before re-initializing (requires --yes)" },
       { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -24,6 +24,28 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       schema: "string",
       created: "string[]",
       dropped: "boolean",
+    },
+  },
+  "app.query": {
+    command: "fide app query",
+    params: [
+      { name: "target", type: "string", required: false, description: "Configured app target key" },
+      { name: "graph", type: "string", required: true, description: "Graph target id the saved query runs against" },
+      { name: "save", type: "string", required: true, description: "Save or update the query under this name" },
+      { name: "description", type: "string", required: false, description: "Optional query description" },
+      { name: "default-limit", type: "string", required: false, description: "Optional default limit for this saved query" },
+      { name: "fields-json", type: "string", required: false, description: "Optional JSON object describing result fields" },
+      { name: "file", type: "string", required: false, description: "Read SQL from a file" },
+      { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
+      { name: "fields", type: "string", required: false, description: "Output field mask" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      ok: "boolean",
+      target: "string",
+      key: "string?",
+      schema: "string",
+      saved: "object?",
     },
   },
   "graph.init": {
