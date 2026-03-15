@@ -29,7 +29,7 @@ function helpText(): string {
           title: "Workflows",
           items: [
             "  fide graph write '<json>'             Write statement inputs into the local workspace",
-            "  fide store init --type sqlite ...     Initialize a configured backend target",
+            "  fide store init --type sqlite ...     Initialize a configured store",
             "  fide store sql --store primary 'select * from statements limit 10'",
             "  fide store materialize --store combined",
           ],

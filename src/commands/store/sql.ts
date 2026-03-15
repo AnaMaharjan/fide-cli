@@ -25,7 +25,7 @@ function sqlHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --store <name>           Configured sqlite or postgres store target name",
+          "  --store <name>           Configured sqlite or postgres store name",
           "  --file <query.sql>       Read SQL from a file",
           "  --stdin                  Read SQL from stdin",
           "  --allow-write            Allow write SQL",
@@ -117,7 +117,7 @@ export async function runStoreSql(args: string[]): Promise<number> {
       });
       const payload = {
         ok: true,
-        target: "postgres",
+        storeType: "postgres",
         key: graphTarget.key,
         schema: graphTarget.schema,
         rowCount: rows.length,
@@ -137,7 +137,7 @@ export async function runStoreSql(args: string[]): Promise<number> {
   const result = await executeSqliteQuery(graphTarget.file, sql, { allowWrite });
   const payload = {
     ok: true,
-    target: "sqlite",
+    storeType: "sqlite",
     key: graphTarget.key,
     file: graphTarget.file,
     rowCount: result.rows.length,

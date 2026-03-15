@@ -66,7 +66,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     return 1;
   }
   if (graphTarget.type !== "local") {
-    throw new Error("`graph write` only supports local workspace targets. Use `fide store sql` or `fide store materialize` for configured sqlite or postgres targets.");
+    throw new Error("`graph write` only supports local `.fide` directories. Use `fide store sql` or `fide store materialize` for configured sqlite or postgres stores.");
   }
 
   const statementsDir = resolveStatementsDir(graphTarget.root);

@@ -12,10 +12,10 @@ export function storeCommandHelp(): string {
       {
         title: "Commands",
         items: [
-          "  init         Initialize a configured sqlite or postgres target",
-          "  status       Inspect configured backend targets and materialization state",
-          "  sql          Run SQL against a configured sqlite or postgres target",
-          "  materialize  Materialize a recipe-backed target from configured sources",
+          "  init         Initialize a configured sqlite or postgres store",
+          "  status       Inspect configured stores and materialization state",
+          "  sql          Run SQL against a configured sqlite or postgres store",
+          "  materialize  Materialize a recipe-backed store from configured sources",
         ],
       },
       {
@@ -30,8 +30,8 @@ export function storeCommandHelp(): string {
       {
         title: "Notes",
         items: [
-          "  - Store commands operate on configured store targets from `settings.json` inside the resolved Fide workspace.",
-          "  - Recipe-backed targets are materialized with `fide store materialize`.",
+          "  - Store commands operate on configured stores from `settings.json` inside the resolved Fide workspace.",
+          "  - Recipe-backed stores are materialized with `fide store materialize`.",
           "  - Local workspace authoring lives under `fide graph`.",
         ],
       },

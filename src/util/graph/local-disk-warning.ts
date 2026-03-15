@@ -35,7 +35,7 @@ function getGitignoreWarnings(
     if (isExplicitlyGitignored(path)) {
       continue;
     }
-    warnings.push(`${describe(path)} is not gitignored: ${relative(process.cwd(), path).replaceAll("\\", "/")} (set target.gitignore=false to suppress)`);
+    warnings.push(`${describe(path)} is not gitignored: ${relative(process.cwd(), path).replaceAll("\\", "/")} (set gitignore=false to suppress)`);
   }
   return warnings;
 }

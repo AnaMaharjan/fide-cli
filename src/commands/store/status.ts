@@ -34,7 +34,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
         {
           title: "Flags",
           items: [
-            "  --store <name>   Configured sqlite or postgres store target name",
+            "  --store <name>   Configured sqlite or postgres store name",
           ],
         },
         {
@@ -68,7 +68,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
       if (!target.databaseUrl) {
         return {
           ok: true,
-          target: "postgres",
+          storeType: "postgres",
           key: target.key,
           next: nextCommands(target.key, target.recipe),
           configuredFromSettings: target.configuredFromSettings,
@@ -192,7 +192,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
 
         return {
           ok: true,
-          target: "postgres",
+          storeType: "postgres",
           key: target.key,
           next: nextCommands(target.key, target.recipe),
           configured: true,
@@ -210,7 +210,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
       } catch (error) {
         return {
           ok: true,
-          target: "postgres",
+          storeType: "postgres",
           key: target.key,
           next: nextCommands(target.key, target.recipe),
           configured: true,
@@ -234,7 +234,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
     const inspection = await inspectSqliteGraph(target.file);
     return {
       ok: true,
-      target: "sqlite",
+      storeType: "sqlite",
       key: target.key,
       configured: true,
       reachable: inspection.reachable,
@@ -255,14 +255,14 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
   }
 
   const configuredKeys = listConfiguredStoreTargetKeys();
-  const targets = await Promise.all(configuredKeys.map(async (key) => {
+  const stores = await Promise.all(configuredKeys.map(async (key) => {
     const targetFlags = new Map(flags);
     targetFlags.set("store", key);
     const resolved = resolveStoreTarget(targetFlags);
     const detailed = await statusForTarget(resolved);
     return {
       key,
-      type: detailed.target,
+      storeType: detailed.storeType,
       warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
         statusCommand: `fide store status --store ${key}`,
@@ -280,7 +280,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
 
   printJson({
     ok: true,
-    targets,
+    stores,
   });
   return 0;
 }

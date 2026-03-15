@@ -90,7 +90,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: {
       ok: "boolean",
-      target: "string",
       configured: "boolean",
       root: "string",
       connection: "string",
@@ -108,18 +107,18 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide store init",
     params: [
       { name: "store", type: "string", required: false, description: "Configured sqlite/postgres store name, or new store name with --type" },
-      { name: "type", type: "string", required: false, description: "Create and initialize a configured backend target", enum: ["postgres", "sqlite"] },
-      { name: "connection", type: "string", required: false, description: "Connection value or env var name for postgres/sqlite targets" },
+      { name: "type", type: "string", required: false, description: "Create and initialize a configured sqlite or postgres store", enum: ["postgres", "sqlite"] },
+      { name: "connection", type: "string", required: false, description: "Connection value or env var name for postgres/sqlite stores" },
       { name: "schema", type: "string", required: false, description: "Postgres schema name (default: fide_graph)" },
-      { name: "recipe", type: "string", required: false, description: "Optional JSON recipe array of { from, sql } steps for a materialized target" },
+      { name: "recipe", type: "string", required: false, description: "Optional JSON recipe array of { from, sql } steps for a materialized store" },
       { name: "gitignore", type: "boolean", required: false, description: "Add sqlite files to .gitignore" },
-      { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved backend target before re-initializing (requires --yes)" },
+      { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved store before re-initializing (requires --yes)" },
       { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
       ok: "boolean",
-      target: "string",
+      storeType: "string",
       key: "string?",
       schema: "string?",
       file: "string?",
@@ -142,7 +141,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: {
       ok: "boolean",
-      target: "string",
+      storeType: "string",
       key: "string?",
       file: "string?",
       schema: "string?",
@@ -155,12 +154,12 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide store materialize",
     params: [
       { name: "store", type: "string", required: true, description: "Configured sqlite or postgres store name with a recipe" },
-      { name: "fields", type: "string", required: false, description: "Output field mask (e.g. target,statementCount,steps)" },
+      { name: "fields", type: "string", required: false, description: "Output field mask (e.g. storeType,statementCount,steps)" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
       ok: "boolean",
-      target: "string",
+      storeType: "string",
       key: "string?",
       file: "string?",
       schema: "string?",
@@ -173,11 +172,11 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "store.status": {
     command: "fide store status",
     params: [
-      { name: "store", type: "string", required: false, description: "Optional configured sqlite/postgres store name; omitted means all configured backend targets" },
+      { name: "store", type: "string", required: false, description: "Optional configured sqlite/postgres store name; omitted means all configured stores" },
     ],
     output: {
       ok: "boolean",
-      target: "string?",
+      storeType: "string?",
       key: "string?",
       configured: "boolean?",
       configuredFromSettings: "boolean?",
@@ -194,7 +193,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       error: "string?",
       warnings: "string[]?",
       next: "object?",
-      targets: "array<{ key: string, type: string, warnings?: string[], next?: object }>?",
+      stores: "array<{ key: string, storeType: string, warnings?: string[], next?: object }>?",
     },
   },
   "graph.statement-input": {

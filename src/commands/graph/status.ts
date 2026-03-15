@@ -27,7 +27,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
         {
           title: "Notes",
           items: [
-            "  - `fide graph status` reports local workspace status.",
+            "  - `fide graph status` reports local `.fide` directory status.",
             "  - Uses `FIDE_DIR` or the nearest `.fide` directory when `--fide-dir` is omitted.",
             "  - Use `fide store status` for configured sqlite/postgres backends.",
           ],
@@ -57,7 +57,6 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
 
   printJson({
     ok: true,
-    target: "local",
     configured: true,
     next: {
       writeHelpCommand: "fide graph write -h",

@@ -25,24 +25,24 @@ function initHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --store <name>           Existing configured backend target name, or new target name with --type",
-          "  --type <postgres|sqlite> Create a configured backend target before initializing it",
-          "  --connection <value>     Connection value or env var name for postgres/sqlite targets",
+          "  --store <name>           Existing configured store name, or new store name with --type",
+          "  --type <postgres|sqlite> Create a configured store before initializing it",
+          "  --connection <value>     Connection value or env var name for postgres/sqlite stores",
           "  --schema <name>          Postgres schema name (default: fide_graph)",
-          "  --recipe <json>          JSON array of { from, sql } recipe steps for a materialized target",
+          "  --recipe <json>          JSON array of { from, sql } recipe steps for a materialized store",
           "  --gitignore              Add sqlite files to .gitignore",
-          "  --dangerously-drop       Reset the resolved store target before re-initializing",
+          "  --dangerously-drop       Reset the resolved store before re-initializing",
           "  --yes                    Confirm --dangerously-drop",
           "  --pretty, -p             Human-readable output",
         ],
       },
-        {
-          title: "Notes",
-          items: [
-            "  - `fide store init` only supports configured sqlite/postgres targets.",
-            "  - Local `.fide` directories are created automatically by `fide graph write`.",
-          ],
-        },
+      {
+        title: "Notes",
+        items: [
+          "  - `fide store init` only supports configured sqlite/postgres stores.",
+          "  - Local `.fide` directories are created automatically by `fide graph write`.",
+        ],
+      },
     ],
   });
 }
@@ -270,7 +270,7 @@ export async function runStoreInit(args: string[]): Promise<number> {
 
     const payload = {
       ok: true,
-      target: "postgres",
+      storeType: "postgres",
       key: target.key,
       schema: target.schema,
       recipe: target.recipe,
@@ -302,7 +302,7 @@ export async function runStoreInit(args: string[]): Promise<number> {
   if (shouldUseJsonOutput(flags)) {
     printJson({
       ok: true,
-      target: "sqlite",
+      storeType: "sqlite",
       key: target.key,
       file: target.file,
       recipe: target.recipe,

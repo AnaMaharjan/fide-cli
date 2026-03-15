@@ -31,8 +31,8 @@ function materializeHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --store <name>           Configured sqlite or postgres store target name with a recipe",
-          "  --fields <mask>          Output field mask (e.g. target,statementCount,steps)",
+          "  --store <name>           Configured sqlite or postgres store name with a recipe",
+          "  --fields <mask>          Output field mask (e.g. storeType,statementCount,steps)",
           "  --pretty, -p             Human-readable output",
         ],
       },
@@ -304,7 +304,7 @@ export async function runStoreMaterialize(args: string[]): Promise<number> {
   const payload = target.type === "postgres"
     ? {
       ok: true,
-      target: "postgres",
+      storeType: "postgres",
       key: target.key,
       schema: target.schema,
       statementCount: totalStatementCount,
@@ -313,7 +313,7 @@ export async function runStoreMaterialize(args: string[]): Promise<number> {
     }
     : {
       ok: true,
-      target: "sqlite",
+      storeType: "sqlite",
       key: target.key,
       file: target.file,
       statementCount: totalStatementCount,

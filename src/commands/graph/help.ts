@@ -14,7 +14,7 @@ export function graphCommandHelp(): string {
         items: [
           "  write    Write statement inputs into a local workspace",
           "  draft    Create a markdown statement draft in a local workspace",
-          "  status   Inspect the local workspace target",
+          "  status   Inspect the local .fide directory",
           "  defs     Inspect statement and entity definitions",
         ],
       },
