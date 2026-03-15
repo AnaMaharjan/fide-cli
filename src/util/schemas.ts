@@ -32,6 +32,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
       { name: "name", type: "string", required: true, description: "Draft file name without .md" },
       { name: "path", type: "string", required: false, description: "Optional subdirectory under .fide/drafts/statements" },
+      { name: "description", type: "string", required: false, description: "Optional draft description frontmatter" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "file", type: "string", required: false, description: "Primary agent path: input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -45,6 +46,10 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       statementCount: "number",
       mode: "string",
       outPath: "string",
+      createdAtUTC: "string",
+      updatedAtUTC: "string",
+      updateCount: "number",
+      next: "object",
     },
   },
   "graph.write.query": {

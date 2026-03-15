@@ -42,6 +42,7 @@ export async function resolveStatementInputsFromArgs(
   const filePath = getStringFlag(flags, "file");
   const useStdin = hasFlag(flags, "stdin");
   const formatFlag = parseStatementsInputFormat(getStringFlag(flags, "format"));
+  const normalize = !hasFlag(flags, "no-normalize");
   const stdinAvailable = process.stdin.isTTY === false;
   const inlineParams = parsed.positionals.join(" ");
 
@@ -50,17 +51,26 @@ export async function resolveStatementInputsFromArgs(
   if (filePath) {
     const raw = await readUtf8(filePath);
     const format = formatFlag ?? detectStatementsInputFormatFromFilePath(filePath) ?? detectStatementsInputFormat(raw);
-    statementInputs = parseStatementInputsByFormat(raw, format);
+    statementInputs = await parseStatementInputsByFormat(raw, format, {
+      filePath,
+      normalizeReferenceIdentifier: normalize,
+    });
   } else if (useStdin) {
     const raw = await readStdinUtf8();
     const format = formatFlag ?? detectStatementsInputFormat(raw);
-    statementInputs = parseStatementInputsByFormat(raw, format);
+    statementInputs = await parseStatementInputsByFormat(raw, format, {
+      normalizeReferenceIdentifier: normalize,
+    });
   } else if (inlineParams && inlineParams.trim().length > 0) {
-    statementInputs = parseStatementInputsByFormat(inlineParams, formatFlag ?? "json");
+    statementInputs = await parseStatementInputsByFormat(inlineParams, formatFlag ?? "json", {
+      normalizeReferenceIdentifier: normalize,
+    });
   } else if (!stdinAvailable) {
     const raw = await readStdinUtf8();
     const format = formatFlag ?? detectStatementsInputFormat(raw);
-    statementInputs = parseStatementInputsByFormat(raw, format);
+    statementInputs = await parseStatementInputsByFormat(raw, format, {
+      normalizeReferenceIdentifier: normalize,
+    });
   }
 
   return { parsed, statementInputs };

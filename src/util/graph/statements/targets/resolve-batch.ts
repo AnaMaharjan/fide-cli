@@ -17,7 +17,9 @@ export async function resolveBatchFromInput(
     return { root: parsed.root, statementCount: parsed.statementWires.length, format };
   }
 
-  const statementInputs = parseStatementInputsByFormat(raw, format);
+  const statementInputs = await parseStatementInputsByFormat(raw, format, {
+    normalizeReferenceIdentifier: options?.normalizeReferenceIdentifier ?? true,
+  });
   const batch = await buildStatementsWithRoot(statementInputs, {
     normalizeReferenceIdentifier: options?.normalizeReferenceIdentifier ?? true,
   });
