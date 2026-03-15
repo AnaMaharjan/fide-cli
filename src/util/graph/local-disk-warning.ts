@@ -44,13 +44,13 @@ export function getSqliteWarnings(file: string, options?: { gitignore?: boolean 
   return getGitignoreWarnings([file], options, () => "SQLite file");
 }
 
-export function getLocalWorkspaceWarnings(root: string, options?: { gitignore?: boolean | null }): string[] {
+export function getLocalFideWarnings(root: string, options?: { gitignore?: boolean | null }): string[] {
   return getGitignoreWarnings(
     [
       resolve(root, ".fide", "statements"),
       resolve(root, ".fide", "drafts"),
     ],
     options,
-    () => "Local workspace path",
+    () => "Local .fide path",
   );
 }

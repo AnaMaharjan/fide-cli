@@ -7,45 +7,6 @@ import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 const FIDE_ENTITY_TYPE_ENUM = Object.keys(FIDE_ENTITY_TYPES).sort();
 
 export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ name: string; type: string; required?: boolean; description?: string; enum?: string[] }>; output: Record<string, string> }> = {
-  "app.init": {
-    command: "fide app init",
-    params: [
-      { name: "target", type: "string", required: false, description: "Existing app target key or new target name" },
-      { name: "connection", type: "string", required: false, description: "Connection value or env var name for the postgres app target" },
-      { name: "schema", type: "string", required: false, description: "App schema name (default: fide_app)" },
-      { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved app schema before re-initializing (requires --yes)" },
-      { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      target: "string",
-      key: "string?",
-      schema: "string",
-      created: "string[]",
-      dropped: "boolean",
-    },
-  },
-  "app.query": {
-    command: "fide app query",
-    params: [
-      { name: "target", type: "string", required: false, description: "Configured app target key" },
-      { name: "graph", type: "string", required: true, description: "Graph target id the saved query runs against" },
-      { name: "save", type: "string", required: true, description: "Save or update the query under this name" },
-      { name: "description", type: "string", required: false, description: "Optional query description" },
-      { name: "file", type: "string", required: false, description: "Read SQL from a file" },
-      { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
-      { name: "fields", type: "string", required: false, description: "Output field mask" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      target: "string",
-      key: "string?",
-      schema: "string",
-      saved: "object?",
-    },
-  },
   "graph.write": {
     command: "fide graph write",
     params: [
@@ -83,6 +44,25 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       outPath: "string",
     },
   },
+  "graph.query.write": {
+    command: "fide graph query write",
+    params: [
+      { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
+      { name: "store", type: "string", required: true, description: "Statement store key for this query file" },
+      { name: "name", type: "string", required: true, description: "Query file name without .sql" },
+      { name: "description", type: "string", required: false, description: "Optional query description header" },
+      { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
+      { name: "file", type: "string", required: false, description: "Read SQL from a file" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      ok: "boolean",
+      statementStoreKey: "string",
+      name: "string",
+      outPath: "string",
+      warnings: "string[]",
+    },
+  },
   "graph.status": {
     command: "fide graph status",
     params: [
@@ -94,7 +74,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       root: "string",
       connection: "string",
       configuredFromSettings: "boolean",
-      workspaceDir: "string",
+      fideDir: "string",
       statementsDir: "string",
       statementsDirPresent: "boolean",
       missing: "string[]",
@@ -103,36 +83,10 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       next: "object",
     },
   },
-  "store.init": {
-    command: "fide store init",
-    params: [
-      { name: "store", type: "string", required: false, description: "Configured sqlite/postgres store name, or new store name with --type" },
-      { name: "type", type: "string", required: false, description: "Create and initialize a configured sqlite or postgres store", enum: ["postgres", "sqlite"] },
-      { name: "connection", type: "string", required: false, description: "Connection value or env var name for postgres/sqlite stores" },
-      { name: "schema", type: "string", required: false, description: "Postgres schema name (default: fide_graph)" },
-      { name: "recipe", type: "string", required: false, description: "Optional JSON recipe array of { from, sql } steps for a materialized store" },
-      { name: "gitignore", type: "boolean", required: false, description: "Add sqlite files to .gitignore" },
-      { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved store before re-initializing (requires --yes)" },
-      { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      storeType: "string",
-      key: "string?",
-      schema: "string?",
-      file: "string?",
-      recipe: "array<{ from: string, sql: string }>?",
-      dropped: "boolean",
-      gitignorePath: "string?",
-      gitignoreAdded: "string[]",
-      warnings: "string[]?",
-    },
-  },
   "store.sql": {
     command: "fide store sql",
     params: [
-      { name: "store", type: "string", required: true, description: "Configured sqlite or postgres store name" },
+      { name: "store", type: "string", required: true, description: "Configured sqlite or postgres statement store name" },
       { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
       { name: "file", type: "string", required: false, description: "Read SQL from a file" },
       { name: "allow-write", type: "boolean", required: false, description: "Allow write queries" },
@@ -150,10 +104,11 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       warnings: "string[]?",
     },
   },
-  "store.materialize": {
-    command: "fide store materialize",
+  "store.build": {
+    command: "fide store build",
     params: [
-      { name: "store", type: "string", required: true, description: "Configured sqlite or postgres store name with a recipe" },
+      { name: "statements", type: "string", required: false, description: "Configured statement store name with a recipe" },
+      { name: "queries", type: "string", required: false, description: "Configured query store name" },
       { name: "fields", type: "string", required: false, description: "Output field mask (e.g. storeType,statementCount,steps)" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
@@ -164,6 +119,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       file: "string?",
       schema: "string?",
       statementCount: "number",
+      queryCount: "number?",
       steps: "array<{ from: string, statementCount: number }>",
       lastRunAt: "string",
       warnings: "string[]?",
@@ -172,7 +128,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "store.status": {
     command: "fide store status",
     params: [
-      { name: "store", type: "string", required: false, description: "Optional configured sqlite/postgres store name; omitted means all configured stores" },
+      { name: "store", type: "string", required: false, description: "Optional configured statement store name; omitted means all configured statement stores" },
     ],
     output: {
       ok: "boolean",
@@ -185,7 +141,8 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       databaseUrlEnv: "string?",
       schema: "string?",
       file: "string?",
-      recipe: "array<{ from: string, sql: string }>?",
+      dir: "string?",
+      recipe: "array<{ from: string, sql?: string }>?",
       lastRunAt: "string?",
       lastRunStatementsAdded: "number?",
       reachable: "boolean?",

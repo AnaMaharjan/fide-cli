@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 let envLoaded = false;
 
-export function ensureWorkspaceEnvLoaded(): void {
+export function ensureFideEnvLoaded(): void {
   if (envLoaded) return;
   envLoaded = true;
 
@@ -23,7 +23,7 @@ export function ensureWorkspaceEnvLoaded(): void {
 }
 
 function resolveEnvFideDir(root: string): string | null {
-  ensureWorkspaceEnvLoaded();
+  ensureFideEnvLoaded();
   const configured = process.env.FIDE_DIR;
   if (!configured) return null;
   return configured.startsWith("/")
@@ -50,7 +50,7 @@ export function resolveFideDir(root: string = process.cwd()): string {
     ?? resolve(root, ".fide");
 }
 
-export function resolveWorkspaceRoot(root: string = process.cwd()): string {
+export function resolveFideRoot(root: string = process.cwd()): string {
   return dirname(resolveFideDir(root));
 }
 

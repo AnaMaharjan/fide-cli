@@ -4,7 +4,7 @@ import { hasFlag, parseArgs } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { resolveGraphTarget } from "../../util/graph/target.js";
-import { getLocalWorkspaceWarnings } from "../../util/graph/local-disk-warning.js";
+import { getLocalFideWarnings } from "../../util/graph/local-disk-warning.js";
 
 export async function runGraphStatus(args: string[] = []): Promise<number> {
   const { flags, positionals } = parseArgs(args);
@@ -43,13 +43,13 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`fide graph status` only supports local workspaces. Use `fide store status` for configured sqlite/postgres targets.");
+    throw new Error("`fide graph status` only supports local .fide directories. Use `fide store status` for configured sqlite/postgres stores.");
   }
 
   const { root, configuredFromSettings } = graphTarget;
-  const workspaceDir = resolve(root, ".fide");
-  const statementsDir = resolve(workspaceDir, "statements");
-  const hasFide = existsSync(workspaceDir);
+  const fideDir = resolve(root, ".fide");
+  const statementsDir = resolve(fideDir, "statements");
+  const hasFide = existsSync(fideDir);
   const hasStatements = existsSync(statementsDir);
 
   const missing: string[] = [];
@@ -65,12 +65,12 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     root,
     connection: graphTarget.connection ?? root,
     configuredFromSettings,
-    workspaceDir,
+    fideDir,
     statementsDir,
     statementsDirPresent: hasStatements,
     missing,
     key: graphTarget.key,
-    warnings: getLocalWorkspaceWarnings(root, { gitignore: graphTarget.gitignore }),
+    warnings: getLocalFideWarnings(root, { gitignore: graphTarget.gitignore }),
   });
   return 0;
 }

@@ -18,9 +18,8 @@ function helpText(): string {
         {
           title: "Groups",
           items: [
-            "  app      Saved query storage and query-run metadata",
             "  graph    Statement authoring in local .fide directories and graph definitions",
-            "  store    Configured sqlite/postgres backends and materialization",
+            "  store    Configured statement stores and store builds",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
           ],
@@ -28,10 +27,10 @@ function helpText(): string {
         {
           title: "Workflows",
           items: [
-            "  fide graph write '<json>'             Write statement inputs into the local workspace",
-            "  fide store init --type sqlite ...     Initialize a configured store",
+            "  fide graph write '<json>'             Write statement inputs into the local .fide directory",
+            "  fide graph query write --store sqlite --name recentStatements 'select * from statements limit 10'",
             "  fide store sql --store primary 'select * from statements limit 10'",
-            "  fide store materialize --store combined",
+            "  fide store build --statements combined",
           ],
         },
         {
@@ -70,10 +69,6 @@ export async function runCli(argv: string[]): Promise<number> {
     }
 
     switch (group) {
-      case "app": {
-        const { runAppCommand } = await import("./commands/app/index.js");
-        return await runAppCommand(command, rest);
-      }
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);

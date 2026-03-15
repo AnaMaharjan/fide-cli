@@ -1,15 +1,10 @@
 import { dirname, resolve } from "node:path";
 import { getStringFlag } from "../args.js";
-import { ensureWorkspaceEnvLoaded, readJsonFile, resolveSettingsPath, resolveWorkspaceRoot } from "../workspace.js";
-
-export type FideSettings = {
-  storeTargets?: Record<string, PostgresStoreTargetSettings | SqliteStoreTargetSettings>;
-  appTargets?: Record<string, { type: "postgres"; connection?: string; schema: string }>;
-};
+import { ensureFideEnvLoaded, readJsonFile, resolveFideDir as resolveConfiguredFideDir, resolveSettingsPath, resolveFideRoot } from "../fide-dir.js";
 
 export type GraphRecipeStep = {
   from: string;
-  sql: string;
+  sql?: string;
 };
 
 export type GraphRecipe = GraphRecipeStep[];
@@ -29,7 +24,7 @@ type GraphRunStateCompat = GraphRunState & {
   lastRunStatementsAdded?: number;
 };
 
-type PostgresStoreTargetSettings = {
+type PostgresStatementStoreSettings = {
   type: "postgres";
   connection?: string;
   schema: string;
@@ -37,12 +32,30 @@ type PostgresStoreTargetSettings = {
   metadata?: GraphRunState["metadata"];
 };
 
-type SqliteStoreTargetSettings = {
+type SqliteStatementStoreSettings = {
   type: "sqlite";
   connection: string;
   gitignore?: boolean;
   recipe?: GraphRecipe;
   metadata?: GraphRunState["metadata"];
+};
+
+type FideJsonlStatementStoreSettings = {
+  type: "fide-jsonl";
+  connection: string;
+  recipe?: GraphRecipe;
+  metadata?: GraphRunState["metadata"];
+};
+
+export type QueryStoreSettings = {
+  type: "postgres";
+  connection?: string;
+  schema: string;
+};
+
+export type FideSettings = {
+  statementStores?: Record<string, PostgresStatementStoreSettings | SqliteStatementStoreSettings | FideJsonlStatementStoreSettings>;
+  queryStores?: Record<string, QueryStoreSettings>;
 };
 
 export type ResolvedLocalGraphTarget = {
@@ -56,7 +69,7 @@ export type ResolvedLocalGraphTarget = {
   runState: GraphRunState | null;
 };
 
-export type ResolvedPostgresGraphTarget = {
+export type ResolvedPostgresStatementStore = {
   type: "postgres";
   key: string | null;
   configuredFromSettings: boolean;
@@ -68,7 +81,7 @@ export type ResolvedPostgresGraphTarget = {
   runState: GraphRunState | null;
 };
 
-export type ResolvedSqliteGraphTarget = {
+export type ResolvedSqliteStatementStore = {
   type: "sqlite";
   key: string | null;
   configuredFromSettings: boolean;
@@ -78,8 +91,18 @@ export type ResolvedSqliteGraphTarget = {
   runState: GraphRunState | null;
 };
 
-export type ResolvedGraphTarget = ResolvedLocalGraphTarget | ResolvedPostgresGraphTarget | ResolvedSqliteGraphTarget;
-export type ResolvedStoreTarget = ResolvedPostgresGraphTarget | ResolvedSqliteGraphTarget;
+export type ResolvedFideJsonlStatementStore = {
+  type: "fide-jsonl";
+  key: string | null;
+  configuredFromSettings: boolean;
+  dir: string;
+  recipe: GraphRecipe | null;
+  runState: GraphRunState | null;
+};
+
+export type ResolvedStatementStore = ResolvedPostgresStatementStore | ResolvedSqliteStatementStore | ResolvedFideJsonlStatementStore;
+export type ResolvedStoreTarget = ResolvedStatementStore;
+export type ResolvedGraphTarget = ResolvedLocalGraphTarget;
 
 function readSettings(root: string): FideSettings | null {
   const settingsPath = resolveSettingsPath(root);
@@ -106,61 +129,76 @@ function normalizeGraphRunState(state: GraphRunStateCompat | null | undefined): 
 function validateRecipe(
   key: string,
   recipe: GraphRecipe,
-  storeTargets: Record<string, PostgresStoreTargetSettings | SqliteStoreTargetSettings>,
+  statementStores: Record<string, PostgresStatementStoreSettings | SqliteStatementStoreSettings | FideJsonlStatementStoreSettings>,
 ): void {
   if (!Array.isArray(recipe) || recipe.length === 0) {
-    throw new Error(`Store target "${key}" recipe must be a non-empty array of { from, sql } steps.`);
+    throw new Error(`Store "${key}" recipe must be a non-empty array of recipe steps.`);
   }
 
   for (const [index, step] of recipe.entries()) {
     if (!step || typeof step !== "object") {
-      throw new Error(`Store target "${key}" recipe step ${index + 1} must be an object with from and sql.`);
+      throw new Error(`Store "${key}" recipe step ${index + 1} must be an object.`);
     }
     if (typeof step.from !== "string" || step.from.trim().length === 0) {
-      throw new Error(`Store target "${key}" recipe step ${index + 1} must include a non-empty from store id.`);
-    }
-    if (typeof step.sql !== "string" || step.sql.trim().length === 0) {
-      throw new Error(`Store target "${key}" recipe step ${index + 1} must include a non-empty SQL string.`);
+      throw new Error(`Store "${key}" recipe step ${index + 1} must include a non-empty from store id.`);
     }
     if (step.from === key) {
-      throw new Error(`Store target "${key}" recipe step ${index + 1} cannot reference itself.`);
+      throw new Error(`Store "${key}" recipe step ${index + 1} cannot reference itself.`);
     }
-    if (!storeTargets[step.from]) {
-      throw new Error(
-        `Store target "${key}" recipe step ${index + 1} references unknown store target "${step.from}". Define it in settings.json first.`,
-      );
+    const source = statementStores[step.from];
+    if (!source) {
+      throw new Error(`Store "${key}" recipe step ${index + 1} references unknown store "${step.from}". Define it in settings.json first.`);
+    }
+    if (source.type === "fide-jsonl") {
+      if (step.sql != null && (typeof step.sql !== "string" || step.sql.trim().length === 0)) {
+        throw new Error(`Store "${key}" recipe step ${index + 1} has an invalid sql value.`);
+      }
+      continue;
+    }
+    if (typeof step.sql !== "string" || step.sql.trim().length === 0) {
+      throw new Error(`Store "${key}" recipe step ${index + 1} must include a non-empty SQL string.`);
     }
   }
 }
 
 export function validateGraphSettings(settings: FideSettings): void {
-  const storeTargets = settings.storeTargets ?? {};
-  for (const [key, target] of Object.entries(storeTargets)) {
-    if (target.type === "postgres" && (typeof target.schema !== "string" || target.schema.trim().length === 0)) {
-      throw new Error(`Store target "${key}" must include schema in settings.json.`);
+  const statementStores = settings.statementStores ?? {};
+  for (const [key, store] of Object.entries(statementStores)) {
+    if (store.type === "postgres" && (typeof store.schema !== "string" || store.schema.trim().length === 0)) {
+      throw new Error(`Statement store "${key}" must include schema in settings.json.`);
     }
-    if (target.type === "sqlite" && (typeof target.connection !== "string" || target.connection.trim().length === 0)) {
-      throw new Error(`Store target "${key}" must include connection in settings.json.`);
+    if ((store.type === "sqlite" || store.type === "fide-jsonl") && (typeof store.connection !== "string" || store.connection.trim().length === 0)) {
+      throw new Error(`Statement store "${key}" must include connection in settings.json.`);
     }
-    if (!target.recipe) continue;
-    validateRecipe(key, target.recipe, storeTargets);
+    if (!store.recipe) continue;
+    validateRecipe(key, store.recipe, statementStores);
+  }
+
+  const queryStores = settings.queryStores ?? {};
+  for (const [key, store] of Object.entries(queryStores)) {
+    if (store.type !== "postgres") {
+      throw new Error(`Query store "${key}" must use type "postgres".`);
+    }
+    if (typeof store.schema !== "string" || store.schema.trim().length === 0) {
+      throw new Error(`Query store "${key}" must include schema in settings.json.`);
+    }
   }
 }
 
 export function listConfiguredStoreTargetKeys(root: string = process.cwd()): string[] {
   const settings = readSettings(root);
-  return Object.keys(settings?.storeTargets ?? {});
+  return Object.keys(settings?.statementStores ?? {});
 }
 
-function getConfiguredStoreTarget(
+function getConfiguredStatementStore(
   settings: FideSettings | null,
   key: string,
-): { key: string | null; target: PostgresStoreTargetSettings | SqliteStoreTargetSettings | null } {
-  const target = settings?.storeTargets?.[key] ?? null;
-  if (!target) {
-    throw new Error(`Unknown store target in settings.json: ${key}`);
+): { key: string | null; store: PostgresStatementStoreSettings | SqliteStatementStoreSettings | FideJsonlStatementStoreSettings | null } {
+  const store = settings?.statementStores?.[key] ?? null;
+  if (!store) {
+    throw new Error(`Unknown store in settings.json: ${key}`);
   }
-  return { key, target };
+  return { key, store };
 }
 
 function resolveLocalTarget(flags: Map<string, string | boolean>): ResolvedLocalGraphTarget {
@@ -184,7 +222,7 @@ function resolveLocalTarget(flags: Map<string, string | boolean>): ResolvedLocal
   return {
     type: "local",
     key: null,
-    root: resolveWorkspaceRoot(process.cwd()),
+    root: resolveFideRoot(process.cwd()),
     connection: null,
     gitignore: null,
     configuredFromSettings: Boolean(process.env.FIDE_DIR),
@@ -193,20 +231,24 @@ function resolveLocalTarget(flags: Map<string, string | boolean>): ResolvedLocal
   };
 }
 
-function resolvePostgresTarget(
-  settings: FideSettings | null,
-  key: string,
-): ResolvedPostgresGraphTarget {
-  ensureWorkspaceEnvLoaded();
-  const configured = getConfiguredStoreTarget(settings, key);
-  const postgresTarget = configured.target?.type === "postgres" ? configured.target : null;
-  if (!postgresTarget) {
-    throw new Error(`Store target "${key}" is not a postgres target.`);
+function resolvePathWithinFideDir(connection: string): string {
+  const fideDir = resolveConfiguredFideDir(process.cwd());
+  return connection.startsWith("/")
+    ? connection
+    : resolve(fideDir, connection);
+}
+
+function resolvePostgresStore(settings: FideSettings | null, key: string): ResolvedPostgresStatementStore {
+  ensureFideEnvLoaded();
+  const configured = getConfiguredStatementStore(settings, key);
+  const postgresStore = configured.store?.type === "postgres" ? configured.store : null;
+  if (!postgresStore) {
+    throw new Error(`Store "${key}" is not a postgres store.`);
   }
-  const connection = postgresTarget.connection ?? null;
-  const schema = postgresTarget.schema;
-  const recipe = postgresTarget.recipe ?? null;
-  const runState = normalizeGraphRunState(postgresTarget.metadata ? { metadata: postgresTarget.metadata } : null);
+  const connection = postgresStore.connection ?? null;
+  const schema = postgresStore.schema;
+  const recipe = postgresStore.recipe ?? null;
+  const runState = normalizeGraphRunState(postgresStore.metadata ? { metadata: postgresStore.metadata } : null);
 
   if (connection?.startsWith("postgres://") || connection?.startsWith("postgresql://")) {
     return {
@@ -249,29 +291,39 @@ function resolvePostgresTarget(
   };
 }
 
-function resolveSqliteTarget(
-  settings: FideSettings | null,
-  key: string,
-): ResolvedSqliteGraphTarget {
-  const configured = getConfiguredStoreTarget(settings, key);
-  const sqliteTarget = configured.target?.type === "sqlite" ? configured.target : null;
-  if (!sqliteTarget) {
-    throw new Error(`Store target "${key}" is not a sqlite target.`);
+function resolveSqliteStore(settings: FideSettings | null, key: string): ResolvedSqliteStatementStore {
+  ensureFideEnvLoaded();
+  const configured = getConfiguredStatementStore(settings, key);
+  const sqliteStore = configured.store?.type === "sqlite" ? configured.store : null;
+  if (!sqliteStore) {
+    throw new Error(`Store "${key}" is not a sqlite store.`);
   }
-  const connection = sqliteTarget.connection;
-  const file = connection.startsWith("/") || connection.startsWith("./") || connection.startsWith("../") || connection.startsWith("~/")
-    ? resolve(process.cwd(), connection)
-    : process.env[connection]
-      ? resolve(process.cwd(), process.env[connection] as string)
-      : resolve(process.cwd(), connection);
+  const rawConnection = sqliteStore.connection;
+  const resolvedConnection = process.env[rawConnection] ?? rawConnection;
   return {
     type: "sqlite",
     key: configured.key,
     configuredFromSettings: true,
-    file,
-    gitignore: typeof sqliteTarget.gitignore === "boolean" ? sqliteTarget.gitignore : null,
-    recipe: sqliteTarget.recipe ?? null,
-    runState: normalizeGraphRunState(sqliteTarget.metadata ? { metadata: sqliteTarget.metadata } : null),
+    file: resolvePathWithinFideDir(resolvedConnection),
+    gitignore: typeof sqliteStore.gitignore === "boolean" ? sqliteStore.gitignore : null,
+    recipe: sqliteStore.recipe ?? null,
+    runState: normalizeGraphRunState(sqliteStore.metadata ? { metadata: sqliteStore.metadata } : null),
+  };
+}
+
+function resolveFideJsonlStore(settings: FideSettings | null, key: string): ResolvedFideJsonlStatementStore {
+  const configured = getConfiguredStatementStore(settings, key);
+  const jsonlStore = configured.store?.type === "fide-jsonl" ? configured.store : null;
+  if (!jsonlStore) {
+    throw new Error(`Store "${key}" is not a fide-jsonl store.`);
+  }
+  return {
+    type: "fide-jsonl",
+    key: configured.key,
+    configuredFromSettings: true,
+    dir: resolvePathWithinFideDir(jsonlStore.connection),
+    recipe: jsonlStore.recipe ?? null,
+    runState: normalizeGraphRunState(jsonlStore.metadata ? { metadata: jsonlStore.metadata } : null),
   };
 }
 
@@ -282,14 +334,11 @@ export function resolveStoreTarget(flags: Map<string, string | boolean>): Resolv
     throw new Error("Missing required flag: --store <name>.");
   }
 
-  const configured = getConfiguredStoreTarget(settings, store);
-  if (configured.target?.type === "postgres") {
-    return resolvePostgresTarget(settings, store);
-  }
-  if (configured.target?.type === "sqlite") {
-    return resolveSqliteTarget(settings, store);
-  }
-  throw new Error(`Unsupported store target type for "${store}".`);
+  const configured = getConfiguredStatementStore(settings, store);
+  if (configured.store?.type === "postgres") return resolvePostgresStore(settings, store);
+  if (configured.store?.type === "sqlite") return resolveSqliteStore(settings, store);
+  if (configured.store?.type === "fide-jsonl") return resolveFideJsonlStore(settings, store);
+  throw new Error(`Unsupported store type for "${store}".`);
 }
 
 export function resolveGraphTarget(flags: Map<string, string | boolean>): ResolvedGraphTarget {
@@ -298,8 +347,5 @@ export function resolveGraphTarget(flags: Map<string, string | boolean>): Resolv
 
 export function resolveFideDir(flags: Map<string, string | boolean>): { root: string; configuredFromSettings: boolean } {
   const target = resolveGraphTarget(flags);
-  if (target.type !== "local") {
-    throw new Error(`The resolved graph target is ${target.type}, but this command expects a local .fide workspace.`);
-  }
   return { root: target.root, configuredFromSettings: target.configuredFromSettings };
 }

@@ -12,8 +12,9 @@ export function graphCommandHelp(): string {
       {
         title: "Commands",
         items: [
-          "  write    Write statement inputs into a local workspace",
-          "  draft    Create a markdown statement draft in a local workspace",
+          "  write    Write statement inputs into a local .fide directory",
+          "  query    Write saved-query SQL files into a local .fide directory",
+          "  draft    Create a markdown statement draft in a local .fide directory",
           "  status   Inspect the local .fide directory",
           "  defs     Inspect statement and entity definitions",
         ],
@@ -22,6 +23,7 @@ export function graphCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide graph write '[{ ... statement inputs ... }]'",
+          "  fide graph query write --store sqlite --name recentStatements 'select * from statements limit 10'",
           "  fide graph draft --file inputs.json",
           "  fide graph defs",
         ],

@@ -1,5 +1,4 @@
-import { runStoreInit } from "./init.js";
-import { runStoreMaterialize } from "./materialize.js";
+import { runStoreBuild } from "./build.js";
 import { runStoreSql } from "./sql.js";
 import { runStoreStatus } from "./status.js";
 import { storeCommandHelp } from "./help.js";
@@ -10,10 +9,6 @@ export async function runStoreCommand(command: string | undefined, args: string[
     return 0;
   }
 
-  if (command === "init") {
-    return runStoreInit(args);
-  }
-
   if (command === "status") {
     return runStoreStatus(args);
   }
@@ -22,8 +17,8 @@ export async function runStoreCommand(command: string | undefined, args: string[
     return runStoreSql(args);
   }
 
-  if (command === "materialize") {
-    return runStoreMaterialize(args);
+  if (command === "build") {
+    return runStoreBuild(args);
   }
 
   console.error(`Unknown store command: ${command}`);

@@ -97,16 +97,23 @@ export async function runStoreSql(args: string[]): Promise<number> {
   }
 
   const allowWrite = hasFlag(flags, "allow-write");
+  if (flags.has("save") || flags.has("description") || flags.has("query-store")) {
+    throw new Error("`fide store sql` no longer supports saved-query writes. Author queries locally, then build them into a query store.");
+  }
   if (!allowWrite && !isReadOnlySql(sql)) {
     throw new Error("Write SQL requires `--allow-write`.");
   }
 
   const graphTarget = resolveStoreTarget(flags);
 
+  if (graphTarget.type === "fide-jsonl") {
+    throw new Error("`fide store sql` only supports sqlite and postgres stores. Use `fide graph write` for local `.fide` statements or build a sqlite/postgres store first.");
+  }
+
   if (graphTarget.type === "postgres") {
     if (!graphTarget.databaseUrl) {
       throw new Error(
-        `Missing postgres connection for store target "${graphTarget.key ?? "unknown"}". Configure the target in settings.json or set the referenced env var.`,
+        `Missing postgres connection for store "${graphTarget.key ?? "unknown"}". Configure the store in settings.json or set the referenced env var.`,
       );
     }
     const client = createPgClient(graphTarget.databaseUrl);

@@ -6,7 +6,7 @@ import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../ut
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, writeUtf8 } from "../../util/io.js";
 import { resolveGraphTarget } from "../../util/graph/target.js";
-import { getLocalWorkspaceWarnings } from "../../util/graph/local-disk-warning.js";
+import { getLocalFideWarnings } from "../../util/graph/local-disk-warning.js";
 import { resolveStatementsBatch, ymdUtc } from "./shared.js";
 
 function draftHelp(): string {
@@ -58,7 +58,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`graph draft` is only supported for local workspaces.");
+    throw new Error("`graph draft` is only supported for local .fide directories.");
   }
 
   const fideDir = resolve(graphTarget.root, ".fide");
@@ -102,7 +102,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     statementCount: batch.statements.length,
     mode: "draft",
     outPath,
-    warnings: getLocalWorkspaceWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
+    warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
     printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));

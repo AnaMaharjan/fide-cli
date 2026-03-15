@@ -4,7 +4,7 @@ import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../ut
 import { renderHelp } from "../../util/help.js";
 import { applyFieldMask, printJson, writeUtf8 } from "../../util/io.js";
 import { resolveGraphTarget } from "../../util/graph/target.js";
-import { getLocalWorkspaceWarnings } from "../../util/graph/local-disk-warning.js";
+import { getLocalFideWarnings } from "../../util/graph/local-disk-warning.js";
 import { resolveStatementsBatch, ymdUtc } from "./shared.js";
 
 function writeHelp(): string {
@@ -33,7 +33,7 @@ function writeHelp(): string {
         title: "Notes",
         items: [
           "  - Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
-          "  - `fide graph write` is local-workspace-only. Use `fide store sql` or `fide store materialize` for configured backends.",
+          "  - `fide graph write` only writes to a local .fide directory. Use `fide store sql` or `fide store build` for configured stores.",
         ],
       },
     ],
@@ -66,7 +66,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     return 1;
   }
   if (graphTarget.type !== "local") {
-    throw new Error("`graph write` only supports local `.fide` directories. Use `fide store sql` or `fide store materialize` for configured sqlite or postgres stores.");
+    throw new Error("`graph write` only supports local `.fide` directories. Use `fide store sql` or `fide store build` for configured sqlite or postgres stores.");
   }
 
   const statementsDir = resolveStatementsDir(graphTarget.root);
@@ -89,7 +89,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     statementCount: batch.statements.length,
     mode: "local",
     outPath,
-    warnings: getLocalWorkspaceWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
+    warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
     printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
