@@ -33,8 +33,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "graph", type: "string", required: true, description: "Graph target id the saved query runs against" },
       { name: "save", type: "string", required: true, description: "Save or update the query under this name" },
       { name: "description", type: "string", required: false, description: "Optional query description" },
-      { name: "default-limit", type: "string", required: false, description: "Optional default limit for this saved query" },
-      { name: "fields-json", type: "string", required: false, description: "Optional JSON object describing result fields" },
       { name: "file", type: "string", required: false, description: "Read SQL from a file" },
       { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
       { name: "fields", type: "string", required: false, description: "Output field mask" },

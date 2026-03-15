@@ -127,8 +127,7 @@ export async function runAppInit(args: string[]): Promise<number> {
 
   await pgClient.unsafe(`
     CREATE TABLE IF NOT EXISTS ${queriesTableQualified} (
-      id BIGSERIAL PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
+      name TEXT PRIMARY KEY,
       graph_id TEXT NOT NULL,
       sql TEXT NOT NULL,
       description TEXT,
@@ -145,8 +144,7 @@ export async function runAppInit(args: string[]): Promise<number> {
 
   await pgClient.unsafe(`
     CREATE TABLE IF NOT EXISTS ${runsTableQualified} (
-      id BIGSERIAL PRIMARY KEY,
-      query_id BIGINT REFERENCES ${queriesTableQualified}(id) ON DELETE CASCADE,
+      query_name TEXT REFERENCES ${queriesTableQualified}(name) ON DELETE CASCADE,
       graph_id TEXT NOT NULL,
       sql TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL,

@@ -23,7 +23,6 @@ function queryHelp(): string {
           "  --graph <graph-id>     Graph target id the saved query runs against",
           "  --save <name>          Save or update the query under this name",
           "  --description <text>   Optional query description",
-          "  --fields-json <json>   Optional JSON object describing result fields",
           "  --file <query.sql>     Read SQL from a file",
           "  --stdin                Read SQL from stdin",
           "  --fields <mask>        Output field mask",
@@ -76,7 +75,6 @@ export async function runAppQuery(args: string[]): Promise<number> {
   const graphId = getStringFlag(flags, "graph");
   const saveName = getStringFlag(flags, "save");
   const description = getStringFlag(flags, "description");
-  const fieldsJsonFlag = getStringFlag(flags, "fields-json");
 
   if (!graphId) {
     throw new Error("Missing required flag: --graph <graph-id>.");
@@ -88,19 +86,6 @@ export async function runAppQuery(args: string[]): Promise<number> {
     console.error("Missing SQL for `app query`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
     console.error(queryHelp());
     return 1;
-  }
-
-  let fields: Record<string, unknown> = {};
-  if (fieldsJsonFlag) {
-    try {
-      const parsed = JSON.parse(fieldsJsonFlag) as unknown;
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error();
-      }
-      fields = parsed as Record<string, unknown>;
-    } catch {
-      throw new Error("Invalid --fields-json value. Expected a JSON object like '{\"subject\":\"string\"}'.");
-    }
   }
 
   const appTarget = resolveAppTarget(flags);
@@ -116,23 +101,21 @@ export async function runAppQuery(args: string[]): Promise<number> {
       await tx.unsafe(`SET LOCAL search_path TO "${appTarget.schema.replaceAll("\"", "\"\"")}";`);
       return tx.unsafe(
         `
-        INSERT INTO graph_queries (name, graph_id, sql, description, fields)
-        VALUES ($1, $2, $3, $4, $5::jsonb)
+        INSERT INTO graph_queries (name, graph_id, sql, description)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (name)
         DO UPDATE SET
           graph_id = EXCLUDED.graph_id,
           sql = EXCLUDED.sql,
           description = EXCLUDED.description,
-          fields = EXCLUDED.fields,
           updated_at = NOW()
-        RETURNING id, name, graph_id, sql, description, fields, created_at, updated_at
+        RETURNING name, graph_id, sql, description, created_at, updated_at
         `,
         [
           saveName,
           graphId,
           sql.trim(),
           description,
-          client.json(fields as Parameters<typeof client.json>[0]),
         ],
       ) as Promise<Array<Record<string, unknown>>>;
     });
