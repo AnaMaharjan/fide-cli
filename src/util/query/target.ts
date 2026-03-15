@@ -23,6 +23,12 @@ function readSettings(root: string = process.cwd()): QuerySettingsRoot | null {
   return readJsonFile<QuerySettingsRoot>(resolveSettingsPath(root));
 }
 
+export function listConfiguredQueryStoreKeys(root: string = process.cwd()): string[] {
+  const settings = readSettings(root);
+  validateQueryStoreSettings(settings ?? {});
+  return Object.keys(settings?.queryStores ?? {});
+}
+
 function resolveDatabaseUrl(connection: string | undefined): {
   databaseUrl: string | null;
   databaseUrlSource: "connection" | "connection-env" | null;

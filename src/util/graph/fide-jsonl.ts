@@ -28,6 +28,29 @@ async function listJsonlFiles(dir: string): Promise<string[]> {
   return files.sort();
 }
 
+function normalizeDateUTC(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (value === "$lastRunAt") {
+    return "$lastRunAt";
+  }
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid UTC date value: ${value}`);
+  }
+  return parsed.toISOString().slice(0, 10);
+}
+
+function extractFileDateUTC(root: string, file: string): string | null {
+  const rel = relative(root, file).replaceAll("\\", "/");
+  const match = /^(\d{4})\/(\d{2})\/(\d{2})\//.exec(rel);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
 export async function inspectFideJsonlStore(dir: string): Promise<FideJsonlInspection> {
   if (!existsSync(dir)) {
     return {
@@ -55,11 +78,23 @@ export async function inspectFideJsonlStore(dir: string): Promise<FideJsonlInspe
   }
 }
 
-export async function queryFideJsonlResolvedStatements(dir: string): Promise<ResolvedStatementRow[]> {
+export async function queryFideJsonlResolvedStatements(
+  dir: string,
+  options?: { fromDateUTC?: string | null; toDateUTC?: string | null; lastRunAt?: string | null },
+): Promise<ResolvedStatementRow[]> {
   const files = await listJsonlFiles(dir);
   const rows: ResolvedStatementRow[] = [];
+  const fromDateUTC = normalizeDateUTC(options?.fromDateUTC === "$lastRunAt" ? options?.lastRunAt ?? null : options?.fromDateUTC);
+  const toDateUTC = normalizeDateUTC(options?.toDateUTC === "$lastRunAt" ? options?.lastRunAt ?? null : options?.toDateUTC);
 
   for (const file of files) {
+    const fileDateUTC = extractFileDateUTC(dir, file);
+    if (fromDateUTC && fileDateUTC && fileDateUTC < fromDateUTC) {
+      continue;
+    }
+    if (toDateUTC && fileDateUTC && fileDateUTC > toDateUTC) {
+      continue;
+    }
     const raw = await readFile(file, "utf8");
     const parsed = await parseGraphStatementBatchJsonl(raw);
     const fileStat = await stat(file);

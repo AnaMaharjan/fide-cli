@@ -41,6 +41,13 @@ function sqlHelp(): string {
           "  fide store sql --store primary --file queries/statements.sql",
         ],
       },
+      {
+        title: "Notes",
+        items: [
+          "  - `fide store sql` is for ad hoc SQL against built statement stores.",
+          "  - Author statements and saved queries locally with `fide graph write`, then use `fide store build` to push them into stores.",
+        ],
+      },
     ],
   });
 }

@@ -29,9 +29,10 @@ export function storeCommandHelp(): string {
         title: "Notes",
         items: [
           "  - Statement stores are configured under `statementStores` in `settings.json`.",
+          "  - Query stores are configured under `queryStores` in `settings.json`.",
           "  - `fide-jsonl` stores are local statement directories; use `fide graph write` to author into them.",
-          "  - Recipe-backed stores are built with `fide store build`.",
-          "  - Local .fide authoring lives under `fide graph`.",
+          "  - Local .fide authoring lives under `fide graph`; built runtime state lives under `fide store`.",
+          "  - Use `fide store build --statements ...` for statement stores and `fide store build --queries ...` for query stores.",
         ],
       },
     ],

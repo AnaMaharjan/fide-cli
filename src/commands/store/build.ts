@@ -54,6 +54,7 @@ function buildHelp(): string {
         items: [
           "  - Recipe SQL may include $lastRunAt for incremental runs.",
           "  - On the first run, $lastRunAt resolves to 1970-01-01T00:00:00.000Z.",
+          "  - Local fide-jsonl recipe steps may use fromDateUTC/toDateUTC; these apply at UTC date granularity based on .fide/statements/YYYY/MM/DD folders.",
           "  - Query-store builds load local .fide/queries/<statement-store>/<name>.sql files.",
         ],
       },
@@ -203,7 +204,14 @@ async function queryRecipeStep(step: GraphRecipeStep, lastRunAt: string | null):
 
   if (source.type === "fide-jsonl") {
     if (sql) throw new Error(`Recipe source "${step.from}" is a fide-jsonl store and cannot run SQL. Remove the sql field from that recipe step.`);
-    return { source, rows: await queryFideJsonlResolvedStatements(source.dir) };
+    return {
+      source,
+      rows: await queryFideJsonlResolvedStatements(source.dir, {
+        fromDateUTC: step.fromDateUTC,
+        toDateUTC: step.toDateUTC,
+        lastRunAt,
+      }),
+    };
   }
   if (!sql) throw new Error(`Recipe source "${step.from}" requires sql.`);
   if (source.type === "postgres") {

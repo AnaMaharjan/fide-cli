@@ -6,6 +6,7 @@ import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, listConfigur
 import { inspectFideJsonlStore } from "../../util/graph/fide-jsonl.js";
 import { inspectSqliteGraph } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
+import { listConfiguredQueryStoreKeys, resolveQueryStore } from "../../util/query/target.js";
 
 function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
@@ -47,7 +48,7 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
         {
           title: "Notes",
           items: [
-            "  - With no store, returns all configured statement stores.",
+            "  - With no store, returns all configured statement stores and query stores.",
             "  - Use `fide graph status` for local .fide directory status.",
           ],
         },
@@ -270,6 +271,95 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
     };
   }
 
+  async function statusForQueryStore(key: string) {
+    const queryFlags = new Map<string, string | boolean>([["query-store", key]]);
+    const store = resolveQueryStore(queryFlags);
+    if (!store.databaseUrl) {
+      return {
+        ok: true,
+        storeType: "postgres",
+        key: store.key,
+        next: {
+          buildHelpCommand: "fide store build -h",
+          buildCommand: `fide store build --queries ${store.key}`,
+        },
+        configured: true,
+        databaseUrlConfigured: false,
+        databaseUrlSource: store.databaseUrlSource,
+        databaseUrlEnv: store.databaseUrlEnv,
+        schema: store.schema,
+        reachable: false,
+        missing: ["postgres.connection"],
+      };
+    }
+
+    const client = createPgClient(store.databaseUrl);
+    try {
+      await client`SELECT 1`;
+      const schemaRows = await client<{ exists: boolean }[]>`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.schemata
+          WHERE schema_name = ${store.schema}
+        ) AS exists
+      `;
+      const schemaExists = Boolean(schemaRows[0]?.exists);
+      const tableRows = schemaExists
+        ? await client<{ table_name: string }[]>`
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = ${store.schema}
+            AND (
+              table_name = 'queries'
+              OR table_name = 'query_runs'
+            )
+          ORDER BY table_name
+        `
+        : [];
+      const presentTables = new Set(tableRows.map((row) => row.table_name));
+      const missing: string[] = [];
+      if (!schemaExists) missing.push(`schema.${store.schema}`);
+      if (!presentTables.has("queries")) missing.push(`${store.schema}.queries`);
+      if (!presentTables.has("query_runs")) missing.push(`${store.schema}.query_runs`);
+      return {
+        ok: true,
+        storeType: "postgres",
+        key: store.key,
+        next: {
+          buildHelpCommand: "fide store build -h",
+          buildCommand: `fide store build --queries ${store.key}`,
+        },
+        configured: true,
+        databaseUrlConfigured: true,
+        databaseUrlSource: store.databaseUrlSource,
+        databaseUrlEnv: store.databaseUrlEnv,
+        schema: store.schema,
+        reachable: true,
+        missing,
+      };
+    } catch (error) {
+      return {
+        ok: true,
+        storeType: "postgres",
+        key: store.key,
+        next: {
+          buildHelpCommand: "fide store build -h",
+          buildCommand: `fide store build --queries ${store.key}`,
+        },
+        configured: true,
+        databaseUrlConfigured: true,
+        databaseUrlSource: store.databaseUrlSource,
+        databaseUrlEnv: store.databaseUrlEnv,
+        schema: store.schema,
+        reachable: false,
+        missing: ["postgres.connection"],
+        error: error instanceof Error ? error.message : String(error),
+      };
+    } finally {
+      await client.end({ timeout: 1 });
+    }
+  }
+
   if (flags.has("store")) {
     printJson(await statusForTarget(resolveStoreTarget(flags)));
     return 0;
@@ -306,9 +396,20 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
     };
   }));
 
+  const queryStoreKeys = listConfiguredQueryStoreKeys();
+  const queryStores = await Promise.all(queryStoreKeys.map(async (key) => {
+    const detailed = await statusForQueryStore(key);
+    return {
+      key,
+      storeType: detailed.storeType,
+      next: detailed.next,
+    };
+  }));
+
   printJson({
     ok: true,
     stores,
+    queryStores,
   });
   return 0;
 }

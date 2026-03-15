@@ -6,6 +6,8 @@ import { type QueryStoreSettings, validateQueryStoreSettings } from "../query/ta
 export type GraphRecipeStep = {
   from: string;
   sql?: string;
+  fromDateUTC?: string;
+  toDateUTC?: string;
 };
 
 export type GraphRecipe = GraphRecipeStep[];
@@ -145,10 +147,19 @@ function validateRecipe(
       throw new Error(`Store "${key}" recipe step ${index + 1} references unknown store "${step.from}". Define it in settings.json first.`);
     }
     if (source.type === "fide-jsonl") {
+      if (step.fromDateUTC != null && (typeof step.fromDateUTC !== "string" || step.fromDateUTC.trim().length === 0)) {
+        throw new Error(`Store "${key}" recipe step ${index + 1} has an invalid fromDateUTC value.`);
+      }
+      if (step.toDateUTC != null && (typeof step.toDateUTC !== "string" || step.toDateUTC.trim().length === 0)) {
+        throw new Error(`Store "${key}" recipe step ${index + 1} has an invalid toDateUTC value.`);
+      }
       if (step.sql != null && (typeof step.sql !== "string" || step.sql.trim().length === 0)) {
         throw new Error(`Store "${key}" recipe step ${index + 1} has an invalid sql value.`);
       }
       continue;
+    }
+    if (step.fromDateUTC != null || step.toDateUTC != null) {
+      throw new Error(`Store "${key}" recipe step ${index + 1} may only use fromDateUTC/toDateUTC with fide-jsonl sources.`);
     }
     if (typeof step.sql !== "string" || step.sql.trim().length === 0) {
       throw new Error(`Store "${key}" recipe step ${index + 1} must include a non-empty SQL string.`);
