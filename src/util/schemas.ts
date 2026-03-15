@@ -46,29 +46,10 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       saved: "object?",
     },
   },
-  "graph.init": {
-    command: "fide graph init",
-    params: [
-      { name: "target", type: "string", required: false, description: "Local workspace path override" },
-      { name: "gitignore", type: "boolean", required: false, description: "Add generated local/sqlite outputs to .gitignore" },
-      { name: "dangerously-drop", type: "boolean", required: false, description: "Reset the resolved local workspace before re-initializing (requires --yes)" },
-      { name: "yes", type: "boolean", required: false, description: "Confirm --dangerously-drop" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      root: "string",
-      created: "string[]",
-      dropped: "boolean",
-      gitignorePath: "string?",
-      gitignoreAdded: "string[]",
-      warnings: "string[]",
-    },
-  },
   "graph.write": {
     command: "fide graph write",
     params: [
-      { name: "target", type: "string", required: false, description: "Local workspace path override" },
+      { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "file", type: "string", required: false, description: "Primary agent path: input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -87,7 +68,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.draft": {
     command: "fide graph draft",
     params: [
-      { name: "target", type: "string", required: false, description: "Configured graph target key or local workspace path" },
+      { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
       { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
       { name: "file", type: "string", required: false, description: "Primary agent path: input file path" },
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
@@ -105,7 +86,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "graph.status": {
     command: "fide graph status",
     params: [
-      { name: "target", type: "string", required: false, description: "Optional local workspace path override" },
+      { name: "fide-dir", type: "string", required: false, description: "Optional local .fide directory override" },
     ],
     output: {
       ok: "boolean",

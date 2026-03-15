@@ -36,13 +36,13 @@ function initHelp(): string {
           "  --pretty, -p             Human-readable output",
         ],
       },
-      {
-        title: "Notes",
-        items: [
-          "  - `fide store init` only supports configured sqlite/postgres targets.",
-          "  - Use `fide graph init` for local workspace setup.",
-        ],
-      },
+        {
+          title: "Notes",
+          items: [
+            "  - `fide store init` only supports configured sqlite/postgres targets.",
+            "  - Local `.fide` directories are created automatically by `fide graph write`.",
+          ],
+        },
     ],
   });
 }
@@ -154,7 +154,7 @@ export async function runStoreInit(args: string[]): Promise<number> {
     flags.set("store", key);
   }
   if (!flags.has("store")) {
-    throw new Error("Missing required flag: --store <name>. Use `fide graph init` for local workspaces.");
+    throw new Error("Missing required flag: --store <name>. Use `fide graph write` for local workspaces.");
   }
 
   const target = resolveStoreTarget(flags);

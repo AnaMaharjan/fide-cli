@@ -19,7 +19,7 @@ function helpText(): string {
           title: "Groups",
           items: [
             "  app      Saved query storage and query-run metadata",
-            "  graph    Statement authoring, local workspace setup, and graph definitions",
+            "  graph    Statement authoring in local .fide directories and graph definitions",
             "  store    Configured sqlite/postgres backends and materialization",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
@@ -28,7 +28,6 @@ function helpText(): string {
         {
           title: "Workflows",
           items: [
-            "  fide graph init                       Initialize a local .fide workspace",
             "  fide graph write '<json>'             Write statement inputs into the local workspace",
             "  fide store init --type sqlite ...     Initialize a configured backend target",
             "  fide store sql --store primary 'select * from statements limit 10'",

@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { getStringFlag } from "../args.js";
 import { ensureWorkspaceEnvLoaded, readJsonFile, resolveSettingsPath, resolveWorkspaceRoot } from "../workspace.js";
 
@@ -164,13 +164,16 @@ function getConfiguredStoreTarget(
 }
 
 function resolveLocalTarget(flags: Map<string, string | boolean>): ResolvedLocalGraphTarget {
-  const target = getStringFlag(flags, "target");
-  if (target) {
+  if (flags.has("target")) {
+    throw new Error("`--target` is no longer supported for `fide graph` commands. Use `--fide-dir <path>` for a local .fide directory override.");
+  }
+  const fideDir = getStringFlag(flags, "fide-dir");
+  if (fideDir) {
     return {
       type: "local",
       key: null,
-      root: resolve(process.cwd(), target),
-      connection: target,
+      root: dirname(resolve(process.cwd(), fideDir)),
+      connection: fideDir,
       gitignore: null,
       configuredFromSettings: false,
       recipe: null,

@@ -14,21 +14,21 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
         {
           title: "Usage",
           items: [
-            "  fide graph status [target]",
-            "  fide graph status --target <path>",
+            "  fide graph status",
+            "  fide graph status --fide-dir <path>",
           ],
         },
         {
           title: "Flags",
           items: [
-            "  --target <path>  Local workspace path override",
+            "  --fide-dir <path>  Local .fide directory override",
           ],
         },
         {
           title: "Notes",
           items: [
             "  - `fide graph status` reports local workspace status.",
-            "  - Uses `FIDE_DIR` or the nearest `.fide` directory when `--target` is omitted.",
+            "  - Uses `FIDE_DIR` or the nearest `.fide` directory when `--fide-dir` is omitted.",
             "  - Use `fide store status` for configured sqlite/postgres backends.",
           ],
         },
@@ -37,14 +37,8 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     return 0;
   }
 
-  if (positionals.length > 1) {
-    throw new Error("`graph status` accepts at most one positional target.");
-  }
-  if (positionals.length === 1) {
-    if (flags.has("target")) {
-      throw new Error("Pass either a positional target or `--target`, not both.");
-    }
-    flags.set("target", positionals[0]);
+  if (positionals.length > 0) {
+    throw new Error("`graph status` does not accept positional arguments. Use `--fide-dir <path>` to override the local .fide directory.");
   }
 
   const graphTarget = resolveGraphTarget(flags);
