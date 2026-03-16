@@ -13,6 +13,8 @@ export type GraphRecipeStep = {
 export type GraphRecipe = GraphRecipeStep[];
 export const GRAPH_STATEMENTS_TABLE = "statements";
 export const GRAPH_REFERENCE_IDENTIFIERS_TABLE = "reference_identifiers";
+export const GRAPH_ROOTS_TABLE = "roots";
+export const GRAPH_STATEMENT_ROOTS_TABLE = "statement_roots";
 
 export type GraphRunState = {
   metadata?: {

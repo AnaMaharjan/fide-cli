@@ -122,6 +122,7 @@ export async function queryFideJsonlResolvedStatements(
         subject_reference_identifier: statement.subjectReferenceIdentifier,
         predicate_reference_identifier: statement.predicateReferenceIdentifier,
         object_reference_identifier: statement.objectReferenceIdentifier,
+        roots: [parsed.root],
       });
     }
   }

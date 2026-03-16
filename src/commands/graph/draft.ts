@@ -11,6 +11,8 @@ import { resolveStatementsBatch } from "./shared.js";
 type DraftFrontmatter = {
   createdAtUTC: string;
   updatedAtUTC: string;
+  writtenAtUTC: string;
+  writtenRoot: string;
   updateCount: number;
   description: string | null;
 };
@@ -36,6 +38,8 @@ function parseExistingDraftFrontmatter(content: string): Partial<DraftFrontmatte
     const value = line.slice(separator + 1).trim();
     if (key === "createdAtUTC" && value) values.createdAtUTC = value;
     if (key === "updatedAtUTC" && value) values.updatedAtUTC = value;
+    if (key === "writtenAtUTC" && value) values.writtenAtUTC = value;
+    if (key === "writtenRoot" && value) values.writtenRoot = value;
     if (key === "description") values.description = value || null;
     if (key === "updateCount") {
       const parsed = Number.parseInt(value, 10);
@@ -50,6 +54,8 @@ function renderDraftFrontmatter(params: {
   description: string | null;
   createdAtUTC: string;
   updatedAtUTC: string;
+  writtenAtUTC: string | null;
+  writtenRoot: string | null;
   updateCount: number;
 }): string {
   const lines = [
@@ -63,6 +69,12 @@ function renderDraftFrontmatter(params: {
   lines.push("entityTypeHelp: fide graph defs");
   lines.push(`createdAtUTC: ${params.createdAtUTC}`);
   lines.push(`updatedAtUTC: ${params.updatedAtUTC}`);
+  if (params.writtenAtUTC) {
+    lines.push(`writtenAtUTC: ${params.writtenAtUTC}`);
+  }
+  if (params.writtenRoot) {
+    lines.push(`writtenRoot: ${params.writtenRoot}`);
+  }
   lines.push(`updateCount: ${params.updateCount}`);
   lines.push("defaults:");
   lines.push("  subject:");
@@ -165,7 +177,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     },
   }));
 
-  const baseDoc = statementDoc.v0.formatStatementInputsAsStatementDoc(normalizedInputs, {
+  const baseDoc = statementDoc.formatStatementInputsAsStatementDoc(normalizedInputs, {
     defaults: {
       subject: { referenceType: "NetworkResource" },
       object: { referenceType: "NetworkResource" },
@@ -198,6 +210,8 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     description,
     createdAtUTC,
     updatedAtUTC,
+    writtenAtUTC: existingFrontmatter.writtenAtUTC ?? null,
+    writtenRoot: existingFrontmatter.writtenRoot ?? null,
     updateCount,
   });
   const output = baseDoc.replace(/^---\n[\s\S]*?\n---\n/, frontmatter);

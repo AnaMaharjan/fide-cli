@@ -18,6 +18,9 @@ type ResolveContext = {
   activeFiles: Set<string>;
 };
 
+type ParsedStatementDoc = ReturnType<typeof statementDoc.parseStatementDoc>;
+type ParsedStatementDocLine = ParsedStatementDoc["statements"][number];
+
 const LOCAL_STATEMENT_REF_PATTERN = /^(?:@(\d+)|(.+?)@(\d+))$/;
 
 function buildStatementReferenceIdentifier(statement: Statement): string {
@@ -25,7 +28,7 @@ function buildStatementReferenceIdentifier(statement: Statement): string {
 }
 
 function getLabelForStatement(
-  statement: (typeof statementDoc.v0.parseStatementDoc extends (...args: any[]) => infer R ? R : never)["statements"][number],
+  statement: ParsedStatementDocLine,
   index: number,
 ): number {
   return statement.localIndex ?? index + 1;
@@ -35,7 +38,7 @@ async function resolveReferencedStatement(
   referenceIdentifier: string,
   currentFilePath: string | undefined,
   currentBuiltStatements: Statement[],
-  currentStatements: ReturnType<typeof statementDoc.v0.parseStatementDoc>["statements"],
+  currentStatements: ParsedStatementDoc["statements"],
   currentIndex: number,
   context: ResolveContext,
   line: number,
@@ -52,7 +55,7 @@ async function resolveReferencedStatement(
   }
 
   if (!relativePathRaw) {
-    const targetIndex = currentStatements.findIndex((statement, index) => getLabelForStatement(statement, index) === targetLabel);
+    const targetIndex = currentStatements.findIndex((statement: ParsedStatementDocLine, index: number) => getLabelForStatement(statement, index) === targetLabel);
     if (targetIndex === -1) {
       throw new Error(`Unknown local statement reference @${targetLabel} at line ${line}.`);
     }
@@ -72,7 +75,7 @@ async function resolveReferencedStatement(
 
   const targetFilePath = resolve(dirname(currentFilePath), relativePathRaw);
   if (targetFilePath === currentFilePath) {
-    const targetIndex = currentStatements.findIndex((statement, index) => getLabelForStatement(statement, index) === targetLabel);
+    const targetIndex = currentStatements.findIndex((statement: ParsedStatementDocLine, index: number) => getLabelForStatement(statement, index) === targetLabel);
     if (targetIndex === -1) {
       throw new Error(`Unknown local statement reference ${JSON.stringify(referenceIdentifier)} at line ${line}.`);
     }
@@ -94,7 +97,7 @@ async function resolveReferencedStatement(
 }
 
 async function resolveStatementDocParsed(
-  parsed: ReturnType<typeof statementDoc.v0.parseStatementDoc>,
+  parsed: ParsedStatementDoc,
   currentFilePath: string | undefined,
   context: ResolveContext,
 ): Promise<ResolvedStatementDoc> {
@@ -170,7 +173,7 @@ async function resolveStatementDocFile(filePath: string, context: ResolveContext
   const promise = (async () => {
     context.activeFiles.add(filePath);
     const raw = await readFile(filePath, "utf8");
-    const parsed = statementDoc.v0.parseStatementDoc(raw);
+    const parsed = statementDoc.parseStatementDoc(raw);
     try {
       return await resolveStatementDocParsed(parsed, filePath, context);
     } finally {
@@ -198,7 +201,7 @@ export async function parseStatementDocInputs(
     cache: new Map(),
     activeFiles: new Set(),
   };
-  const parsed = statementDoc.v0.parseStatementDoc(raw);
+  const parsed = statementDoc.parseStatementDoc(raw);
   const resolved = await resolveStatementDocParsed(parsed, options.filePath, context);
   return resolved.statementInputs;
 }

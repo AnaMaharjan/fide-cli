@@ -37,6 +37,7 @@ export type ResolvedStatementRow = {
   subject_reference_identifier: string;
   predicate_reference_identifier: string;
   object_reference_identifier: string;
+  roots: string[];
 };
 
 const EXPECTED_REFERENCE_IDENTIFIER_COLUMNS = [
@@ -54,6 +55,16 @@ const EXPECTED_STATEMENTS_COLUMNS = [
   "object_reference_type",
   "object_fingerprint",
   "created_at",
+];
+
+const EXPECTED_ROOTS_COLUMNS = [
+  "root",
+  "created_at",
+];
+
+const EXPECTED_STATEMENT_ROOTS_COLUMNS = [
+  "root",
+  "statement_fingerprint",
 ];
 
 let sqliteModulePromise: Promise<SqliteModule> | null = null;
@@ -112,7 +123,8 @@ export async function querySqliteResolvedStatements(file: string, sql: string): 
         s.created_at,
         subj.reference_identifier AS subject_reference_identifier,
         pred.reference_identifier AS predicate_reference_identifier,
-        obj.reference_identifier AS object_reference_identifier
+        obj.reference_identifier AS object_reference_identifier,
+        COALESCE(group_concat(DISTINCT sr.root), '') AS roots_csv
       FROM selected s
       INNER JOIN reference_identifiers subj
         ON subj.identifier_fingerprint = s.subject_fingerprint
@@ -120,7 +132,25 @@ export async function querySqliteResolvedStatements(file: string, sql: string): 
         ON pred.identifier_fingerprint = s.predicate_fingerprint
       INNER JOIN reference_identifiers obj
         ON obj.identifier_fingerprint = s.object_fingerprint
-    `).all() as ResolvedStatementRow[];
+      LEFT JOIN statement_roots sr
+        ON sr.statement_fingerprint = s.statement_fingerprint
+      GROUP BY
+        s.statement_fingerprint,
+        s.subject_type,
+        s.subject_reference_type,
+        s.subject_fingerprint,
+        s.predicate_fingerprint,
+        s.object_type,
+        s.object_reference_type,
+        s.object_fingerprint,
+        s.created_at,
+        subj.reference_identifier,
+        pred.reference_identifier,
+        obj.reference_identifier
+    `).all().map((row) => ({
+      ...row,
+      roots: typeof row.roots_csv === "string" && row.roots_csv.length > 0 ? row.roots_csv.split(",") : [],
+    })) as ResolvedStatementRow[];
   } finally {
     db.close();
   }
@@ -134,6 +164,8 @@ export async function ensureSqliteGraphSchema(file: string, options?: { drop?: b
       db.exec(`
         DROP TABLE IF EXISTS statements;
         DROP TABLE IF EXISTS reference_identifiers;
+        DROP TABLE IF EXISTS statement_roots;
+        DROP TABLE IF EXISTS roots;
       `);
     }
 
@@ -162,6 +194,17 @@ export async function ensureSqliteGraphSchema(file: string, options?: { drop?: b
           (object_type <> '00' AND object_reference_type <> '00')
         )
       );
+
+      CREATE TABLE IF NOT EXISTS roots (
+        root TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS statement_roots (
+        root TEXT NOT NULL,
+        statement_fingerprint TEXT NOT NULL,
+        PRIMARY KEY (root, statement_fingerprint)
+      );
     `);
   } finally {
     db.close();
@@ -184,7 +227,7 @@ export async function inspectSqliteGraph(file: string): Promise<SqliteInspection
       SELECT name, sql
       FROM sqlite_master
       WHERE type = 'table'
-        AND (name = 'reference_identifiers' OR name = 'statements')
+        AND (name = 'reference_identifiers' OR name = 'statements' OR name = 'roots' OR name = 'statement_roots')
       ORDER BY name
     `).all() as Array<{ name: string; sql: string | null }>;
     const tableNames = new Set(tableRows.map((row) => row.name));
@@ -196,6 +239,12 @@ export async function inspectSqliteGraph(file: string): Promise<SqliteInspection
     const statementsColumns = tableNames.has("statements")
       ? (db.prepare("PRAGMA table_info(statements)").all() as Array<{ name: string }>).map((row) => row.name)
       : [];
+    const rootsColumns = tableNames.has("roots")
+      ? (db.prepare("PRAGMA table_info(roots)").all() as Array<{ name: string }>).map((row) => row.name)
+      : [];
+    const statementRootsColumns = tableNames.has("statement_roots")
+      ? (db.prepare("PRAGMA table_info(statement_roots)").all() as Array<{ name: string }>).map((row) => row.name)
+      : [];
 
     const missing: string[] = [];
     if (!tableNames.has("reference_identifiers")) {
@@ -203,6 +252,12 @@ export async function inspectSqliteGraph(file: string): Promise<SqliteInspection
     }
     if (!tableNames.has("statements")) {
       missing.push("sqlite.statements");
+    }
+    if (!tableNames.has("roots")) {
+      missing.push("sqlite.roots");
+    }
+    if (!tableNames.has("statement_roots")) {
+      missing.push("sqlite.statement_roots");
     }
     missing.push(
       ...EXPECTED_REFERENCE_IDENTIFIER_COLUMNS
@@ -213,6 +268,16 @@ export async function inspectSqliteGraph(file: string): Promise<SqliteInspection
       ...EXPECTED_STATEMENTS_COLUMNS
         .filter((column) => !statementsColumns.includes(column))
         .map((column) => `sqlite.statements.${column}`),
+    );
+    missing.push(
+      ...EXPECTED_ROOTS_COLUMNS
+        .filter((column) => !rootsColumns.includes(column))
+        .map((column) => `sqlite.roots.${column}`),
+    );
+    missing.push(
+      ...EXPECTED_STATEMENT_ROOTS_COLUMNS
+        .filter((column) => !statementRootsColumns.includes(column))
+        .map((column) => `sqlite.statement_roots.${column}`),
     );
     if (!statementsSql.includes("chk_subject_protocol_self_sourced")) {
       missing.push("sqlite.statements.chk_subject_protocol_self_sourced");
@@ -326,9 +391,21 @@ export async function replaceSqliteGraphFromResolvedStatements(
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(statement_fingerprint) DO NOTHING
     `);
+    const insertRoot = db.prepare(`
+      INSERT INTO roots (root)
+      VALUES (?)
+      ON CONFLICT(root) DO NOTHING
+    `);
+    const insertStatementRoot = db.prepare(`
+      INSERT INTO statement_roots (root, statement_fingerprint)
+      VALUES (?, ?)
+      ON CONFLICT(root, statement_fingerprint) DO NOTHING
+    `);
 
     db.exec("BEGIN");
     try {
+      db.exec("DELETE FROM statement_roots;");
+      db.exec("DELETE FROM roots;");
       db.exec("DELETE FROM statements;");
       db.exec("DELETE FROM reference_identifiers;");
       for (const statement of statements) {
@@ -346,6 +423,10 @@ export async function replaceSqliteGraphFromResolvedStatements(
           statement.object_fingerprint,
           statement.created_at,
         );
+        for (const root of statement.roots) {
+          insertRoot.run(root);
+          insertStatementRoot.run(root, statement.statement_fingerprint);
+        }
       }
       db.exec("COMMIT");
     } catch (error) {
@@ -385,6 +466,16 @@ export async function appendSqliteGraphFromResolvedStatements(
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(statement_fingerprint) DO NOTHING
     `);
+    const insertRoot = db.prepare(`
+      INSERT INTO roots (root)
+      VALUES (?)
+      ON CONFLICT(root) DO NOTHING
+    `);
+    const insertStatementRoot = db.prepare(`
+      INSERT INTO statement_roots (root, statement_fingerprint)
+      VALUES (?, ?)
+      ON CONFLICT(root, statement_fingerprint) DO NOTHING
+    `);
 
     db.exec("BEGIN");
     try {
@@ -403,6 +494,10 @@ export async function appendSqliteGraphFromResolvedStatements(
           statement.object_fingerprint,
           statement.created_at,
         );
+        for (const root of statement.roots) {
+          insertRoot.run(root);
+          insertStatementRoot.run(root, statement.statement_fingerprint);
+        }
       }
       db.exec("COMMIT");
     } catch (error) {

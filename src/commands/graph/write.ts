@@ -54,6 +54,39 @@ function resolveStatementsDir(root: string): string {
   return resolve(root, ".fide", "statements");
 }
 
+function updateDraftWriteFrontmatter(content: string, writtenAtUTC: string, writtenRoot: string): string {
+  const match = /^---\n([\s\S]*?)\n---\n/.exec(content);
+  if (!match) return content;
+  const lines = match[1].split("\n");
+  const nextLines: string[] = [];
+  let inserted = false;
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (trimmed.startsWith("writtenAtUTC:") || trimmed.startsWith("writtenRoot:")) {
+      continue;
+    }
+    nextLines.push(rawLine);
+    if (trimmed.startsWith("updatedAtUTC:")) {
+      nextLines.push(`writtenAtUTC: ${writtenAtUTC}`);
+      nextLines.push(`writtenRoot: ${writtenRoot}`);
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    const updateCountIndex = nextLines.findIndex((line) => line.trim().startsWith("updateCount:"));
+    if (updateCountIndex >= 0) {
+      nextLines.splice(updateCountIndex, 0, `writtenAtUTC: ${writtenAtUTC}`, `writtenRoot: ${writtenRoot}`);
+    } else {
+      nextLines.push(`writtenAtUTC: ${writtenAtUTC}`);
+      nextLines.push(`writtenRoot: ${writtenRoot}`);
+    }
+  }
+
+  return content.replace(/^---\n[\s\S]*?\n---\n/, `---\n${nextLines.join("\n")}\n---\n`);
+}
+
 async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typeof parseArgs>; sql: string }> {
   const parsed = parseArgs(args);
   const flags = parsed.flags;
@@ -149,6 +182,19 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
   const output = `${wires.map((wire) => JSON.stringify(wire)).join("\n")}\n`;
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
+
+  const filePath = getStringFlag(flags, "file");
+  if (filePath) {
+    try {
+      const raw = await readUtf8(filePath);
+      const nextDraft = updateDraftWriteFrontmatter(raw, new Date().toISOString(), batch.root);
+      if (nextDraft !== raw) {
+        await writeUtf8(filePath, nextDraft);
+      }
+    } catch {
+      // Ignore non-draft file inputs; local canonical write already succeeded.
+    }
+  }
 
   const payload = {
     root: batch.root,
