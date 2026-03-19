@@ -162,6 +162,94 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       stores: "array<{ key: string, storeType: string, warnings?: string[], next?: object }>?",
     },
   },
+  "auth.login": {
+    command: "fide auth login",
+    params: [
+      { name: "base-url", type: "string", required: false, description: "Base URL for Fide HTTP surfaces. Defaults to https://api.fide.work." },
+      { name: "api-key", type: "string", required: true, description: "Fide API key to save locally" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      user: "object",
+    },
+  },
+  "auth.logout": {
+    command: "fide auth logout",
+    params: [
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      cleared: "boolean",
+      path: "string",
+    },
+  },
+  "auth.status": {
+    command: "fide auth status",
+    params: [
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      configured: "boolean",
+      baseUrl: "string?",
+      source: "string?",
+      configPath: "string",
+      storedConfigPresent: "boolean",
+      envConfigured: "boolean",
+      remote: "object",
+    },
+  },
+  "auth.whoami": {
+    command: "fide auth whoami",
+    params: [
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      user: "object",
+    },
+  },
+  "auth.keys.list": {
+    command: "fide auth keys list",
+    params: [
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      apiKeys: "array",
+    },
+  },
+  "auth.keys.create": {
+    command: "fide auth keys create",
+    params: [
+      { name: "label", type: "string", required: true, description: "Label for the new API key" },
+      { name: "user-id", type: "string", required: false, description: "Optional target user id for workspace-managed service accounts" },
+      { name: "expires-at", type: "string", required: false, description: "Optional ISO-8601 expiration timestamp" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      apiKey: "object",
+      rawKey: "string",
+    },
+  },
+  "auth.keys.revoke": {
+    command: "fide auth keys revoke",
+    params: [
+      { name: "id", type: "string", required: true, description: "API key id to revoke" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      id: "string",
+      ok: "boolean",
+    },
+  },
   "graph.statement-input": {
     command: "fide schema graph.statement-input",
     params: [],

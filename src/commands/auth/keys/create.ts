@@ -1,0 +1,57 @@
+import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
+import { renderHelp } from "../../../util/help.js";
+import { printJson } from "../../../util/io.js";
+import { okResponse } from "../../../util/response.js";
+import { requireAuthApiClient } from "./shared.js";
+
+function createHelp(): string {
+  return renderHelp({
+    sections: [
+      {
+        title: "Usage",
+        items: [
+          "  fide auth keys create --label <label> [--user-id <id>] [--expires-at <iso8601>] [--pretty|-p]",
+        ],
+      },
+    ],
+  });
+}
+
+export async function runAuthKeysCreate(args: string[]): Promise<number> {
+  const { flags } = parseArgs(args);
+  const useJson = shouldUseJsonOutput(flags);
+  if (flags.has("help")) {
+    console.log(createHelp());
+    return 0;
+  }
+
+  const label = getStringFlag(flags, "label");
+  if (!label) {
+    throw new Error("Missing required flag: --label");
+  }
+
+  const userId = getStringFlag(flags, "user-id") ?? undefined;
+  const expiresAt = getStringFlag(flags, "expires-at") ?? undefined;
+  const { auth, client } = await requireAuthApiClient();
+  const created = await client.createApiKey({
+    label,
+    ...(userId ? { userId } : {}),
+    ...(expiresAt ? { expiresAt } : {}),
+  });
+
+  const payload = okResponse("auth-keys-create.v1", {
+    baseUrl: auth.baseUrl,
+    source: auth.source,
+    apiKey: created.apiKey,
+    rawKey: created.rawKey,
+  }, {
+    command: "fide auth keys create",
+  });
+
+  if (useJson) {
+    printJson(payload);
+  } else {
+    console.log(created.rawKey);
+  }
+  return 0;
+}
