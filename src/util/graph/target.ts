@@ -173,7 +173,9 @@ export function validateGraphSettings(settings: FideSettings): void {
   const statementStores = settings.statementStores ?? {};
   for (const [key, store] of Object.entries(statementStores)) {
     if (store.type === "postgres" && (typeof store.schema !== "string" || store.schema.trim().length === 0)) {
-      throw new Error(`Statement store "${key}" must include schema in settings.json.`);
+      throw new Error(
+        `Statement store "${key}" must include schema in settings.json. Suggested schema: "fide_graph".`,
+      );
     }
     if ((store.type === "sqlite" || store.type === "fide-jsonl") && (typeof store.connection !== "string" || store.connection.trim().length === 0)) {
       throw new Error(`Statement store "${key}" must include connection in settings.json.`);

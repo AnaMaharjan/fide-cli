@@ -55,7 +55,9 @@ export function validateQueryStoreSettings(settings: QuerySettingsRoot): void {
       throw new Error(`Query store "${key}" must use type "postgres".`);
     }
     if (typeof store.schema !== "string" || store.schema.trim().length === 0) {
-      throw new Error(`Query store "${key}" must include schema in settings.json.`);
+      throw new Error(
+        `Query store "${key}" must include schema in settings.json. Suggested schema: "fide_graph_queries".`,
+      );
     }
   }
 }
