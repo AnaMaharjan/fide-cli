@@ -12,7 +12,7 @@ export function authCommandHelp(): string {
       {
         title: "Commands",
         items: [
-          "  login        Start bootstrap auth or save API-key-based auth for the CLI",
+          "  login        Save API-key-based auth for the CLI",
           "  logout       Remove saved machine-level auth settings",
           "  status       Inspect machine-level auth settings and remote validity",
           "  whoami       Resolve the current authenticated user through the API",
@@ -23,8 +23,6 @@ export function authCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide auth login --base-url http://localhost:3200 --api-key fide_sk_...",
-          "  fide auth login --email you@example.com",
-          "  fide auth login --email you@example.com --otp 123456",
           "  fide auth status",
           "  fide auth whoami",
           "  fide auth keys list",
@@ -40,7 +38,7 @@ export function authCommandHelp(): string {
           "  - Machine-level auth settings live under ~/.fide/settings.json inside the env object.",
           "  - The same settings file can also store a selected workspace for cloud-mode commands.",
           "  - Workspace-level .fide settings are separate from the machine-level auth settings file.",
-          "  - login supports API keys directly or email OTP bootstrap that ends in a saved Fide API key.",
+          "  - login verifies the API key through the API before saving it locally.",
         ],
       },
     ],

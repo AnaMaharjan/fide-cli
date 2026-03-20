@@ -166,19 +166,13 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide auth login",
     params: [
       { name: "base-url", type: "string", required: false, description: "Base URL for Fide HTTP surfaces. Defaults to https://api.fide.work." },
-      { name: "api-key", type: "string", required: false, description: "Fide API key to save locally" },
-      { name: "email", type: "string", required: false, description: "Start or complete email OTP bootstrap auth" },
-      { name: "otp", type: "string", required: false, description: "Email OTP to exchange for a Fide API key" },
-      { name: "label", type: "string", required: false, description: "Optional label for the issued Fide API key" },
+      { name: "api-key", type: "string", required: true, description: "Fide API key to save locally" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
       baseUrl: "string?",
       source: "string?",
       user: "object?",
-      email: "string?",
-      sent: "boolean?",
-      next: "object?",
     },
   },
   "auth.logout": {

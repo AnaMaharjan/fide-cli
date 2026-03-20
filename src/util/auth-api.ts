@@ -112,11 +112,6 @@ type AuthClientOptions = {
   apiKey: string;
 };
 
-export type EmailAuthStartResponse = {
-  ok: true;
-  email: string;
-};
-
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/u, "");
 }
@@ -376,37 +371,6 @@ export function createAuthApiClient(options: AuthClientOptions) {
         headers,
       });
       return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-roles-revoke.v1");
-    },
-  };
-}
-
-export function createBootstrapAuthApiClient(baseUrlInput: string) {
-  const baseUrl = normalizeBaseUrl(baseUrlInput);
-  const headers = {
-    "content-type": "application/json",
-  };
-
-  return {
-    async startEmailAuth(email: string): Promise<EmailAuthStartResponse> {
-      const response = await fetch(`${baseUrl}/v1/auth/email/start`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ email }),
-      });
-      return parseApiResponse<EmailAuthStartResponse>(response, "auth-login-email-start.v1");
-    },
-
-    async verifyEmailAuth(input: {
-      email: string;
-      otp: string;
-      label?: string;
-    }): Promise<{ apiKey: ApiKeySummary; rawKey: string }> {
-      const response = await fetch(`${baseUrl}/v1/auth/email/verify`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(input),
-      });
-      return parseApiResponse<{ apiKey: ApiKeySummary; rawKey: string }>(response, "auth-login-email-verify.v1");
     },
   };
 }
