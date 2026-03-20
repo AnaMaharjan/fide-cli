@@ -1,8 +1,8 @@
 import { createAuthApiClient } from "../../util/auth-api.js";
-import { resolveAuthConfig } from "../../util/auth-config.js";
+import { resolveAuthSettings } from "../../util/auth-settings.js";
 
 export async function requireWorkspaceApiClient() {
-  const auth = await resolveAuthConfig();
+  const auth = await resolveAuthSettings();
   if (!auth) {
     throw new Error("No Fide auth settings found. Run `fide auth login --base-url <url> --api-key <key>` or set FIDE_BASE_URL and FIDE_API_KEY.");
   }

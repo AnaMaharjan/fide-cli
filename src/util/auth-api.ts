@@ -45,6 +45,43 @@ export type WorkspaceSummary = {
   roles: string[];
 };
 
+export type WorkspaceSettingsResponse = {
+  settings: Record<string, unknown>;
+};
+
+export type WorkspaceConnection = {
+  id: string;
+  workspaceId: string;
+  slug: string;
+  kind: string;
+  secretId: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkspaceQuery = {
+  statementStoreKey: string;
+  name: string;
+  description: string | null;
+  sql: string;
+};
+
+export type WorkspaceQueryRunResult = WorkspaceQuery & {
+  queryStoreKey: string;
+  graphStoreKey: string;
+  sqlPreview: string;
+  rowCount: number;
+  truncated: boolean;
+  rows: unknown[];
+};
+
+export type WorkspaceQuerySummary = {
+  statementStoreKey: string;
+  name: string;
+  description: string | null;
+};
+
 export type WorkspaceMember = {
   userId: string;
   userType?: "human" | "agent" | "service_account" | null;
@@ -73,6 +110,11 @@ export type WorkspaceMemberMutation = {
 type AuthClientOptions = {
   baseUrl: string;
   apiKey: string;
+};
+
+export type EmailAuthStartResponse = {
+  ok: true;
+  email: string;
 };
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -167,6 +209,110 @@ export function createAuthApiClient(options: AuthClientOptions) {
       return parseApiResponse<WorkspaceSummary>(response, "workspace-get.v1");
     },
 
+    async getWorkspaceSettings(id: string): Promise<WorkspaceSettingsResponse> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/settings`, {
+        method: "GET",
+        headers,
+      });
+      return parseApiResponse<WorkspaceSettingsResponse>(response, "workspace-settings-get.v1");
+    },
+
+    async setWorkspaceSettings(id: string, settings: Record<string, unknown>): Promise<WorkspaceSettingsResponse> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/settings`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ settings }),
+      });
+      return parseApiResponse<WorkspaceSettingsResponse>(response, "workspace-settings-set.v1");
+    },
+
+    async listWorkspaceConnections(id: string): Promise<{ connections: WorkspaceConnection[] }> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/connections`, {
+        method: "GET",
+        headers,
+      });
+      return parseApiResponse<{ connections: WorkspaceConnection[] }>(response, "workspace-connections-list.v1");
+    },
+
+    async createWorkspaceConnection(input: {
+      workspaceId: string;
+      slug: string;
+      kind: string;
+      description?: string;
+    } & ({
+      secretId: string;
+      connection?: never;
+    } | {
+      secretId?: never;
+      connection: string;
+    })): Promise<WorkspaceConnection> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/connections`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          slug: input.slug,
+          kind: input.kind,
+          ...(input.secretId ? { secretId: input.secretId } : { connection: input.connection }),
+          description: input.description,
+        }),
+      });
+      return parseApiResponse<WorkspaceConnection>(response, "workspace-connections-create.v1");
+    },
+
+    async listWorkspaceQueries(input: {
+      workspaceId: string;
+      queryStore?: string;
+    }): Promise<{ queryStoreKey: string; queries: WorkspaceQuerySummary[] }> {
+      const search = new URLSearchParams()
+      if (input.queryStore) search.set("queryStore", input.queryStore)
+      const suffix = search.size > 0 ? `?${search.toString()}` : ""
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/queries${suffix}`, {
+        method: "GET",
+        headers,
+      });
+      return parseApiResponse<{ queryStoreKey: string; queries: WorkspaceQuerySummary[] }>(response, "workspace-queries-list.v1");
+    },
+
+    async getWorkspaceQuery(input: {
+      workspaceId: string;
+      statementStoreKey: string;
+      name: string;
+      queryStore?: string;
+    }): Promise<WorkspaceQuery> {
+      const search = new URLSearchParams()
+      if (input.queryStore) search.set("queryStore", input.queryStore)
+      const suffix = search.size > 0 ? `?${search.toString()}` : ""
+      const response = await fetch(
+        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.statementStoreKey)}/${encodeURIComponent(input.name)}${suffix}`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
+      return parseApiResponse<WorkspaceQuery>(response, "workspace-query-get.v1");
+    },
+
+    async runWorkspaceQuery(input: {
+      workspaceId: string;
+      statementStoreKey: string;
+      name: string;
+      queryStore?: string;
+      limit?: number;
+    }): Promise<WorkspaceQueryRunResult> {
+      const response = await fetch(
+        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.statementStoreKey)}/${encodeURIComponent(input.name)}/run`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            ...(input.queryStore ? { queryStore: input.queryStore } : {}),
+            ...(typeof input.limit === "number" ? { limit: input.limit } : {}),
+          }),
+        },
+      );
+      return parseApiResponse<WorkspaceQueryRunResult>(response, "workspace-query-run.v1");
+    },
+
     async listWorkspaceMembers(id: string): Promise<{ members: WorkspaceMember[] }> {
       const response = await fetch(`${baseUrl}/v1/workspaces/${id}/members`, {
         method: "GET",
@@ -230,6 +376,37 @@ export function createAuthApiClient(options: AuthClientOptions) {
         headers,
       });
       return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-roles-revoke.v1");
+    },
+  };
+}
+
+export function createBootstrapAuthApiClient(baseUrlInput: string) {
+  const baseUrl = normalizeBaseUrl(baseUrlInput);
+  const headers = {
+    "content-type": "application/json",
+  };
+
+  return {
+    async startEmailAuth(email: string): Promise<EmailAuthStartResponse> {
+      const response = await fetch(`${baseUrl}/v1/auth/email/start`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ email }),
+      });
+      return parseApiResponse<EmailAuthStartResponse>(response, "auth-login-email-start.v1");
+    },
+
+    async verifyEmailAuth(input: {
+      email: string;
+      otp: string;
+      label?: string;
+    }): Promise<{ apiKey: ApiKeySummary; rawKey: string }> {
+      const response = await fetch(`${baseUrl}/v1/auth/email/verify`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(input),
+      });
+      return parseApiResponse<{ apiKey: ApiKeySummary; rawKey: string }>(response, "auth-login-email-verify.v1");
     },
   };
 }

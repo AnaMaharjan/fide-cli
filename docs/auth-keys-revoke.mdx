@@ -1,0 +1,9 @@
+---
+title: "fide auth keys revoke"
+description: "fide auth keys revoke <id> [--pretty|-p]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide auth keys revoke","summary":"Revoke an API key by id","description":"fide auth keys revoke <id> [--pretty|-p]","usage":["fide auth keys revoke <id> [--pretty|-p]"],"arguments":[{"name":"<id>","type":"string","required":true,"description":"API key id to revoke"}],"options":[{"name":"--pretty","type":"boolean","required":false,"description":"Human-readable output"}],"outputFields":[{"name":"baseUrl","type":"string","required":false},{"name":"source","type":"string","required":false},{"name":"id","type":"string","required":false},{"name":"ok","type":"boolean","required":false}],"subcommands":[],"schemas":[{"surface":"auth.keys.revoke","command":"fide auth keys revoke","params":[{"name":"--id","type":"string","required":true,"description":"API key id to revoke"},{"name":"--pretty","type":"boolean","required":false,"description":"Human-readable output"}],"outputFields":[{"name":"baseUrl","type":"string","required":false},{"name":"source","type":"string","required":false},{"name":"id","type":"string","required":false},{"name":"ok","type":"boolean","required":false}],"json":"{\n  \"command\": \"fide auth keys revoke\",\n  \"params\": [\n    {\n      \"name\": \"id\",\n      \"type\": \"string\",\n      \"required\": true,\n      \"description\": \"API key id to revoke\"\n    },\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"required\": false,\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {\n    \"baseUrl\": \"string\",\n    \"source\": \"string\",\n    \"id\": \"string\",\n    \"ok\": \"boolean\"\n  }\n}"}],"examples":[],"notes":[]}} />

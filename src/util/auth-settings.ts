@@ -4,12 +4,12 @@ import { homedir } from "node:os";
 
 export const DEFAULT_FIDE_BASE_URL = "https://api.fide.work";
 
-export type StoredAuthConfig = {
+export type StoredAuthSettings = {
   baseUrl: string;
   apiKey: string;
 };
 
-export type ResolvedAuthConfig = StoredAuthConfig & {
+export type ResolvedAuthSettings = StoredAuthSettings & {
   source: "env" | "settings";
   path: string;
 };
@@ -22,13 +22,13 @@ function resolveConfigDir(): string {
   return join(homedir(), ".fide");
 }
 
-export function resolveAuthConfigPath(): string {
+export function resolveAuthSettingsPath(): string {
   return join(resolveConfigDir(), "settings.json");
 }
 
-export async function readStoredAuthConfig(): Promise<StoredAuthConfig | null> {
+export async function readStoredAuthSettings(): Promise<StoredAuthSettings | null> {
   try {
-    const raw = await readFile(resolveAuthConfigPath(), "utf8");
+    const raw = await readFile(resolveAuthSettingsPath(), "utf8");
     const parsed = JSON.parse(raw) as UserFideSettings;
     const env = parsed.env;
     if (!env || typeof env !== "object") {
@@ -48,8 +48,8 @@ export async function readStoredAuthConfig(): Promise<StoredAuthConfig | null> {
   }
 }
 
-export async function writeStoredAuthConfig(config: StoredAuthConfig): Promise<void> {
-  const path = resolveAuthConfigPath();
+export async function writeStoredAuthSettings(settings: StoredAuthSettings): Promise<void> {
+  const path = resolveAuthSettingsPath();
   let current: UserFideSettings = {};
   try {
     const raw = await readFile(path, "utf8");
@@ -62,8 +62,8 @@ export async function writeStoredAuthConfig(config: StoredAuthConfig): Promise<v
     ...current,
     env: {
       ...(current.env ?? {}),
-      FIDE_BASE_URL: config.baseUrl,
-      FIDE_API_KEY: config.apiKey,
+      FIDE_BASE_URL: settings.baseUrl,
+      FIDE_API_KEY: settings.apiKey,
     },
   };
 
@@ -71,8 +71,8 @@ export async function writeStoredAuthConfig(config: StoredAuthConfig): Promise<v
   await writeFile(path, `${JSON.stringify(next, null, 2)}\n`, "utf8");
 }
 
-export async function clearStoredAuthConfig(): Promise<void> {
-  const path = resolveAuthConfigPath();
+export async function clearStoredAuthSettings(): Promise<void> {
+  const path = resolveAuthSettingsPath();
   try {
     const raw = await readFile(path, "utf8");
     const current = JSON.parse(raw) as UserFideSettings;
@@ -96,8 +96,8 @@ export async function clearStoredAuthConfig(): Promise<void> {
   }
 }
 
-export async function resolveAuthConfig(): Promise<ResolvedAuthConfig | null> {
-  const path = resolveAuthConfigPath();
+export async function resolveAuthSettings(): Promise<ResolvedAuthSettings | null> {
+  const path = resolveAuthSettingsPath();
   const envBaseUrl = process.env.FIDE_BASE_URL?.trim();
   const envApiKey = process.env.FIDE_API_KEY?.trim();
 
@@ -110,7 +110,7 @@ export async function resolveAuthConfig(): Promise<ResolvedAuthConfig | null> {
     };
   }
 
-  const stored = await readStoredAuthConfig();
+  const stored = await readStoredAuthSettings();
   if (!stored) return null;
 
   return {

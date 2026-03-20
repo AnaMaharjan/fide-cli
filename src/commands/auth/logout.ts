@@ -2,7 +2,7 @@ import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
-import { clearStoredAuthConfig, resolveAuthConfigPath } from "../../util/auth-config.js";
+import { clearStoredAuthSettings, resolveAuthSettingsPath } from "../../util/auth-settings.js";
 
 function logoutHelp(): string {
   return renderHelp({
@@ -25,10 +25,10 @@ export async function runAuthLogout(args: string[]): Promise<number> {
     return 0;
   }
 
-  await clearStoredAuthConfig();
+  await clearStoredAuthSettings();
   const payload = okResponse("auth-logout.v1", {
     cleared: true,
-    userSettingsPath: resolveAuthConfigPath(),
+    userSettingsPath: resolveAuthSettingsPath(),
   }, {
     command: "fide auth logout",
   });

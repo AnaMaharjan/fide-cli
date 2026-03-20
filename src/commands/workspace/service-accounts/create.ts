@@ -2,6 +2,7 @@ import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../../util/arg
 import { renderHelp } from "../../../util/help.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
+import { getWorkspaceFlag } from "../../../util/workspace-settings.js";
 import { requireWorkspaceApiClient } from "../shared.js";
 
 function createHelp(): string {
@@ -10,7 +11,7 @@ function createHelp(): string {
       {
         title: "Usage",
         items: [
-          "  fide workspace service-accounts create --workspace-id <workspace-id> --label <label> --role <role-code> [--pretty|-p]",
+          "  fide workspace service-accounts create --workspace <workspace-id> --label <label> --role <role-code> [--pretty|-p]",
         ],
       },
     ],
@@ -25,11 +26,11 @@ export async function runWorkspaceServiceAccountCreate(args: string[]): Promise<
     return 0;
   }
 
-  const workspaceId = getStringFlag(flags, "workspace-id");
+  const workspaceId = getWorkspaceFlag(flags);
   const label = getStringFlag(flags, "label");
   const roleCode = getStringFlag(flags, "role");
   if (!workspaceId) {
-    throw new Error("Missing required flag: --workspace-id");
+    throw new Error("Missing required flag: --workspace");
   }
   if (!label) {
     throw new Error("Missing required flag: --label");
@@ -53,7 +54,7 @@ export async function runWorkspaceServiceAccountCreate(args: string[]): Promise<
     command: "fide workspace service-accounts create",
     next: {
       apiKeyCreate: `fide auth keys create --label '${label}' --user-id ${serviceAccount.userId}`,
-      members: `fide workspace members --id ${workspaceId}`,
+      members: `fide workspace members --workspace ${workspaceId}`,
     },
   });
 

@@ -3,7 +3,7 @@ import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
-import { readStoredAuthConfig, resolveAuthConfig, resolveAuthConfigPath } from "../../util/auth-config.js";
+import { readStoredAuthSettings, resolveAuthSettings, resolveAuthSettingsPath } from "../../util/auth-settings.js";
 
 function statusHelp(): string {
   return renderHelp({
@@ -26,8 +26,8 @@ export async function runAuthStatus(args: string[]): Promise<number> {
     return 0;
   }
 
-  const stored = await readStoredAuthConfig();
-  const resolved = await resolveAuthConfig();
+  const stored = await readStoredAuthSettings();
+  const resolved = await resolveAuthSettings();
 
   let remote: { ok: boolean; error?: string } = { ok: false, error: "Not authenticated" };
   if (resolved) {
@@ -43,7 +43,7 @@ export async function runAuthStatus(args: string[]): Promise<number> {
     configured: Boolean(resolved),
     baseUrl: resolved?.baseUrl ?? null,
     source: resolved?.source ?? null,
-    userSettingsPath: resolveAuthConfigPath(),
+    userSettingsPath: resolveAuthSettingsPath(),
     storedSettingsPresent: Boolean(stored),
     envConfigured: Boolean(process.env.FIDE_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
     remote,

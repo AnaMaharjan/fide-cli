@@ -1,6 +1,61 @@
 ---
-title: CLI
-description: "Command reference for @chris-test/cli"
+title: "CLI"
+description: "Generated command reference for the Fide CLI."
 ---
 
-- [`fide CLI`](./fide)
+This reference is generated from the CLI's live `--help` output and schema surfaces.
+
+## Top Level
+
+- [`fide`](./fide) - Fide CLI
+- [`fide docs`](./docs) - Resolve canonical docs pointers to local source content
+- [`fide schema`](./schema) - Introspect command schemas
+
+## Graph
+
+- [`fide graph`](./graph) - Statement authoring in local .fide directories and graph definitions
+- [`fide graph write`](./graph-write) - Write statement inputs into a local .fide directory
+- [`fide graph draft`](./graph-draft) - Create a markdown statement draft in a local .fide directory
+- [`fide graph status`](./graph-status) - Inspect the local .fide directory
+- [`fide graph defs`](./graph-defs) - Inspect statement and entity definitions
+
+## Store
+
+- [`fide store`](./store) - Configured statement stores and store builds
+- [`fide store status`](./store-status) - Inspect configured stores and build state
+- [`fide store sql`](./store-sql) - Run SQL against a configured sqlite or postgres statement store
+- [`fide store build`](./store-build) - Build a recipe-backed store from configured sources
+
+## Auth
+
+- [`fide auth`](./auth) - CLI authentication and API key management
+- [`fide auth login`](./auth-login) - Save API-key-based auth for the CLI
+- [`fide auth logout`](./auth-logout) - Remove saved machine-level auth settings
+- [`fide auth status`](./auth-status) - Inspect machine-level auth settings and remote validity
+- [`fide auth whoami`](./auth-whoami) - Resolve the current authenticated user through the API
+- [`fide auth keys`](./auth-keys) - List, create, and revoke API keys through the API
+- [`fide auth keys list`](./auth-keys-list) - List API keys visible to the current authenticated user
+- [`fide auth keys create`](./auth-keys-create) - Create an API key
+- [`fide auth keys revoke`](./auth-keys-revoke) - Revoke an API key by id
+
+## Workspace
+
+- [`fide workspace`](./workspace) - Workspace inspection and service-account provisioning
+- [`fide workspace list`](./workspace-list) - List accessible workspaces
+- [`fide workspace get`](./workspace-get) - Inspect a workspace by id
+- [`fide workspace members`](./workspace-members) - List members for a workspace
+- [`fide workspace members add`](./workspace-members-add)
+- [`fide workspace roles`](./workspace-roles) - Grant and revoke workspace roles
+- [`fide workspace roles grant`](./workspace-roles-grant) - Grant a role to an existing workspace member
+- [`fide workspace roles revoke`](./workspace-roles-revoke) - Revoke a role from an existing workspace member
+- [`fide workspace service-accounts`](./workspace-service-accounts) - Create workspace-managed service accounts
+- [`fide workspace service-accounts create`](./workspace-service-accounts-create) - Create a workspace-managed service account
+- [`fide workspace settings`](./workspace-settings) - Read and write workspace-managed settings
+- [`fide workspace settings get`](./workspace-settings-get) - Read workspace-managed settings from the API
+- [`fide workspace settings set`](./workspace-settings-set) - Write workspace-managed settings to the API
+- [`fide workspace connections`](./workspace-connections) - List and create workspace connection metadata
+- [`fide workspace connections list`](./workspace-connections-list) - List workspace connection metadata
+- [`fide workspace connections create`](./workspace-connections-create) - Create workspace connection metadata
+- [`fide workspace queries`](./workspace-queries) - List and inspect hosted workspace queries
+- [`fide workspace queries list`](./workspace-queries-list) - List hosted queries for a workspace
+- [`fide workspace queries get`](./workspace-queries-get) - Get a hosted query by statement store key and name

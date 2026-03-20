@@ -2,6 +2,7 @@ import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.j
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
+import { getWorkspaceFlag } from "../../util/workspace-settings.js";
 import { requireWorkspaceApiClient } from "./shared.js";
 
 function getHelp(): string {
@@ -10,7 +11,7 @@ function getHelp(): string {
       {
         title: "Usage",
         items: [
-          "  fide workspace get --id <workspace-id> [--pretty|-p]",
+          "  fide workspace get --workspace <workspace-id> [--pretty|-p]",
         ],
       },
     ],
@@ -25,9 +26,9 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
     return 0;
   }
 
-  const id = getStringFlag(flags, "id");
+  const id = getWorkspaceFlag(flags);
   if (!id) {
-    throw new Error("Missing required flag: --id");
+    throw new Error("Missing required flag: --workspace");
   }
 
   const { auth, client } = await requireWorkspaceApiClient();
@@ -39,7 +40,7 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
   }, {
     command: "fide workspace get",
     next: {
-      members: `fide workspace members --id ${workspace.id}`,
+      members: `fide workspace members --workspace ${workspace.id}`,
     },
   });
 

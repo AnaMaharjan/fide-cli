@@ -2,6 +2,7 @@ import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.j
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
+import { getWorkspaceFlag } from "../../util/workspace-settings.js";
 import { requireWorkspaceApiClient } from "./shared.js";
 
 function membersAddHelp(): string {
@@ -10,7 +11,7 @@ function membersAddHelp(): string {
       {
         title: "Usage",
         items: [
-          "  fide workspace members add --workspace-id <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+          "  fide workspace members add --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
         ],
       },
     ],
@@ -25,10 +26,10 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
     return 0;
   }
 
-  const workspaceId = getStringFlag(flags, "workspace-id");
+  const workspaceId = getWorkspaceFlag(flags);
   const userId = getStringFlag(flags, "user-id");
   const roleCode = getStringFlag(flags, "role");
-  if (!workspaceId) throw new Error("Missing required flag: --workspace-id");
+  if (!workspaceId) throw new Error("Missing required flag: --workspace");
   if (!userId) throw new Error("Missing required flag: --user-id");
   if (!roleCode) throw new Error("Missing required flag: --role");
 
@@ -41,8 +42,8 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
   }, {
     command: "fide workspace members add",
     next: {
-      members: `fide workspace members --id ${workspaceId}`,
-      grantRole: `fide workspace roles grant --workspace-id ${workspaceId} --user-id ${userId} --role <role-code>`,
+      members: `fide workspace members --workspace ${workspaceId}`,
+      grantRole: `fide workspace roles grant --workspace ${workspaceId} --user-id ${userId} --role <role-code>`,
     },
   });
 

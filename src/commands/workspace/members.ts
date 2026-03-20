@@ -2,6 +2,7 @@ import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.j
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
+import { getWorkspaceFlag } from "../../util/workspace-settings.js";
 import { requireWorkspaceApiClient } from "./shared.js";
 
 function membersHelp(): string {
@@ -10,7 +11,7 @@ function membersHelp(): string {
       {
         title: "Usage",
         items: [
-          "  fide workspace members --id <workspace-id> [--pretty|-p]",
+          "  fide workspace members --workspace <workspace-id> [--pretty|-p]",
         ],
       },
     ],
@@ -25,9 +26,9 @@ export async function runWorkspaceMembers(args: string[]): Promise<number> {
     return 0;
   }
 
-  const id = getStringFlag(flags, "id");
+  const id = getWorkspaceFlag(flags);
   if (!id) {
-    throw new Error("Missing required flag: --id");
+    throw new Error("Missing required flag: --workspace");
   }
 
   const { auth, client } = await requireWorkspaceApiClient();
@@ -40,7 +41,7 @@ export async function runWorkspaceMembers(args: string[]): Promise<number> {
   }, {
     command: "fide workspace members",
     next: {
-      serviceAccountCreate: `fide workspace service-accounts create --workspace-id ${id} --label '<label>' --role workspace.member`,
+      serviceAccountCreate: `fide workspace service-accounts create --workspace ${id} --label '<label>' --role workspace.member`,
     },
   });
 

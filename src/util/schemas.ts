@@ -166,13 +166,19 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide auth login",
     params: [
       { name: "base-url", type: "string", required: false, description: "Base URL for Fide HTTP surfaces. Defaults to https://api.fide.work." },
-      { name: "api-key", type: "string", required: true, description: "Fide API key to save locally" },
+      { name: "api-key", type: "string", required: false, description: "Fide API key to save locally" },
+      { name: "email", type: "string", required: false, description: "Start or complete email OTP bootstrap auth" },
+      { name: "otp", type: "string", required: false, description: "Email OTP to exchange for a Fide API key" },
+      { name: "label", type: "string", required: false, description: "Optional label for the issued Fide API key" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
-      baseUrl: "string",
-      source: "string",
-      user: "object",
+      baseUrl: "string?",
+      source: "string?",
+      user: "object?",
+      email: "string?",
+      sent: "boolean?",
+      next: "object?",
     },
   },
   "auth.logout": {
@@ -264,7 +270,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "workspace.get": {
     command: "fide workspace get",
     params: [
-      { name: "id", type: "string", required: true, description: "Workspace id" },
+      { name: "workspace", type: "string", required: true, description: "Workspace id" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
@@ -276,7 +282,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "workspace.members": {
     command: "fide workspace members",
     params: [
-      { name: "id", type: "string", required: true, description: "Workspace id" },
+      { name: "workspace", type: "string", required: true, description: "Workspace id" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
     ],
     output: {
@@ -289,7 +295,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "workspace.members.add": {
     command: "fide workspace members add",
     params: [
-      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "workspace", type: "string", required: true, description: "Workspace id" },
       { name: "user-id", type: "string", required: true, description: "User id to add as a member" },
       { name: "role", type: "string", required: true, description: "Explicit initial role code" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -306,7 +312,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "workspace.roles.grant": {
     command: "fide workspace roles grant",
     params: [
-      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "workspace", type: "string", required: true, description: "Workspace id" },
       { name: "user-id", type: "string", required: true, description: "Target workspace member id" },
       { name: "role", type: "string", required: true, description: "Role code to grant" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -323,7 +329,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "workspace.roles.revoke": {
     command: "fide workspace roles revoke",
     params: [
-      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "workspace", type: "string", required: true, description: "Workspace id" },
       { name: "user-id", type: "string", required: true, description: "Target workspace member id" },
       { name: "role", type: "string", required: true, description: "Role code to revoke" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -340,7 +346,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
   "workspace.service-accounts.create": {
     command: "fide workspace service-accounts create",
     params: [
-      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "workspace", type: "string", required: true, description: "Workspace id" },
       { name: "label", type: "string", required: true, description: "Service-account label" },
       { name: "role", type: "string", required: true, description: "Initial role code for the new service account" },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -349,6 +355,123 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       baseUrl: "string",
       source: "string",
       serviceAccount: "object",
+    },
+  },
+  "workspace.settings.get": {
+    command: "fide workspace settings get",
+    params: [
+      { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      settings: "object",
+    },
+  },
+  "workspace.settings.set": {
+    command: "fide workspace settings set",
+    params: [
+      { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "stdin", type: "boolean", required: false, description: "Read a JSON object from stdin" },
+      { name: "file", type: "string", required: false, description: "Read a JSON object from a file" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      settings: "object",
+    },
+  },
+  "workspace.connections.list": {
+    command: "fide workspace connections list",
+    params: [
+      { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      connections: "array",
+    },
+  },
+  "workspace.connections.create": {
+    command: "fide workspace connections create",
+    params: [
+      { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "slug", type: "string", required: true, description: "Stable workspace-local connection name" },
+      { name: "kind", type: "string", required: true, description: "Connection kind, such as postgres" },
+      { name: "connection", type: "string", required: false, description: "Raw connection secret to store in Vault server-side" },
+      { name: "secret-id", type: "string", required: false, description: "Existing Vault secret UUID or external secret backend id" },
+      { name: "description", type: "string", required: false, description: "Optional connection description" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      connection: "object",
+    },
+  },
+  "workspace.queries.list": {
+    command: "fide workspace queries list",
+    params: [
+      { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "query-store", type: "string", required: false, description: "Hosted query store key when a workspace has more than one query store configured." },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      queryStoreKey: "string",
+      queries: "array",
+      next: "object?",
+    },
+  },
+  "workspace.query.get": {
+    command: "fide workspace queries get",
+    params: [
+      { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "statement-store", type: "string", required: true, description: "Statement store key referenced by the saved query" },
+      { name: "name", type: "string", required: true, description: "Saved query name" },
+      { name: "query-store", type: "string", required: false, description: "Hosted query store key when a workspace has more than one query store configured." },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      query: "object",
+      next: "object",
+    },
+  },
+  "workspace.query.run": {
+    command: "fide workspace queries run",
+    params: [
+      { name: "workspace", type: "string", required: true, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
+      { name: "statement-store", type: "string", required: true, description: "Statement store key referenced by the saved query" },
+      { name: "name", type: "string", required: true, description: "Saved query name" },
+      { name: "query-store", type: "string", required: false, description: "Hosted query store key when a workspace has more than one query store configured." },
+      { name: "limit", type: "number", required: false, description: "Maximum number of rows to return, capped server-side." },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      workspaceSelectionSource: "string",
+      result: "object",
+      next: "object",
     },
   },
   "graph.statement-input": {

@@ -1,11 +1,14 @@
 import { readdir, readFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 
-export type LocalQueryDefinition = {
+export type QueryDefinition = {
   statementStoreKey: string;
   name: string;
   description: string | null;
   sql: string;
+};
+
+export type LocalQueryDefinition = QueryDefinition & {
   file: string;
 };
 

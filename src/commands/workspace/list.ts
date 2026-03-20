@@ -35,8 +35,8 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
     command: "fide workspace list",
     next: result.workspaces[0]
       ? {
-          get: `fide workspace get --id ${result.workspaces[0].id}`,
-          members: `fide workspace members --id ${result.workspaces[0].id}`,
+          get: `fide workspace get --workspace ${result.workspaces[0].id}`,
+          members: `fide workspace members --workspace ${result.workspaces[0].id}`,
         }
       : undefined,
   });
@@ -49,7 +49,7 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
     }
     if (result.workspaces[0]) {
       console.log("");
-      console.log(`Next: fide workspace members --id ${result.workspaces[0].id}`);
+      console.log(`Next: fide workspace members --workspace ${result.workspaces[0].id}`);
     }
   }
   return 0;

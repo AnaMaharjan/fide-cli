@@ -1,5 +1,5 @@
 import { createPgClient } from "@chris-test/db";
-import { type LocalQueryDefinition } from "./files.js";
+import { type QueryDefinition } from "./files.js";
 import { type ResolvedQueryStore } from "./target.js";
 
 export async function ensureQueryStoreSchema(store: ResolvedQueryStore): Promise<void> {
@@ -43,7 +43,7 @@ export async function ensureQueryStoreSchema(store: ResolvedQueryStore): Promise
   }
 }
 
-export async function replaceQueryStoreQueries(store: ResolvedQueryStore, queries: LocalQueryDefinition[]): Promise<number> {
+export async function replaceQueryStoreQueries(store: ResolvedQueryStore, queries: QueryDefinition[]): Promise<number> {
   if (!store.databaseUrl) {
     throw new Error(`Missing postgres connection for query store "${store.key}". Configure the store in settings.json or set the referenced env var.`);
   }

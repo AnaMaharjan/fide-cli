@@ -1,0 +1,9 @@
+---
+title: "fide graph"
+description: "fide graph <command> [flags]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide graph","summary":"Statement authoring in local .fide directories and graph definitions","description":"fide graph <command> [flags]","usage":["fide graph <command> [flags]"],"arguments":[],"options":[],"outputFields":[],"subcommands":[{"name":"write","summary":"Write statement inputs into a local .fide directory","href":"./graph-write"},{"name":"draft","summary":"Create a markdown statement draft in a local .fide directory","href":"./graph-draft"},{"name":"status","summary":"Inspect the local .fide directory","href":"./graph-status"},{"name":"defs","summary":"Inspect statement and entity definitions","href":"./graph-defs"}],"schemas":[],"examples":[{"command":"fide graph write '[{ ... statement inputs ... }]'"},{"command":"fide graph write --query --store sqlite --name recentStatements 'select * from statements limit 10'"},{"command":"fide graph draft --file inputs.json"},{"command":"fide graph defs"}],"notes":[{"title":"Target Resolution","body":"`--fide-dir <path>` resolves a local .fide directory path.\nWithout `--fide-dir`, graph commands use `FIDE_DIR` when set, otherwise the nearest `.fide` directory, otherwise the current working directory.\nBackend sqlite/postgres targets live under `fide store`, not `fide graph`."}]}} />

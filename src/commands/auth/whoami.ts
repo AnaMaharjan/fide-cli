@@ -3,7 +3,7 @@ import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
-import { resolveAuthConfig } from "../../util/auth-config.js";
+import { resolveAuthSettings } from "../../util/auth-settings.js";
 
 function whoamiHelp(): string {
   return renderHelp({
@@ -26,7 +26,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
     return 0;
   }
 
-  const auth = await resolveAuthConfig();
+  const auth = await resolveAuthSettings();
   if (!auth) {
     throw new Error("No Fide auth settings found. Run `fide auth login --base-url <url> --api-key <key>` or set FIDE_BASE_URL and FIDE_API_KEY.");
   }
