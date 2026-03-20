@@ -29,11 +29,11 @@ export async function runAuthStatus(args: string[]): Promise<number> {
   const stored = await readStoredAuthConfig();
   const resolved = await resolveAuthConfig();
 
-  let remote: { ok: boolean; user?: unknown; error?: string } = { ok: false, error: "Not authenticated" };
+  let remote: { ok: boolean; error?: string } = { ok: false, error: "Not authenticated" };
   if (resolved) {
     try {
-      const user = await createAuthApiClient(resolved).me();
-      remote = { ok: true, user };
+      await createAuthApiClient(resolved).me();
+      remote = { ok: true };
     } catch (error) {
       remote = { ok: false, error: error instanceof Error ? error.message : String(error) };
     }
@@ -43,8 +43,8 @@ export async function runAuthStatus(args: string[]): Promise<number> {
     configured: Boolean(resolved),
     baseUrl: resolved?.baseUrl ?? null,
     source: resolved?.source ?? null,
-    configPath: resolveAuthConfigPath(),
-    storedConfigPresent: Boolean(stored),
+    userSettingsPath: resolveAuthConfigPath(),
+    storedSettingsPresent: Boolean(stored),
     envConfigured: Boolean(process.env.FIDE_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
     remote,
   }, {
@@ -54,7 +54,7 @@ export async function runAuthStatus(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else if (!resolved) {
-    console.log("No Fide auth configured");
+    console.log("No Fide auth settings found");
   } else if (remote.ok) {
     console.log(`Authenticated via ${resolved.source} to ${resolved.baseUrl}`);
   } else {

@@ -182,7 +182,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     ],
     output: {
       cleared: "boolean",
-      path: "string",
+      userSettingsPath: "string",
     },
   },
   "auth.status": {
@@ -194,10 +194,10 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       configured: "boolean",
       baseUrl: "string?",
       source: "string?",
-      configPath: "string",
-      storedConfigPresent: "boolean",
+      userSettingsPath: "string",
+      storedSettingsPresent: "boolean",
       envConfigured: "boolean",
-      remote: "object",
+      remote: "object<{ ok: boolean, error?: string }>",
     },
   },
   "auth.whoami": {
@@ -248,6 +248,107 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       source: "string",
       id: "string",
       ok: "boolean",
+    },
+  },
+  "workspace.list": {
+    command: "fide workspace list",
+    params: [
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaces: "array",
+    },
+  },
+  "workspace.get": {
+    command: "fide workspace get",
+    params: [
+      { name: "id", type: "string", required: true, description: "Workspace id" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspace: "object",
+    },
+  },
+  "workspace.members": {
+    command: "fide workspace members",
+    params: [
+      { name: "id", type: "string", required: true, description: "Workspace id" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      workspaceId: "string",
+      members: "array",
+    },
+  },
+  "workspace.members.add": {
+    command: "fide workspace members add",
+    params: [
+      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "user-id", type: "string", required: true, description: "User id to add as a member" },
+      { name: "role", type: "string", required: true, description: "Explicit initial role code" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      ok: "boolean",
+      workspaceId: "string",
+      userId: "string",
+      roleCode: "string",
+    },
+  },
+  "workspace.roles.grant": {
+    command: "fide workspace roles grant",
+    params: [
+      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "user-id", type: "string", required: true, description: "Target workspace member id" },
+      { name: "role", type: "string", required: true, description: "Role code to grant" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      ok: "boolean",
+      workspaceId: "string",
+      userId: "string",
+      roleCode: "string",
+    },
+  },
+  "workspace.roles.revoke": {
+    command: "fide workspace roles revoke",
+    params: [
+      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "user-id", type: "string", required: true, description: "Target workspace member id" },
+      { name: "role", type: "string", required: true, description: "Role code to revoke" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      ok: "boolean",
+      workspaceId: "string",
+      userId: "string",
+      roleCode: "string",
+    },
+  },
+  "workspace.service-accounts.create": {
+    command: "fide workspace service-accounts create",
+    params: [
+      { name: "workspace-id", type: "string", required: true, description: "Workspace id" },
+      { name: "label", type: "string", required: true, description: "Service-account label" },
+      { name: "role", type: "string", required: true, description: "Initial role code for the new service account" },
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      baseUrl: "string",
+      source: "string",
+      serviceAccount: "object",
     },
   },
   "graph.statement-input": {

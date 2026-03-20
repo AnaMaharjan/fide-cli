@@ -19,7 +19,7 @@ function loginHelp(): string {
         items: [
           `  - --base-url defaults to ${DEFAULT_FIDE_BASE_URL}.`,
           "  - This command verifies the API key with /v1/me before saving it.",
-          "  - The saved config is local to this machine.",
+          "  - The saved settings are local to this machine.",
         ],
       },
     ],
@@ -46,7 +46,7 @@ export async function runAuthLogin(args: string[]): Promise<number> {
 
   const payload = okResponse("auth-login.v1", {
     baseUrl,
-    source: "config",
+    source: "settings",
     user: me,
   }, {
     command: "fide auth login",
@@ -55,7 +55,7 @@ export async function runAuthLogin(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`Saved auth for ${me.userId ?? me.id} at ${baseUrl}`);
+    console.log(`Saved auth for ${me.user.id ?? me.auth.type} at ${baseUrl}`);
   }
   return 0;
 }

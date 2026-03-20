@@ -28,7 +28,7 @@ export async function runAuthLogout(args: string[]): Promise<number> {
   await clearStoredAuthConfig();
   const payload = okResponse("auth-logout.v1", {
     cleared: true,
-    path: resolveAuthConfigPath(),
+    userSettingsPath: resolveAuthConfigPath(),
   }, {
     command: "fide auth logout",
   });
@@ -36,7 +36,7 @@ export async function runAuthLogout(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log("Cleared saved Fide auth config");
+    console.log("Cleared saved Fide auth settings");
   }
   return 0;
 }

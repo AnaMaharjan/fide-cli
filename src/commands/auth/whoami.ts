@@ -28,7 +28,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
 
   const auth = await resolveAuthConfig();
   if (!auth) {
-    throw new Error("No Fide auth configured. Run `fide auth login --base-url <url> --api-key <key>` or set FIDE_BASE_URL and FIDE_API_KEY.");
+    throw new Error("No Fide auth settings found. Run `fide auth login --base-url <url> --api-key <key>` or set FIDE_BASE_URL and FIDE_API_KEY.");
   }
 
   const me = await createAuthApiClient(auth).me();
@@ -43,7 +43,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`${me.userId ?? me.id}`);
+    console.log(`${me.user.id ?? me.auth.type}`);
   }
   return 0;
 }

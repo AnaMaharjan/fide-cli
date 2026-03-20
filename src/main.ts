@@ -21,6 +21,7 @@ function helpText(): string {
             "  graph    Statement authoring in local .fide directories and graph definitions",
             "  store    Configured statement stores and store builds",
             "  auth     CLI authentication and API key management",
+            "  workspace Workspace inspection and service-account provisioning",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
           ],
@@ -33,6 +34,7 @@ function helpText(): string {
             "  fide store sql --store primary 'select * from statements limit 10'",
             "  fide store build --statements combined",
             "  fide auth login --api-key fide_sk_...",
+            "  fide workspace list",
           ],
         },
         {
@@ -82,6 +84,10 @@ export async function runCli(argv: string[]): Promise<number> {
       case "auth": {
         const { runAuthCommand } = await import("./commands/auth/index.js");
         return await runAuthCommand(command, rest);
+      }
+      case "workspace": {
+        const { runWorkspaceCommand } = await import("./commands/workspace/index.js");
+        return await runWorkspaceCommand(command, rest);
       }
       default:
         throw new Error(`Unknown group: ${group}. Run \`fide --help\` to see available commands.`);

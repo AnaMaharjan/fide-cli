@@ -10,7 +10,7 @@ export type StoredAuthConfig = {
 };
 
 export type ResolvedAuthConfig = StoredAuthConfig & {
-  source: "env" | "config";
+  source: "env" | "settings";
   path: string;
 };
 
@@ -80,18 +80,14 @@ export async function clearStoredAuthConfig(): Promise<void> {
     delete env.FIDE_BASE_URL;
     delete env.FIDE_API_KEY;
 
-    const next: UserFideSettings = {
-      ...current,
-      ...(Object.keys(env).length > 0 ? { env } : {}),
-    };
+    const { env: _ignoredEnv, ...rest } = current;
+    const next: UserFideSettings = Object.keys(env).length > 0
+      ? { ...rest, env }
+      : rest;
 
     if (Object.keys(next).length === 0) {
       await rm(path, { force: true });
       return;
-    }
-
-    if (!("env" in next)) {
-      delete next.env;
     }
 
     await writeFile(path, `${JSON.stringify(next, null, 2)}\n`, "utf8");
@@ -119,7 +115,7 @@ export async function resolveAuthConfig(): Promise<ResolvedAuthConfig | null> {
 
   return {
     ...stored,
-    source: "config",
+    source: "settings",
     path,
   };
 }
