@@ -1,9 +1,0 @@
----
-title: "fide workspace queries"
-description: "fide workspace queries <command> [flags]"
-full: true
----
-
-import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
-
-<CLICommandPageInteractive data={{"name":"fide workspace queries","summary":"List and inspect hosted workspace queries","description":"fide workspace queries <command> [flags]","usage":["fide workspace queries <command> [flags]"],"arguments":[],"options":[],"outputFields":[],"subcommands":[{"name":"list","summary":"List hosted queries for a workspace","href":"./workspace-queries-list"},{"name":"get","summary":"Get a hosted query by graph key and name","href":"./workspace-queries-get"},{"name":"run","summary":"Execute a hosted saved query against the workspace graph store"}],"schemas":[],"examples":[],"notes":[{"title":"Notes","body":"Use --workspace <workspace-id> to select a workspace explicitly.\nUse --query-store <key> when a workspace has more than one hosted query store configured.\nUse --limit <n> to cap execution result size on run.\nHosted queries use the same canonical query shape as local saved queries, without local file metadata.\nHosted execution is read-only. Saved queries must resolve to SELECT, WITH, EXPLAIN, or VALUES SQL."}]}} />

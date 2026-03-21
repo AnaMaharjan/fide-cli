@@ -23,13 +23,12 @@
     "build:link": "node ./scripts/build.mjs --link",
     "check-types": "tsc --noEmit",
     "generate:docs": "node ./scripts/generate-docs/cli-reference.mjs",
-    "check:generated:docs": "node ./scripts/generate-docs/cli-reference.mjs --check",
-    "compare:source-schema": "node ./scripts/compare-source-schema.mjs",
-    "check:generated:schema": "node ./scripts/compare-source-schema.mjs --check"
+    "check:generated:docs": "node ./scripts/generate-docs/cli-reference.mjs --check"
   },
   "dependencies": {
     "@chris-test/db": "workspace:*",
-    "@chris-test/graph": "workspace:*"
+    "@chris-test/graph": "workspace:*",
+    "@chris-test/graph-db": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

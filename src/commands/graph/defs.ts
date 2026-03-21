@@ -1,8 +1,9 @@
 import { FIDE_ENTITY_TYPES, type FideEntityTypeName } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { errorResponse, okResponse } from "../../util/response.js";
+import { graphDefsCommand } from "./metadata.js";
 
 type EntitySummary = {
   name: FideEntityTypeName;
@@ -52,39 +53,11 @@ function buildEntitySummary(name: FideEntityTypeName): EntitySummary {
   };
 }
 
-function defsHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide graph defs [--entity <EntityType>]",
-          "  fide graph defs <EntityType>",
-        ],
-      },
-      {
-        title: "Flags",
-        items: [
-          "  --entity <EntityType>    Optional entity type filter",
-        ],
-      },
-      {
-        title: "Examples",
-        items: [
-          "  fide graph defs",
-          "  fide graph defs --entity NetworkResource",
-          "  fide graph defs Person",
-        ],
-      },
-    ],
-  });
-}
-
 export async function runGraphDefs(args: string[] = []): Promise<number> {
   const { flags, positionals } = parseArgs(args);
 
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    console.log(defsHelp());
+    console.log(renderCommandHelp(graphDefsCommand));
     return 0;
   }
 

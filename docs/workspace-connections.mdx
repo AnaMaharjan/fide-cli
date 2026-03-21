@@ -1,9 +1,0 @@
----
-title: "fide workspace connections"
-description: "fide workspace connections <command> [flags]"
-full: true
----
-
-import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
-
-<CLICommandPageInteractive data={{"name":"fide workspace connections","summary":"List and create workspace connection metadata","description":"fide workspace connections <command> [flags]","usage":["fide workspace connections <command> [flags]"],"arguments":[],"options":[],"outputFields":[],"subcommands":[{"name":"list","summary":"List workspace connection metadata","href":"./workspace-connections-list"},{"name":"create","summary":"Create workspace connection metadata","href":"./workspace-connections-create"}],"schemas":[],"examples":[],"notes":[{"title":"Notes","body":"Use --workspace <workspace-id> to select a workspace explicitly.\ncreate accepts either --connection or --secret-id.\nWhen --connection is used, the API stores the secret in Vault and returns the resulting secret id.\nWorkspace settings should reference these connections via connectionRef rather than raw secrets."}]}} />

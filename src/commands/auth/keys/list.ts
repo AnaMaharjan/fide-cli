@@ -1,11 +1,17 @@
 import { parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
+import { authKeysListCommand } from "../metadata.js";
 import { requireAuthApiClient } from "./shared.js";
 
 export async function runAuthKeysList(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
+  if (flags.has("help")) {
+    console.log(renderCommandHelp(authKeysListCommand));
+    return 0;
+  }
 
   const { auth, client } = await requireAuthApiClient();
   const { apiKeys } = await client.listApiKeys();

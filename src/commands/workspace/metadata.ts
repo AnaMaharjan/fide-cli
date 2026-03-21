@@ -1,0 +1,200 @@
+import { commandSchemas, defineCommand } from "../../util/command-metadata.js";
+
+export const workspaceListCommand = defineCommand({
+  surface: "workspace.list",
+  command: "fide workspace list",
+  summary: "List accessible workspaces",
+  usage: [
+    "fide workspace list [--pretty|-p]",
+  ],
+  params: [
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    workspaces: "array",
+  },
+});
+
+export const workspaceGetCommand = defineCommand({
+  surface: "workspace.get",
+  command: "fide workspace get",
+  summary: "Inspect a workspace by id",
+  usage: [
+    "fide workspace get --workspace <workspace-id> [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    workspace: "object",
+  },
+});
+
+export const workspaceMembersCommand = defineCommand({
+  surface: "workspace.members",
+  command: "fide workspace members list",
+  summary: "List members for a workspace",
+  usage: [
+    "fide workspace members list --workspace <workspace-id> [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    workspaceId: "string",
+    members: "array",
+  },
+});
+
+export const workspaceMembersAddCommand = defineCommand({
+  surface: "workspace.members.add",
+  command: "fide workspace members add",
+  summary: "Add a member to a workspace with an initial role",
+  usage: [
+    "fide workspace members add --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "user-id", type: "string", required: true, description: "User id to add as a member", valueLabel: "<user-id>" },
+    { name: "role", type: "string", required: true, description: "Explicit initial role code", valueLabel: "<role-code>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    ok: "boolean",
+    workspaceId: "string",
+    userId: "string",
+    roleCode: "string",
+  },
+});
+
+export const workspaceRolesGrantCommand = defineCommand({
+  surface: "workspace.roles.grant",
+  command: "fide workspace roles grant",
+  summary: "Grant a role to an existing workspace member",
+  usage: [
+    "fide workspace roles grant --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "user-id", type: "string", required: true, description: "Target workspace member id", valueLabel: "<user-id>" },
+    { name: "role", type: "string", required: true, description: "Role code to grant", valueLabel: "<role-code>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    ok: "boolean",
+    workspaceId: "string",
+    userId: "string",
+    roleCode: "string",
+  },
+});
+
+export const workspaceRolesRevokeCommand = defineCommand({
+  surface: "workspace.roles.revoke",
+  command: "fide workspace roles revoke",
+  summary: "Revoke a role from an existing workspace member",
+  usage: [
+    "fide workspace roles revoke --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "user-id", type: "string", required: true, description: "Target workspace member id", valueLabel: "<user-id>" },
+    { name: "role", type: "string", required: true, description: "Role code to revoke", valueLabel: "<role-code>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    ok: "boolean",
+    workspaceId: "string",
+    userId: "string",
+    roleCode: "string",
+  },
+});
+
+export const workspaceServiceAccountCreateCommand = defineCommand({
+  surface: "workspace.service-accounts.create",
+  command: "fide workspace service-accounts create",
+  summary: "Create a workspace-managed service account",
+  usage: [
+    "fide workspace service-accounts create --workspace <workspace-id> --label <label> --role <role-code> [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "label", type: "string", required: true, description: "Service-account label", valueLabel: "<label>" },
+    { name: "role", type: "string", required: true, description: "Initial role code for the new service account", valueLabel: "<role-code>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    serviceAccount: "object",
+  },
+});
+
+export const workspaceSettingsGetCommand = defineCommand({
+  surface: "workspace.settings.get",
+  command: "fide workspace settings get",
+  summary: "Read workspace-managed settings from the API",
+  usage: [
+    "fide workspace settings get [--workspace <workspace-id>] [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings.", valueLabel: "<workspace-id>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    workspaceId: "string",
+    workspaceSelectionSource: "string",
+    settings: "object",
+  },
+});
+
+export const workspaceSettingsSetCommand = defineCommand({
+  surface: "workspace.settings.set",
+  command: "fide workspace settings set",
+  summary: "Write workspace-managed settings to the API",
+  usage: [
+    "fide workspace settings set [--workspace <workspace-id>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
+  ],
+  params: [
+    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings.", valueLabel: "<workspace-id>" },
+    { name: "stdin", type: "boolean", description: "Read a JSON object from stdin" },
+    { name: "file", type: "string", description: "Read a JSON object from a file", valueLabel: "<path>" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    baseUrl: "string",
+    source: "string",
+    workspaceId: "string",
+    workspaceSelectionSource: "string",
+    settings: "object",
+  },
+});
+
+export const WORKSPACE_COMMAND_METADATA = [
+  workspaceListCommand,
+  workspaceGetCommand,
+  workspaceMembersCommand,
+  workspaceMembersAddCommand,
+  workspaceRolesGrantCommand,
+  workspaceRolesRevokeCommand,
+  workspaceServiceAccountCreateCommand,
+  workspaceSettingsGetCommand,
+  workspaceSettingsSetCommand,
+] as const;
+
+export const WORKSPACE_COMMAND_SCHEMAS = commandSchemas(WORKSPACE_COMMAND_METADATA);

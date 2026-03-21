@@ -24,7 +24,7 @@ function helpText(): string {
         {
           title: "Groups",
           items: [
-            "  graph    Graph authoring, configured store access, builds, and graph definitions",
+            "  graph    Graph authoring, hosted graph management, queries, builds, and graph definitions",
             "  auth     CLI authentication and API key management",
             "  workspace Workspace inspection and service-account provisioning",
             "  docs     Resolve canonical docs pointers to local source content",
@@ -34,13 +34,15 @@ function helpText(): string {
         {
           title: "Workflows",
           items: [
-            "  fide status",
-            "  fide graph write '<json>'             Write statement inputs into the local .fide directory",
-            "  fide graph query write --graph sqlite --name recentStatements 'select * from statements limit 10'",
-            "  fide graph query --graph primary 'select * from statements limit 10'",
-            "  fide graph build --graph combined",
-            "  fide auth login --api-key fide_sk_...",
-            "  fide workspace list",
+          "  fide status",
+          "  fide graph statements write '<json>'  Write statement inputs into the local .fide directory",
+          "  fide graph list --workspace <workspace-id>",
+          "  fide graph save --workspace <workspace-id> --graph primary --type postgres --schema fide_graph --connection-ref primary-graph",
+          "  fide graph query save --graph sqlite --name recentStatements 'select * from statements limit 10'",
+          "  fide graph query run --graph primary 'select * from statements limit 10'",
+          "  fide graph build --graph combined",
+          "  fide auth login --api-key fide_sk_...",
+          "  fide workspace list",
           ],
         },
         {

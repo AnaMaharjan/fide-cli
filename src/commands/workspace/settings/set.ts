@@ -1,22 +1,10 @@
 import { parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderHelp } from "../../../util/help.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson, readUtf8 } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
 import { resolveWorkspaceSelectionOrThrow } from "../../../util/workspace-settings.js";
+import { workspaceSettingsSetCommand } from "../metadata.js";
 import { requireWorkspaceApiClient } from "../shared.js";
-
-function settingsSetHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide workspace settings set [--workspace <workspace-id>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
 
 async function readSettingsInput(positionals: string[], flags: Map<string, string | boolean>): Promise<string> {
   const file = typeof flags.get("file") === "string" ? String(flags.get("file")) : null;
@@ -50,7 +38,7 @@ export async function runWorkspaceSettingsSet(args: string[]): Promise<number> {
   const { flags, positionals } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(settingsSetHelp());
+    console.log(renderCommandHelp(workspaceSettingsSetCommand));
     return 0;
   }
 

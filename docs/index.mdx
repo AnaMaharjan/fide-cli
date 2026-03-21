@@ -8,51 +8,64 @@ This reference is generated from the CLI's live `--help` output and schema surfa
 ## Top Level
 
 - [`fide`](./fide) - Fide CLI
-- [`fide status`](./status) - Inspect active machine, project, and workspace context
 - [`fide docs`](./docs)
 - [`fide schema`](./schema)
+- [`fide status`](./status) - Inspect active machine, project, and workspace context
 
 ## Graph
 
-- [`fide graph`](./graph)
-- [`fide graph write`](./graph-write) - Write statement inputs into a local .fide directory
-- [`fide graph draft`](./graph-draft) - Create a markdown statement draft in a local .fide directory
-- [`fide graph status`](./graph-status) - Inspect local graph state and configured runtime status
-- [`fide graph query`](./graph-query) - Run an ad hoc graph query against a configured graph
-- [`fide graph query write`](./graph-query-write) - Save a local graph query definition
-- [`fide graph build`](./graph-build) - Build configured statement or query stores from graph sources
-- [`fide graph defs`](./graph-defs) - Inspect statement and entity definitions
+- [`fide graph build`](./graph-build)
+- [`fide graph defs`](./graph-defs)
+- [`fide graph draft`](./graph-draft)
+- [`fide graph get`](./graph-get)
+- [`fide graph list`](./graph-list)
+- [`fide graph save`](./graph-save)
+- [`fide graph status`](./graph-status)
+
+## Graph Query
+
+- [`fide graph query get`](./graph-query-get) - Read one project or hosted saved graph query
+- [`fide graph query list`](./graph-query-list) - List project or hosted saved graph queries
+- [`fide graph query run`](./graph-query-run) - Run ad hoc SQL or execute a saved graph query
+- [`fide graph query save`](./graph-query-save) - Save a project or hosted graph query
+
+## Graph Statements
+
+- [`fide graph statements write`](./graph-statements-write)
 
 ## Auth
 
-- [`fide auth`](./auth)
-- [`fide auth login`](./auth-login) - Save API-key-based auth for the CLI
-- [`fide auth logout`](./auth-logout) - Remove saved machine-level auth settings
-- [`fide auth status`](./auth-status) - Inspect machine-level auth settings and remote validity
-- [`fide auth whoami`](./auth-whoami) - Resolve the current authenticated user through the API
-- [`fide auth keys`](./auth-keys) - List, create, and revoke API keys through the API
-- [`fide auth keys list`](./auth-keys-list) - List API keys visible to the current authenticated user
-- [`fide auth keys create`](./auth-keys-create) - Create an API key
-- [`fide auth keys revoke`](./auth-keys-revoke) - Revoke an API key by id
+- [`fide auth login`](./auth-login)
+- [`fide auth logout`](./auth-logout)
+- [`fide auth status`](./auth-status)
+- [`fide auth whoami`](./auth-whoami)
+
+## Auth Keys
+
+- [`fide auth keys create`](./auth-keys-create)
+- [`fide auth keys list`](./auth-keys-list)
+- [`fide auth keys revoke`](./auth-keys-revoke)
 
 ## Workspace
 
-- [`fide workspace`](./workspace)
-- [`fide workspace list`](./workspace-list) - List accessible workspaces
-- [`fide workspace get`](./workspace-get) - Inspect a workspace by id
-- [`fide workspace members`](./workspace-members) - List members for a workspace
+- [`fide workspace get`](./workspace-get)
+- [`fide workspace list`](./workspace-list)
+
+## Workspace Members
+
 - [`fide workspace members add`](./workspace-members-add)
-- [`fide workspace roles`](./workspace-roles) - Grant and revoke workspace roles
-- [`fide workspace roles grant`](./workspace-roles-grant) - Grant a role to an existing workspace member
-- [`fide workspace roles revoke`](./workspace-roles-revoke) - Revoke a role from an existing workspace member
-- [`fide workspace service-accounts`](./workspace-service-accounts) - Create workspace-managed service accounts
-- [`fide workspace service-accounts create`](./workspace-service-accounts-create) - Create a workspace-managed service account
-- [`fide workspace settings`](./workspace-settings) - Read and write workspace-managed settings
-- [`fide workspace settings get`](./workspace-settings-get) - Read workspace-managed settings from the API
-- [`fide workspace settings set`](./workspace-settings-set) - Write workspace-managed settings to the API
-- [`fide workspace connections`](./workspace-connections) - List and create workspace connection metadata
-- [`fide workspace connections list`](./workspace-connections-list) - List workspace connection metadata
-- [`fide workspace connections create`](./workspace-connections-create) - Create workspace connection metadata
-- [`fide workspace queries`](./workspace-queries) - List and inspect hosted workspace queries
-- [`fide workspace queries list`](./workspace-queries-list) - List hosted queries for a workspace
-- [`fide workspace queries get`](./workspace-queries-get) - Get a hosted query by graph key and name
+- [`fide workspace members list`](./workspace-members-list)
+
+## Workspace Roles
+
+- [`fide workspace roles grant`](./workspace-roles-grant)
+- [`fide workspace roles revoke`](./workspace-roles-revoke)
+
+## Workspace Service Accounts
+
+- [`fide workspace service-accounts create`](./workspace-service-accounts-create)
+
+## Workspace Settings
+
+- [`fide workspace settings get`](./workspace-settings-get)
+- [`fide workspace settings set`](./workspace-settings-set)

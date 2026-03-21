@@ -1,11 +1,9 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { parseFideId, STANDARD_CURIE_PREFIXES, statementDoc, type StatementInput } from "@chris-test/graph";
+import { getLocalFideWarnings, parseFideId, resolveGraphTarget, STANDARD_CURIE_PREFIXES, statementDoc, type StatementInput } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
-import { resolveGraphTarget } from "../../util/graph/target.js";
-import { getLocalFideWarnings } from "../../util/graph/local-disk-warning.js";
 import { graphDraftCommand } from "./metadata.js";
 import { resolveStatementsBatch } from "./shared.js";
 
@@ -191,7 +189,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     updatedAtUTC,
     updateCount,
     next: {
-      write: `fide graph write --file ${outPath}`,
+      write: `fide graph statements write --file ${outPath}`,
     },
     warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
   };

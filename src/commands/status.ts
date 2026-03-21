@@ -1,32 +1,14 @@
 import { existsSync } from "node:fs";
+import type { FideSettings } from "@chris-test/graph";
 import { parseArgs, shouldUseJsonOutput } from "../util/args.js";
+import { renderCommandHelp } from "../util/command-metadata.js";
 import { createAuthApiClient } from "../util/auth-api.js";
 import { readStoredAuthSettings, resolveAuthSettings, resolveAuthSettingsPath } from "../util/auth-settings.js";
-import { renderHelp } from "../util/help.js";
 import { printJson } from "../util/io.js";
 import { okResponse } from "../util/response.js";
+import { statusCommand } from "./metadata.js";
 import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/fide-dir.js";
 import { resolveWorkspaceSelection } from "../util/workspace-settings.js";
-import type { FideSettings } from "../util/graph/target.js";
-
-function statusHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide status [--pretty|-p]",
-        ],
-      },
-      {
-        title: "Notes",
-        items: [
-          "  - Shows active machine, project, and workspace context in one response.",
-        ],
-      },
-    ],
-  });
-}
 
 function renderPrettyStatus(payload: ReturnType<typeof okResponse<{
   machine: Record<string, unknown>;
@@ -75,7 +57,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help") || flags.has("-h")) {
-    console.log(statusHelp());
+    console.log(renderCommandHelp(statusCommand));
     return 0;
   }
 

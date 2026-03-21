@@ -1,28 +1,16 @@
 import { parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderHelp } from "../../../util/help.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
 import { resolveWorkspaceSelectionOrThrow } from "../../../util/workspace-settings.js";
+import { workspaceSettingsGetCommand } from "../metadata.js";
 import { requireWorkspaceApiClient } from "../shared.js";
-
-function settingsGetHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide workspace settings get [--workspace <workspace-id>] [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
 
 export async function runWorkspaceSettingsGet(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(settingsGetHelp());
+    console.log(renderCommandHelp(workspaceSettingsGetCommand));
     return 0;
   }
 

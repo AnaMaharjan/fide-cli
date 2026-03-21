@@ -1,9 +1,0 @@
----
-title: "fide workspace settings"
-description: "fide workspace settings <command> [flags]"
-full: true
----
-
-import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
-
-<CLICommandPageInteractive data={{"name":"fide workspace settings","summary":"Read and write workspace-managed settings","description":"fide workspace settings <command> [flags]","usage":["fide workspace settings <command> [flags]"],"arguments":[],"options":[],"outputFields":[],"subcommands":[{"name":"get","summary":"Read workspace-managed settings from the API","href":"./workspace-settings-get"},{"name":"set","summary":"Write workspace-managed settings to the API","href":"./workspace-settings-set"}],"schemas":[],"examples":[{"command":"fide workspace settings get --workspace <workspace-id>"},{"command":"fide workspace settings set --workspace <workspace-id> --file settings.json"},{"command":"cat settings.json | fide workspace settings set --workspace <workspace-id> --stdin"}],"notes":[{"title":"Notes","body":"Use --workspace <workspace-id> to select a workspace explicitly.\nFIDE_WORKSPACE overrides the saved selection.\nA saved `workspace` value in ~/.fide/settings.json is used last.\nFor cloud-managed stores, prefer connectionRef values that point at workspace connections over raw secret material."}]}} />

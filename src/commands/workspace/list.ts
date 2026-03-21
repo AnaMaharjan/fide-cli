@@ -1,27 +1,15 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
+import { workspaceListCommand } from "./metadata.js";
 import { requireWorkspaceApiClient } from "./shared.js";
-
-function listHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide workspace list [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
 
 export async function runWorkspaceList(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(listHelp());
+    console.log(renderCommandHelp(workspaceListCommand));
     return 0;
   }
 
@@ -36,7 +24,7 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
     next: result.workspaces[0]
       ? {
           get: `fide workspace get --workspace ${result.workspaces[0].id}`,
-          members: `fide workspace members --workspace ${result.workspaces[0].id}`,
+          members: `fide workspace members list --workspace ${result.workspaces[0].id}`,
         }
       : undefined,
   });
@@ -49,7 +37,7 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
     }
     if (result.workspaces[0]) {
       console.log("");
-      console.log(`Next: fide workspace members --workspace ${result.workspaces[0].id}`);
+      console.log(`Next: fide workspace members list --workspace ${result.workspaces[0].id}`);
     }
   }
   return 0;

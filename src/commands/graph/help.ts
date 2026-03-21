@@ -1,11 +1,14 @@
 import { renderHelp } from "../../util/help.js";
-import { graphBuildCommand, graphDraftCommand, graphQueryCommand, graphStatusCommand } from "./metadata.js";
+import { graphBuildCommand, graphDraftCommand, graphGetCommand, graphListCommand, graphQueryCommand, graphSaveCommand, graphStatusCommand } from "./metadata.js";
 
 export function graphCommandHelp(): string {
   const commandSummaries = [
-    { name: "write", summary: "Write statement inputs into a local .fide directory" },
+    { name: "statements", summary: "Write statement inputs into a local .fide directory" },
     { name: "draft", summary: graphDraftCommand.summary },
     { name: "status", summary: graphStatusCommand.summary },
+    { name: "list", summary: graphListCommand.summary },
+    { name: "get", summary: graphGetCommand.summary },
+    { name: "save", summary: graphSaveCommand.summary },
     { name: "query", summary: graphQueryCommand.summary },
     { name: "build", summary: graphBuildCommand.summary },
     { name: "defs", summary: "Inspect statement and entity definitions" },
@@ -26,10 +29,13 @@ export function graphCommandHelp(): string {
       {
         title: "Workflows",
         items: [
-          "  fide graph write '[{ ... statement inputs ... }]'",
-          "  fide graph query write --graph sqlite --name recentStatements 'select * from statements limit 10'",
+          "  fide graph statements write '[{ ... statement inputs ... }]'",
+          "  fide graph list --workspace <workspace-id>",
+          "  fide graph save --workspace <workspace-id> --graph primary --type postgres --schema fide_graph --connection-ref primary-graph",
           "  fide graph status",
-          `  ${graphQueryCommand.examples?.[0] ?? "fide graph query --graph primary 'select * from statements limit 10'"}`,
+          "  fide graph query run --graph primary 'select * from statements limit 10'",
+          "  fide graph query save --graph sqlite --name recentStatements 'select * from statements limit 10'",
+          "  fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
           `  ${graphBuildCommand.examples?.[1] ?? "fide graph build --graph combined"}`,
           "  fide graph draft --file inputs.json",
           "  fide graph defs",
@@ -38,10 +44,11 @@ export function graphCommandHelp(): string {
       {
         title: "Notes",
         items: [
-          "  - Local authoring commands (`write`, `draft`) resolve `--fide-dir <path>`, `FIDE_DIR`, the nearest `.fide` directory, then the current working directory.",
+          "  - Local authoring commands (`statements write`, `draft`) resolve `--fide-dir <path>`, `FIDE_DIR`, the nearest `.fide` directory, then the current working directory.",
           "  - `status` shows local graph status by default and can target configured runtime backends with `--graph` or `--query-store`.",
-          "  - `query` executes ad hoc graph queries, and `query write` saves local query definitions.",
-          "  - Runtime commands (`query`, `build`) operate on configured statement stores and query stores.",
+          "  - `list`, `get`, and `save` operate on hosted workspace graphs.",
+          "  - `query` is the single namespace for ad hoc SQL, local saved queries, and hosted saved queries.",
+          "  - Runtime commands (`query`, `build`) operate on configured graphs and query stores.",
         ],
       },
     ],

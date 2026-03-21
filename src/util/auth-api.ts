@@ -49,25 +49,14 @@ export type WorkspaceSettingsResponse = {
   settings: Record<string, unknown>;
 };
 
-export type WorkspaceConnection = {
-  id: string;
-  workspaceId: string;
-  slug: string;
-  kind: string;
-  secretId: string;
-  description: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type WorkspaceQuery = {
+export type GraphQuery = {
   graphKey: string;
   name: string;
   description: string | null;
   sql: string;
 };
 
-export type WorkspaceQueryRunResult = WorkspaceQuery & {
+export type GraphQueryRunResult = GraphQuery & {
   queryStoreKey: string;
   graphStoreKey: string;
   sqlPreview: string;
@@ -76,7 +65,7 @@ export type WorkspaceQueryRunResult = WorkspaceQuery & {
   rows: unknown[];
 };
 
-export type WorkspaceQuerySummary = {
+export type GraphQuerySummary = {
   graphKey: string;
   name: string;
   description: string | null;
@@ -221,43 +210,10 @@ export function createAuthApiClient(options: AuthClientOptions) {
       return parseApiResponse<WorkspaceSettingsResponse>(response, "workspace-settings-set.v1");
     },
 
-    async listWorkspaceConnections(id: string): Promise<{ connections: WorkspaceConnection[] }> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/connections`, {
-        method: "GET",
-        headers,
-      });
-      return parseApiResponse<{ connections: WorkspaceConnection[] }>(response, "workspace-connections-list.v1");
-    },
-
-    async createWorkspaceConnection(input: {
-      workspaceId: string;
-      slug: string;
-      kind: string;
-      description?: string;
-    } & ({
-      secretId: string;
-      connection?: never;
-    } | {
-      secretId?: never;
-      connection: string;
-    })): Promise<WorkspaceConnection> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/connections`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          slug: input.slug,
-          kind: input.kind,
-          ...(input.secretId ? { secretId: input.secretId } : { connection: input.connection }),
-          description: input.description,
-        }),
-      });
-      return parseApiResponse<WorkspaceConnection>(response, "workspace-connections-create.v1");
-    },
-
-    async listWorkspaceQueries(input: {
+    async listGraphQueries(input: {
       workspaceId: string;
       queryStore?: string;
-    }): Promise<{ queryStoreKey: string; queries: WorkspaceQuerySummary[] }> {
+    }): Promise<{ queryStoreKey: string; queries: GraphQuerySummary[] }> {
       const search = new URLSearchParams()
       if (input.queryStore) search.set("queryStore", input.queryStore)
       const suffix = search.size > 0 ? `?${search.toString()}` : ""
@@ -265,15 +221,15 @@ export function createAuthApiClient(options: AuthClientOptions) {
         method: "GET",
         headers,
       });
-      return parseApiResponse<{ queryStoreKey: string; queries: WorkspaceQuerySummary[] }>(response, "workspace-queries-list.v1");
+      return parseApiResponse<{ queryStoreKey: string; queries: GraphQuerySummary[] }>(response, "graph-query-list-workspace.v1");
     },
 
-    async getWorkspaceQuery(input: {
+    async getGraphQuery(input: {
       workspaceId: string;
       graphKey: string;
       name: string;
       queryStore?: string;
-    }): Promise<WorkspaceQuery> {
+    }): Promise<GraphQuery> {
       const search = new URLSearchParams()
       if (input.queryStore) search.set("queryStore", input.queryStore)
       const suffix = search.size > 0 ? `?${search.toString()}` : ""
@@ -284,16 +240,39 @@ export function createAuthApiClient(options: AuthClientOptions) {
           headers,
         },
       );
-      return parseApiResponse<WorkspaceQuery>(response, "workspace-query-get.v1");
+      return parseApiResponse<GraphQuery>(response, "graph-query-get-workspace.v1");
     },
 
-    async runWorkspaceQuery(input: {
+    async saveGraphQuery(input: {
+      workspaceId: string;
+      graphKey: string;
+      name: string;
+      sql: string;
+      description?: string | null;
+      queryStore?: string;
+    }): Promise<{ queryStoreKey: string; query: GraphQuery }> {
+      const response = await fetch(
+        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}`,
+        {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({
+            sql: input.sql,
+            ...(typeof input.description === "string" ? { description: input.description } : {}),
+            ...(input.queryStore ? { queryStore: input.queryStore } : {}),
+          }),
+        },
+      );
+      return parseApiResponse<{ queryStoreKey: string; query: GraphQuery }>(response, "graph-query-save-workspace.v1");
+    },
+
+    async runGraphQuery(input: {
       workspaceId: string;
       graphKey: string;
       name: string;
       queryStore?: string;
       limit?: number;
-    }): Promise<WorkspaceQueryRunResult> {
+    }): Promise<GraphQueryRunResult> {
       const response = await fetch(
         `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}/run`,
         {
@@ -305,7 +284,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
           }),
         },
       );
-      return parseApiResponse<WorkspaceQueryRunResult>(response, "workspace-query-run.v1");
+      return parseApiResponse<GraphQueryRunResult>(response, "graph-query-run-workspace.v1");
     },
 
     async listWorkspaceMembers(id: string): Promise<{ members: WorkspaceMember[] }> {

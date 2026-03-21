@@ -1,36 +1,16 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
 import { DEFAULT_FIDE_BASE_URL, writeStoredAuthSettings } from "../../util/auth-settings.js";
-
-function loginHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide auth login --api-key <key> [--base-url <url>] [--pretty|-p]",
-        ],
-      },
-      {
-        title: "Notes",
-        items: [
-          `  - --base-url defaults to ${DEFAULT_FIDE_BASE_URL}.`,
-          "  - This command verifies the API key with /v1/me before saving it.",
-          "  - The saved settings are local to this machine.",
-        ],
-      },
-    ],
-  });
-}
+import { authLoginCommand } from "./metadata.js";
 
 export async function runAuthLogin(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(loginHelp());
+    console.log(renderCommandHelp(authLoginCommand));
     return 0;
   }
 

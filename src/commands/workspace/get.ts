@@ -1,28 +1,16 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { getWorkspaceFlag } from "../../util/workspace-settings.js";
+import { workspaceGetCommand } from "./metadata.js";
 import { requireWorkspaceApiClient } from "./shared.js";
-
-function getHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide workspace get --workspace <workspace-id> [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
 
 export async function runWorkspaceGet(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(getHelp());
+    console.log(renderCommandHelp(workspaceGetCommand));
     return 0;
   }
 
@@ -40,7 +28,7 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
   }, {
     command: "fide workspace get",
     next: {
-      members: `fide workspace members --workspace ${workspace.id}`,
+      members: `fide workspace members list --workspace ${workspace.id}`,
     },
   });
 

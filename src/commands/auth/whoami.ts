@@ -1,28 +1,16 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
 import { resolveAuthSettings } from "../../util/auth-settings.js";
-
-function whoamiHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide auth whoami [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
+import { authWhoamiCommand } from "./metadata.js";
 
 export async function runAuthWhoami(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(whoamiHelp());
+    console.log(renderCommandHelp(authWhoamiCommand));
     return 0;
   }
 

@@ -1,12 +1,13 @@
 import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
 import { readUtf8 } from "../../util/io.js";
 import {
+  buildStatementsWithRoot,
   detectStatementsInputFormat,
   detectStatementsInputFormatFromFilePath,
+  parseStatementInputsByFormat,
   parseStatementsInputFormat,
-} from "../../util/graph/statements/shared.js";
-import { parseStatementInputsByFormat } from "../../util/graph/statements/targets/parse-inputs.js";
-import { buildStatementsWithRoot, type StatementInput } from "@chris-test/graph";
+  type StatementInput,
+} from "@chris-test/graph";
 
 /**
  * Format a date as UTC year/month/day path segments.

@@ -22,7 +22,7 @@ export function workspaceSettingsHelp(): string {
           "  - Use --workspace <workspace-id> to select a workspace explicitly.",
           "  - FIDE_WORKSPACE overrides the saved selection.",
           "  - A saved `workspace` value in ~/.fide/settings.json is used last.",
-          "  - For cloud-managed stores, prefer connectionRef values that point at workspace connections over raw secret material.",
+          "  - Graph and query-store settings may still use connectionRef values, but graph management now lives under `fide graph`.",
         ],
       },
       {

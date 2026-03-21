@@ -1,27 +1,15 @@
 import { parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderHelp } from "../../../util/help.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
 import { requireAuthApiClient } from "./shared.js";
-
-function revokeHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide auth keys revoke <id> [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
+import { authKeysRevokeCommand } from "../metadata.js";
 
 export async function runAuthKeysRevoke(args: string[]): Promise<number> {
   const { positionals, flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(revokeHelp());
+    console.log(renderCommandHelp(authKeysRevokeCommand));
     return 0;
   }
 

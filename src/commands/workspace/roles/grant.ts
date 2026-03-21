@@ -1,28 +1,16 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderHelp } from "../../../util/help.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
 import { getWorkspaceFlag } from "../../../util/workspace-settings.js";
+import { workspaceRolesGrantCommand } from "../metadata.js";
 import { requireWorkspaceApiClient } from "../shared.js";
-
-function rolesGrantHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide workspace roles grant --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
 
 export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(rolesGrantHelp());
+    console.log(renderCommandHelp(workspaceRolesGrantCommand));
     return 0;
   }
 
@@ -42,7 +30,7 @@ export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
   }, {
     command: "fide workspace roles grant",
     next: {
-      members: `fide workspace members --workspace ${workspaceId}`,
+      members: `fide workspace members list --workspace ${workspaceId}`,
       revoke: `fide workspace roles revoke --workspace ${workspaceId} --user-id ${userId} --role ${roleCode}`,
     },
   });

@@ -1,27 +1,15 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderHelp } from "../../../util/help.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
 import { requireAuthApiClient } from "./shared.js";
-
-function createHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide auth keys create --label <label> [--user-id <id>] [--expires-at <iso8601>] [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
+import { authKeysCreateCommand } from "../metadata.js";
 
 export async function runAuthKeysCreate(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(createHelp());
+    console.log(renderCommandHelp(authKeysCreateCommand));
     return 0;
   }
 

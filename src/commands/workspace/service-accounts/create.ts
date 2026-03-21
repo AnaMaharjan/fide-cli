@@ -1,28 +1,16 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderHelp } from "../../../util/help.js";
+import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { okResponse } from "../../../util/response.js";
 import { getWorkspaceFlag } from "../../../util/workspace-settings.js";
+import { workspaceServiceAccountCreateCommand } from "../metadata.js";
 import { requireWorkspaceApiClient } from "../shared.js";
-
-function createHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide workspace service-accounts create --workspace <workspace-id> --label <label> --role <role-code> [--pretty|-p]",
-        ],
-      },
-    ],
-  });
-}
 
 export async function runWorkspaceServiceAccountCreate(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(createHelp());
+    console.log(renderCommandHelp(workspaceServiceAccountCreateCommand));
     return 0;
   }
 
@@ -54,7 +42,7 @@ export async function runWorkspaceServiceAccountCreate(args: string[]): Promise<
     command: "fide workspace service-accounts create",
     next: {
       apiKeyCreate: `fide auth keys create --label '${label}' --user-id ${serviceAccount.userId}`,
-      members: `fide workspace members --workspace ${workspaceId}`,
+      members: `fide workspace members list --workspace ${workspaceId}`,
     },
   });
 

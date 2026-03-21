@@ -13,45 +13,8 @@ const GENERATED_PATHS = [
   "packages/cli/docs",
 ];
 
-const DOC_PAGES = [
+const TOP_LEVEL_DOC_PAGES = [
   { slug: "fide", tokens: [] },
-  { slug: "status", tokens: ["status"], surfaces: ["status"] },
-  { slug: "graph", tokens: ["graph"] },
-  { slug: "graph-write", tokens: ["graph", "write"], surfaces: ["graph.write"] },
-  { slug: "graph-draft", tokens: ["graph", "draft"], surfaces: ["graph.draft"] },
-  { slug: "graph-status", tokens: ["graph", "status"], surfaces: ["graph.status"] },
-  { slug: "graph-query", tokens: ["graph", "query"], surfaces: ["graph.query"] },
-  { slug: "graph-query-write", tokens: ["graph", "query", "write"], surfaces: ["graph.query.write"] },
-  { slug: "graph-build", tokens: ["graph", "build"], surfaces: ["graph.build"] },
-  { slug: "graph-defs", tokens: ["graph", "defs"], surfaces: ["graph.defs"] },
-  { slug: "auth", tokens: ["auth"] },
-  { slug: "auth-login", tokens: ["auth", "login"], surfaces: ["auth.login"] },
-  { slug: "auth-logout", tokens: ["auth", "logout"], surfaces: ["auth.logout"] },
-  { slug: "auth-status", tokens: ["auth", "status"], surfaces: ["auth.status"] },
-  { slug: "auth-whoami", tokens: ["auth", "whoami"], surfaces: ["auth.whoami"] },
-  { slug: "auth-keys", tokens: ["auth", "keys"] },
-  { slug: "auth-keys-list", tokens: ["auth", "keys", "list"], surfaces: ["auth.keys.list"] },
-  { slug: "auth-keys-create", tokens: ["auth", "keys", "create"], surfaces: ["auth.keys.create"] },
-  { slug: "auth-keys-revoke", tokens: ["auth", "keys", "revoke"], surfaces: ["auth.keys.revoke"] },
-  { slug: "workspace", tokens: ["workspace"] },
-  { slug: "workspace-list", tokens: ["workspace", "list"], surfaces: ["workspace.list"] },
-  { slug: "workspace-get", tokens: ["workspace", "get"], surfaces: ["workspace.get"] },
-  { slug: "workspace-members", tokens: ["workspace", "members"], surfaces: ["workspace.members"] },
-  { slug: "workspace-members-add", tokens: ["workspace", "members", "add"], surfaces: ["workspace.members.add"] },
-  { slug: "workspace-roles", tokens: ["workspace", "roles"] },
-  { slug: "workspace-roles-grant", tokens: ["workspace", "roles", "grant"], surfaces: ["workspace.roles.grant"] },
-  { slug: "workspace-roles-revoke", tokens: ["workspace", "roles", "revoke"], surfaces: ["workspace.roles.revoke"] },
-  { slug: "workspace-service-accounts", tokens: ["workspace", "service-accounts"] },
-  { slug: "workspace-service-accounts-create", tokens: ["workspace", "service-accounts", "create"], surfaces: ["workspace.service-accounts.create"] },
-  { slug: "workspace-settings", tokens: ["workspace", "settings"] },
-  { slug: "workspace-settings-get", tokens: ["workspace", "settings", "get"], surfaces: ["workspace.settings.get"] },
-  { slug: "workspace-settings-set", tokens: ["workspace", "settings", "set"], surfaces: ["workspace.settings.set"] },
-  { slug: "workspace-connections", tokens: ["workspace", "connections"] },
-  { slug: "workspace-connections-list", tokens: ["workspace", "connections", "list"], surfaces: ["workspace.connections.list"] },
-  { slug: "workspace-connections-create", tokens: ["workspace", "connections", "create"], surfaces: ["workspace.connections.create"] },
-  { slug: "workspace-queries", tokens: ["workspace", "queries"] },
-  { slug: "workspace-queries-list", tokens: ["workspace", "queries", "list"], surfaces: ["workspace.queries.list"] },
-  { slug: "workspace-queries-get", tokens: ["workspace", "queries", "get"], surfaces: ["workspace.query.get"] },
   { slug: "docs", tokens: ["docs"] },
   { slug: "schema", tokens: ["schema"] },
 ];
@@ -59,39 +22,53 @@ const DOC_PAGES = [
 const PAGE_GROUPS = [
   {
     title: "Top Level",
-    pages: ["fide", "status", "docs", "schema"],
+    match: (slug) => slug === "fide" || slug === "status" || slug === "docs" || slug === "schema",
   },
   {
     title: "Graph",
-    pages: ["graph", "graph-write", "graph-draft", "graph-status", "graph-query", "graph-query-write", "graph-build", "graph-defs"],
+    match: (slug) => slug.startsWith("graph-") && !slug.startsWith("graph-query-") && !slug.startsWith("graph-statements-"),
+  },
+  {
+    title: "Graph Query",
+    match: (slug) => slug.startsWith("graph-query-"),
+  },
+  {
+    title: "Graph Statements",
+    match: (slug) => slug.startsWith("graph-statements-"),
   },
   {
     title: "Auth",
-    pages: ["auth", "auth-login", "auth-logout", "auth-status", "auth-whoami", "auth-keys", "auth-keys-list", "auth-keys-create", "auth-keys-revoke"],
+    match: (slug) => slug.startsWith("auth-") && !slug.startsWith("auth-keys-"),
+  },
+  {
+    title: "Auth Keys",
+    match: (slug) => slug.startsWith("auth-keys-"),
   },
   {
     title: "Workspace",
-    pages: [
-      "workspace",
-      "workspace-list",
-      "workspace-get",
-      "workspace-members",
-      "workspace-members-add",
-      "workspace-roles",
-      "workspace-roles-grant",
-      "workspace-roles-revoke",
-      "workspace-service-accounts",
-      "workspace-service-accounts-create",
-      "workspace-settings",
-      "workspace-settings-get",
-      "workspace-settings-set",
-      "workspace-connections",
-      "workspace-connections-list",
-      "workspace-connections-create",
-      "workspace-queries",
-      "workspace-queries-list",
-      "workspace-queries-get",
-    ],
+    match: (slug) =>
+      slug.startsWith("workspace-")
+      && slug !== "workspace-members"
+      && !slug.startsWith("workspace-members-")
+      && !slug.startsWith("workspace-roles-")
+      && !slug.startsWith("workspace-service-accounts-")
+      && !slug.startsWith("workspace-settings-"),
+  },
+  {
+    title: "Workspace Members",
+    match: (slug) => slug === "workspace-members" || slug.startsWith("workspace-members-"),
+  },
+  {
+    title: "Workspace Roles",
+    match: (slug) => slug.startsWith("workspace-roles-"),
+  },
+  {
+    title: "Workspace Service Accounts",
+    match: (slug) => slug.startsWith("workspace-service-accounts-"),
+  },
+  {
+    title: "Workspace Settings",
+    match: (slug) => slug.startsWith("workspace-settings-"),
   },
 ];
 
@@ -198,10 +175,43 @@ function commandName(tokens) {
   return tokens.length === 0 ? "fide" : `fide ${tokens.join(" ")}`;
 }
 
+function slugFromTokens(tokens) {
+  return tokens.length === 0 ? "fide" : tokens.join("-");
+}
+
+function tokensFromCommand(command) {
+  if (!command.startsWith("fide ")) return [];
+  return command.slice("fide ".length).split(" ");
+}
+
 function readSchema(surface) {
   const output = runCapture("node", [CLI_BIN, "schema", surface]);
   const parsed = JSON.parse(output);
   return parsed.schema ?? parsed.data?.schema ?? null;
+}
+
+function readSchemaIndex() {
+  const output = runCapture("node", [CLI_BIN, "schema"]);
+  const parsed = JSON.parse(output);
+  return parsed.schemas ?? parsed.data?.schemas ?? {};
+}
+
+function buildDocPages(schemaIndex) {
+  const pages = [...TOP_LEVEL_DOC_PAGES];
+
+  for (const [surface, schema] of Object.entries(schemaIndex)) {
+    const command = schema?.command;
+    if (typeof command !== "string" || command.startsWith("fide schema ")) continue;
+    const tokens = tokensFromCommand(command);
+    if (tokens.length === 0) continue;
+    pages.push({
+      slug: slugFromTokens(tokens),
+      tokens,
+      surfaces: [surface],
+    });
+  }
+
+  return pages.sort((a, b) => commandKey(a.tokens).localeCompare(commandKey(b.tokens)));
 }
 
 function readHelp(tokens) {
@@ -341,7 +351,7 @@ function generateIndexPage(pageBySlug) {
   for (const group of PAGE_GROUPS) {
     lines.push(`## ${group.title}`);
     lines.push("");
-    for (const slug of group.pages) {
+    for (const slug of [...pageBySlug.keys()].filter(group.match)) {
       const page = pageBySlug.get(slug);
       if (!page) continue;
       lines.push(`- [\`${page.data.name}\`](./${slug})${page.data.summary ? ` - ${page.data.summary}` : ""}`);
@@ -352,25 +362,37 @@ function generateIndexPage(pageBySlug) {
   writeFileSync(resolve(DOCS_ROOT, "index.mdx"), `${lines.join("\n").trimEnd()}\n`, "utf8");
 }
 
+function shouldEmitPage(page, subcommandEntries, schemas) {
+  if (page.tokens.length <= 1) return true;
+  if (subcommandEntries.length === 0) return true;
+  const hasStandaloneSchema = schemas.some((schema) => {
+    const params = schema?.params ?? [];
+    const output = Object.keys(schema?.output ?? {});
+    return params.length > 0 || output.length > 0;
+  });
+  return hasStandaloneSchema;
+}
+
 function generateDocs() {
   rmSync(DOCS_ROOT, { recursive: true, force: true });
   mkdirSync(DOCS_ROOT, { recursive: true });
 
   run("pnpm", ["--dir", "packages/cli", "run", "build"], { stdio: "inherit" });
 
-  const docsByKey = new Map(DOC_PAGES.map((page) => [commandKey(page.tokens), page]));
+  const docPages = buildDocPages(readSchemaIndex());
+  const docsByKey = new Map(docPages.map((page) => [commandKey(page.tokens), page]));
   const docsBySurface = new Map(
-    DOC_PAGES.flatMap((page) => (page.surfaces ?? []).map((surface) => [surface, page]))
+    docPages.flatMap((page) => (page.surfaces ?? []).map((surface) => [surface, page]))
   );
   const pageBySlug = new Map();
   const helpCache = new Map();
 
-  for (const page of DOC_PAGES) {
+  for (const page of docPages) {
     const helpText = readHelp(page.tokens);
     helpCache.set(commandKey(page.tokens), parseHelpSections(helpText));
   }
 
-  for (const page of DOC_PAGES) {
+  for (const page of docPages) {
     const sections = helpCache.get(commandKey(page.tokens)) ?? {};
     const parent = page.tokens.length > 0 ? helpCache.get(commandKey(page.tokens.slice(0, -1))) : null;
     const parentEntries = parseNamedList(parent?.Commands ?? parent?.Groups ?? []);
@@ -416,6 +438,10 @@ function generateDocs() {
           href: child ? `./${child.slug}` : undefined,
         };
       });
+    }
+
+    if (!shouldEmitPage(page, subcommandEntries, schemas)) {
+      continue;
     }
 
     const notes = [];
@@ -483,7 +509,9 @@ function generateDocs() {
 
   const metaPages = ["index"];
   for (const group of PAGE_GROUPS) {
-    metaPages.push(`--- ${group.title} ---`, ...group.pages);
+    const emittedPages = [...pageBySlug.keys()].filter(group.match);
+    if (emittedPages.length === 0) continue;
+    metaPages.push(`--- ${group.title} ---`, ...emittedPages);
   }
   writeJson(resolve(DOCS_ROOT, "meta.json"), {
     title: "CLI",

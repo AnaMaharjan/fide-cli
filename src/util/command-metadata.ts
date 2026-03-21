@@ -84,3 +84,7 @@ export function commandSchema(command: CommandMetadata) {
     output: command.output,
   };
 }
+
+export function commandSchemas(commands: readonly CommandMetadata[]) {
+  return Object.fromEntries(commands.map((command) => [command.surface, commandSchema(command)]));
+}
