@@ -27,26 +27,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       warnings: "string[]",
     },
   },
-  "graph.write.query": {
-    command: "fide graph write --query",
-    params: [
-      { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
-      { name: "query", type: "boolean", required: true, description: "Write a saved query file instead of statement inputs" },
-      { name: "statement-store", type: "string", required: true, description: "Statement store key for this query file" },
-      { name: "name", type: "string", required: true, description: "Query file name without .sql" },
-      { name: "description", type: "string", required: false, description: "Optional query description header" },
-      { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
-      { name: "file", type: "string", required: false, description: "Read SQL from a file" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      statementStoreKey: "string",
-      name: "string",
-      outPath: "string",
-      warnings: "string[]",
-    },
-  },
   "auth.login": {
     command: "fide auth login",
     params: [

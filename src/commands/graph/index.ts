@@ -1,10 +1,10 @@
 import { runGraphDraft } from "./draft.js";
 import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
+import { runGraphQueryCommand } from "./query.js";
 import { runGraphStatus } from "./status.js";
 import { runGraphWrite } from "./write.js";
 import { runStoreBuild } from "../store/build.js";
-import { runStoreSql } from "../store/sql.js";
 
 /**
  * Route `fide graph <command>` subcommands.
@@ -27,8 +27,8 @@ export async function runGraphCommand(command: string | undefined, args: string[
     return runGraphStatus(args);
   }
 
-  if (command === "sql") {
-    return runStoreSql(args, "graph");
+  if (command === "query") {
+    return runGraphQueryCommand(args);
   }
 
   if (command === "build") {

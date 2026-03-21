@@ -5,16 +5,16 @@ import { printJson, readUtf8 } from "../../util/io.js";
 import { resolveStoreTarget } from "../../util/graph/target.js";
 import { executeSqliteQuery } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
-import { graphSqlCommand } from "../graph/metadata.js";
+import { graphQueryCommand } from "../graph/metadata.js";
 import { readStdinUtf8 } from "../graph/shared.js";
 
 function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
-function sqlHelp(commandName = "fide graph sql"): string {
+function sqlHelp(commandName = "fide graph query"): string {
   void commandName;
-  return renderCommandHelp(graphSqlCommand);
+  return renderCommandHelp(graphQueryCommand);
 }
 
 function isReadOnlySql(sql: string): boolean {
@@ -53,7 +53,7 @@ async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typ
 export async function runStoreSql(args: string[], invocation: "graph" | "store" = "graph"): Promise<number> {
   const initialParsed = parseArgs(args);
   if (hasFlag(initialParsed.flags, "help")) {
-    console.log(sqlHelp("fide graph sql"));
+    console.log(sqlHelp("fide graph query"));
     return 0;
   }
 
@@ -63,14 +63,14 @@ export async function runStoreSql(args: string[], invocation: "graph" | "store" 
     throw new Error("Missing required flag: --statement-store <name>.");
   }
   if (!sql.trim()) {
-    console.error(`Missing SQL for \`${invocation} sql\`. Use \`--stdin\`, \`--file <path>\`, or pass SQL inline.`);
-    console.error(sqlHelp("fide graph sql"));
+    console.error(`Missing query text for \`graph query\`. Use \`--stdin\`, \`--file <path>\`, or pass the query inline.`);
+    console.error(sqlHelp("fide graph query"));
     return 1;
   }
 
   const allowWrite = hasFlag(flags, "allow-write");
   if (flags.has("save") || flags.has("description") || flags.has("query-store")) {
-    throw new Error("Saved-query writes are no longer supported here. Author queries locally with `fide graph write --query`, then build them into a query store.");
+    throw new Error("Saved-query writes are handled by `fide graph query write`.");
   }
   if (!allowWrite && !isReadOnlySql(sql)) {
     throw new Error("Write SQL requires `--allow-write`.");
@@ -79,7 +79,7 @@ export async function runStoreSql(args: string[], invocation: "graph" | "store" 
   const graphTarget = resolveStoreTarget(flags);
 
   if (graphTarget.type === "fide-jsonl") {
-    throw new Error("This command only supports sqlite and postgres stores. Use `fide graph write` for local `.fide` statements or build a sqlite/postgres store first.");
+    throw new Error("This command only supports sqlite and postgres statement stores. Use `fide graph write` for local `.fide` statements or build a sqlite/postgres store first.");
   }
 
   if (graphTarget.type === "postgres") {

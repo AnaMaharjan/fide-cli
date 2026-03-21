@@ -16,10 +16,11 @@ const GENERATED_PATHS = [
 const DOC_PAGES = [
   { slug: "fide", tokens: [] },
   { slug: "graph", tokens: ["graph"] },
-  { slug: "graph-write", tokens: ["graph", "write"], surfaces: ["graph.write", "graph.write.query"] },
+  { slug: "graph-write", tokens: ["graph", "write"], surfaces: ["graph.write"] },
   { slug: "graph-draft", tokens: ["graph", "draft"], surfaces: ["graph.draft"] },
   { slug: "graph-status", tokens: ["graph", "status"], surfaces: ["graph.status"] },
-  { slug: "graph-sql", tokens: ["graph", "sql"], surfaces: ["graph.sql"] },
+  { slug: "graph-query", tokens: ["graph", "query"], surfaces: ["graph.query"] },
+  { slug: "graph-query-write", tokens: ["graph", "query", "write"], surfaces: ["graph.query.write"] },
   { slug: "graph-build", tokens: ["graph", "build"], surfaces: ["graph.build"] },
   { slug: "graph-defs", tokens: ["graph", "defs"], surfaces: ["graph.defs"] },
   { slug: "auth", tokens: ["auth"] },
@@ -61,7 +62,7 @@ const PAGE_GROUPS = [
   },
   {
     title: "Graph",
-    pages: ["graph", "graph-write", "graph-draft", "graph-status", "graph-sql", "graph-build", "graph-defs"],
+    pages: ["graph", "graph-write", "graph-draft", "graph-status", "graph-query", "graph-query-write", "graph-build", "graph-defs"],
   },
   {
     title: "Auth",

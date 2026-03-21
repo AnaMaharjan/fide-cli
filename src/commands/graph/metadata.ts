@@ -75,14 +75,14 @@ export const graphStatusCommand = defineCommand({
   ],
 });
 
-export const graphSqlCommand = defineCommand({
-  surface: "graph.sql",
-  command: "fide graph sql",
-  summary: "Run SQL against a configured sqlite or postgres statement store",
+export const graphQueryCommand = defineCommand({
+  surface: "graph.query",
+  command: "fide graph query",
+  summary: "Run an ad hoc graph query against a configured statement store",
   usage: [
-    "fide graph sql --statement-store <name> <sql>",
-    "fide graph sql --statement-store <name> --file <query.sql>",
-    "fide graph sql --statement-store <name> --stdin",
+    "fide graph query --statement-store <name> <query>",
+    "fide graph query --statement-store <name> --file <query.sql>",
+    "fide graph query --statement-store <name> --stdin",
   ],
   params: [
     { name: "statement-store", type: "string", required: true, description: "Configured sqlite or postgres statement store name", valueLabel: "<name>" },
@@ -102,13 +102,48 @@ export const graphSqlCommand = defineCommand({
     warnings: "string[]?",
   },
   examples: [
-    "fide graph sql --statement-store primary 'select * from statements limit 10'",
-    "fide graph sql --statement-store sqlite 'select * from statements limit 10'",
-    "fide graph sql --statement-store primary --file queries/statements.sql",
+    "fide graph query --statement-store primary 'select * from statements limit 10'",
+    "fide graph query --statement-store sqlite 'select * from statements limit 10'",
+    "fide graph query --statement-store primary --file queries/statements.sql",
   ],
   notes: [
-    "`fide graph sql` is for ad hoc SQL against built statement stores.",
-    "Author statements and saved queries locally with `fide graph write`, then use `fide graph build` to push them into stores.",
+    "`fide graph query` executes an ad hoc query against a configured statement store.",
+    "Use `fide graph query write` to save a local query definition instead of executing it.",
+  ],
+});
+
+export const graphQueryWriteCommand = defineCommand({
+  surface: "graph.query.write",
+  command: "fide graph query write",
+  summary: "Save a local graph query definition",
+  usage: [
+    "fide graph query write --statement-store <name> --name <query-name> <query>",
+    "fide graph query write --statement-store <name> --name <query-name> --file <query.sql>",
+    "fide graph query write --statement-store <name> --name <query-name> --stdin",
+  ],
+  params: [
+    { name: "statement-store", type: "string", required: true, description: "Statement store key targeted by this query", valueLabel: "<name>" },
+    { name: "name", type: "string", required: true, description: "Query file name without .sql", valueLabel: "<query-name>" },
+    { name: "description", type: "string", description: "Optional leading description header for the saved query", valueLabel: "<text>" },
+    { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
+    { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
+    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
+  ],
+  output: {
+    ok: "boolean",
+    mode: "string",
+    statementStoreKey: "string",
+    name: "string",
+    outPath: "string",
+    warnings: "string[]",
+  },
+  examples: [
+    "fide graph query write --statement-store primary --name recentStatements 'select * from statements limit 10'",
+    "fide graph query write --statement-store sqlite --name recentStatements --file queries/statements.sql",
+  ],
+  notes: [
+    "Writes local query files under `.fide/queries/<query-name>.sql`.",
+    "Saved query metadata includes the targeted statement store inside the query file.",
   ],
 });
 
@@ -117,12 +152,12 @@ export const graphBuildCommand = defineCommand({
   command: "fide graph build",
   summary: "Build configured statement or query stores from graph sources",
   usage: [
-    "fide graph build --statements <name>",
-    "fide graph build --queries <name>",
+    "fide graph build --statement-store <name>",
+    "fide graph build --query-store <name>",
   ],
   params: [
-    { name: "statements", type: "string", description: "Configured statement store name with a recipe", valueLabel: "<name>" },
-    { name: "queries", type: "string", description: "Configured query store name", valueLabel: "<name>" },
+    { name: "statement-store", type: "string", description: "Configured statement store name with a recipe", valueLabel: "<name>" },
+    { name: "query-store", type: "string", description: "Configured query store name", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -138,22 +173,23 @@ export const graphBuildCommand = defineCommand({
     warnings: "string[]?",
   },
   examples: [
-    "fide graph build --statements sqlite",
-    "fide graph build --statements combined",
-    "fide graph build --queries postgresQueries",
+    "fide graph build --statement-store sqlite",
+    "fide graph build --statement-store combined",
+    "fide graph build --query-store postgresQueries",
   ],
   notes: [
     "Recipe SQL may include $lastRunAt for incremental runs.",
     "On the first run, $lastRunAt resolves to 1970-01-01T00:00:00.000Z.",
     "Local fide-jsonl recipe steps may use fromDateUTC/toDateUTC; these apply at UTC date granularity based on .fide/statements/YYYY/MM/DD folders.",
-    "Query-store builds load local .fide/queries/<statement-store>/<name>.sql files.",
+    "Query-store builds load local .fide/queries/<name>.sql files.",
   ],
 });
 
 export const GRAPH_COMMAND_METADATA = [
   graphDraftCommand,
   graphStatusCommand,
-  graphSqlCommand,
+  graphQueryCommand,
+  graphQueryWriteCommand,
   graphBuildCommand,
 ] as const;
 

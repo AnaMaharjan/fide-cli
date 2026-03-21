@@ -373,12 +373,12 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
     console.log(buildHelp("fide graph build"));
     return 0;
   }
-  if (flags.has("store") || flags.has("query-store")) {
-    throw new Error("This command uses `--statements <name>` or `--queries <name>`, not `--store` or `--query-store`.");
+  if (flags.has("store") || flags.has("statements") || flags.has("queries")) {
+    throw new Error("This command uses `--statement-store <name>` or `--query-store <name>`, not `--store`, `--statements`, or `--queries`.");
   }
-  if (flags.has("queries")) {
+  if (flags.has("query-store")) {
     const queryFlags = new Map<string, string | boolean>(flags);
-    queryFlags.set("query-store", String(flags.get("queries")));
+    queryFlags.set("query-store", String(flags.get("query-store")));
     const queryStore = resolveQueryStore(queryFlags);
     const graphTarget = resolveGraphTarget(flags);
     const queries = await readLocalQueries(graphTarget.root);
@@ -398,10 +398,10 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
     return 0;
   }
 
-  if (!flags.has("statements")) throw new Error("Missing required flag: --statements <name> or --queries <name>.");
+  if (!flags.has("statement-store")) throw new Error("Missing required flag: --statement-store <name> or --query-store <name>.");
 
   const statementFlags = new Map<string, string | boolean>(flags);
-  statementFlags.set("store", String(flags.get("statements")));
+  statementFlags.set("store", String(flags.get("statement-store")));
 
   const target = resolveStoreTarget(statementFlags);
   assertRecipeTarget(target);

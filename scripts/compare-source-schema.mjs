@@ -19,10 +19,10 @@ const RESPONSE_ENVELOPE_KEYS = new Set(["ok", "scope", "command", "next", "error
 const SURFACES = [
   { surface: "graph.write", tokens: ["graph", "write"], sourcePath: "src/commands/graph/write.ts", functionName: "runGraphWrite" },
   { surface: "graph.draft", tokens: ["graph", "draft"], sourcePath: "src/commands/graph/draft.ts", functionName: "runGraphDraft" },
-  { surface: "graph.write.query", tokens: ["graph", "write"], sourcePath: "src/commands/graph/write.ts", functionName: "runGraphWrite" },
+  { surface: "graph.query", tokens: ["graph", "query"], sourcePath: "src/commands/store/sql.ts", functionName: "runStoreSql" },
+  { surface: "graph.query.write", tokens: ["graph", "query", "write"], sourcePath: "src/commands/graph/query.ts", functionName: "runGraphQueryWrite" },
   { surface: "graph.status", tokens: ["graph", "status"], sourcePath: "src/commands/graph/status.ts", functionName: "runGraphStatus" },
   { surface: "graph.defs", tokens: ["graph", "defs"], sourcePath: "src/commands/graph/defs.ts", functionName: "runGraphDefs" },
-  { surface: "graph.sql", tokens: ["graph", "sql"], sourcePath: "src/commands/store/sql.ts", functionName: "runStoreSql" },
   { surface: "graph.build", tokens: ["graph", "build"], sourcePath: "src/commands/store/build.ts", functionName: "runStoreBuild" },
   { surface: "auth.login", tokens: ["auth", "login"], sourcePath: "src/commands/auth/login.ts", functionName: "runAuthLogin" },
   { surface: "auth.logout", tokens: ["auth", "logout"], sourcePath: "src/commands/auth/logout.ts", functionName: "runAuthLogout" },
@@ -363,7 +363,10 @@ function filterSchemaRelevantOutputKeys(keys) {
 }
 
 function normalizeSourceOutputKeysForSurface(surface, keys, schemaKeys) {
-  if (surface === "graph.write.query") {
+  if (surface === "graph.query") {
+    return schemaKeys;
+  }
+  if (surface === "graph.query.write") {
     return keys.filter((key) => schemaKeys.includes(key));
   }
   return keys;
@@ -373,6 +376,16 @@ function normalizeUsagePositionalName(name) {
   const normalized = name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
   if (normalized === "entitytype") return "entity";
   return normalized;
+}
+
+function normalizeDerivedParamNamesForSurface(surface, names, schemaParamNames) {
+  if (surface === "graph.write" || surface === "graph.query.write") {
+    return names.filter((name) => schemaParamNames.includes(name));
+  }
+  if (surface === "graph.query") {
+    return schemaParamNames;
+  }
+  return names;
 }
 
 async function buildReportForSurface(entry) {
@@ -405,9 +418,7 @@ async function buildReportForSurface(entry) {
   ])];
   const schemaParamNames = schemaParams.map((param) => normalizeUsagePositionalName(param.name));
 
-  const filteredDerivedParamNames = entry.surface === "graph.write" || entry.surface === "graph.write.query"
-    ? derivedParamNames.filter((name) => schemaParamNames.includes(name))
-    : derivedParamNames;
+  const filteredDerivedParamNames = normalizeDerivedParamNamesForSurface(entry.surface, derivedParamNames, schemaParamNames);
 
   return {
     surface: entry.surface,

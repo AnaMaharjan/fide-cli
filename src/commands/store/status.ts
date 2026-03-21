@@ -16,12 +16,12 @@ function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres
     };
   }
   const next: Record<string, string> = {
-    sqlHelpCommand: "fide graph sql -h",
-    sqlCommand: `fide graph sql --statement-store ${key} ...`,
+    queryHelpCommand: "fide graph query -h",
+    queryCommand: `fide graph query --statement-store ${key} ...`,
   };
   if (Array.isArray(recipe) && recipe.length > 0) {
     next.buildHelpCommand = "fide graph build -h";
-    next.buildCommand = `fide graph build --statements ${key}`;
+    next.buildCommand = `fide graph build --statement-store ${key}`;
   }
   return next;
 }
@@ -240,7 +240,7 @@ export async function getQueryStoreStatus(key: string) {
         key: store.key,
         next: {
           buildHelpCommand: "fide graph build -h",
-          buildCommand: `fide graph build --queries ${store.key}`,
+          buildCommand: `fide graph build --query-store ${store.key}`,
         },
         configured: true,
         databaseUrlConfigured: false,
@@ -286,7 +286,7 @@ export async function getQueryStoreStatus(key: string) {
         key: store.key,
         next: {
           buildHelpCommand: "fide graph build -h",
-          buildCommand: `fide graph build --queries ${store.key}`,
+          buildCommand: `fide graph build --query-store ${store.key}`,
         },
         configured: true,
         databaseUrlConfigured: true,
@@ -303,7 +303,7 @@ export async function getQueryStoreStatus(key: string) {
         key: store.key,
         next: {
           buildHelpCommand: "fide graph build -h",
-          buildCommand: `fide graph build --queries ${store.key}`,
+          buildCommand: `fide graph build --query-store ${store.key}`,
         },
         configured: true,
         databaseUrlConfigured: true,
@@ -338,13 +338,13 @@ export async function getRuntimeStatusOverview() {
             writeCommand: "fide graph write ...",
           }
           : {
-            sqlHelpCommand: "fide graph sql -h",
-            sqlCommand: `fide graph sql --statement-store ${key} ...`,
+            queryHelpCommand: "fide graph query -h",
+            queryCommand: `fide graph query --statement-store ${key} ...`,
           }),
         ...(Array.isArray(detailed.recipe) && detailed.recipe.length > 0 && detailed.storeType !== "fide-jsonl"
           ? {
             buildHelpCommand: "fide graph build -h",
-            buildCommand: `fide graph build --statements ${key}`,
+            buildCommand: `fide graph build --statement-store ${key}`,
           }
           : {}),
       },

@@ -16,21 +16,23 @@ export function resolveQueriesDir(root: string): string {
   return resolve(root, ".fide", "queries");
 }
 
-export function renderQueryFile(sql: string, description: string | null): string {
+export function renderQueryFile(sql: string, options: { description: string | null; statementStoreKey: string }): string {
   const normalizedSql = sql.trim();
   const lines: string[] = [];
-  if (description && description.trim().length > 0) {
-    lines.push(`-- description: ${description.trim()}`);
+  lines.push(`-- statement-store: ${options.statementStoreKey}`);
+  if (options.description && options.description.trim().length > 0) {
+    lines.push(`-- description: ${options.description.trim()}`);
     lines.push("");
   }
   lines.push(normalizedSql);
   return `${lines.join("\n")}\n`;
 }
 
-export function parseQueryFile(content: string): { description: string | null; sql: string } {
+export function parseQueryFile(content: string): { statementStoreKey: string; description: string | null; sql: string } {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   let index = 0;
   let description: string | null = null;
+  let statementStoreKey: string | null = null;
 
   while (index < lines.length) {
     const line = lines[index];
@@ -45,6 +47,12 @@ export function parseQueryFile(content: string): { description: string | null; s
       index += 1;
       continue;
     }
+    const statementStoreMatch = /^--\s*statement-store\s*:\s*(.+)$/i.exec(trimmed);
+    if (statementStoreMatch) {
+      statementStoreKey = statementStoreMatch[1].trim() || null;
+      index += 1;
+      continue;
+    }
     break;
   }
 
@@ -52,7 +60,10 @@ export function parseQueryFile(content: string): { description: string | null; s
   if (!sql) {
     throw new Error("Query file is missing SQL body.");
   }
-  return { description, sql };
+  if (!statementStoreKey) {
+    throw new Error("Query file is missing statement-store metadata.");
+  }
+  return { statementStoreKey, description, sql };
 }
 
 async function listSqlFiles(dir: string): Promise<string[]> {
@@ -73,29 +84,24 @@ async function listSqlFiles(dir: string): Promise<string[]> {
 
 export async function readLocalQueries(root: string): Promise<LocalQueryDefinition[]> {
   const queriesDir = resolveQueriesDir(root);
-  let storeDirs;
+  let files;
   try {
-    storeDirs = await readdir(queriesDir, { withFileTypes: true });
+    files = await listSqlFiles(queriesDir);
   } catch {
     return [];
   }
 
   const queries: LocalQueryDefinition[] = [];
-  for (const storeDir of storeDirs) {
-    if (!storeDir.isDirectory()) continue;
-    const statementStoreKey = storeDir.name;
-    const files = await listSqlFiles(resolve(queriesDir, statementStoreKey));
-    for (const file of files) {
-      const content = await readFile(file, "utf8");
-      const parsed = parseQueryFile(content);
-      queries.push({
-        statementStoreKey,
-        name: basename(file, ".sql"),
-        description: parsed.description,
-        sql: parsed.sql,
-        file,
-      });
-    }
+  for (const file of files) {
+    const content = await readFile(file, "utf8");
+    const parsed = parseQueryFile(content);
+    queries.push({
+      statementStoreKey: parsed.statementStoreKey,
+      name: basename(file, ".sql"),
+      description: parsed.description,
+      sql: parsed.sql,
+      file,
+    });
   }
   return queries;
 }
