@@ -57,7 +57,7 @@ export type GraphQuery = {
 };
 
 export type GraphQueryRunResult = GraphQuery & {
-  queryStoreKey: string;
+  queryCatalogKey: string;
   graphStoreKey: string;
   sqlPreview: string;
   rowCount: number;
@@ -212,26 +212,26 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async listGraphQueries(input: {
       workspaceId: string;
-      queryStore?: string;
-    }): Promise<{ queryStoreKey: string; queries: GraphQuerySummary[] }> {
+      queryCatalog?: string;
+    }): Promise<{ queryCatalogKey: string; queries: GraphQuerySummary[] }> {
       const search = new URLSearchParams()
-      if (input.queryStore) search.set("queryStore", input.queryStore)
+      if (input.queryCatalog) search.set("queryCatalog", input.queryCatalog)
       const suffix = search.size > 0 ? `?${search.toString()}` : ""
       const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/queries${suffix}`, {
         method: "GET",
         headers,
       });
-      return parseApiResponse<{ queryStoreKey: string; queries: GraphQuerySummary[] }>(response, "graph-query-list-workspace.v1");
+      return parseApiResponse<{ queryCatalogKey: string; queries: GraphQuerySummary[] }>(response, "graph-query-list-workspace.v1");
     },
 
     async getGraphQuery(input: {
       workspaceId: string;
       graphKey: string;
       name: string;
-      queryStore?: string;
+      queryCatalog?: string;
     }): Promise<GraphQuery> {
       const search = new URLSearchParams()
-      if (input.queryStore) search.set("queryStore", input.queryStore)
+      if (input.queryCatalog) search.set("queryCatalog", input.queryCatalog)
       const suffix = search.size > 0 ? `?${search.toString()}` : ""
       const response = await fetch(
         `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}${suffix}`,
@@ -249,8 +249,8 @@ export function createAuthApiClient(options: AuthClientOptions) {
       name: string;
       sql: string;
       description?: string | null;
-      queryStore?: string;
-    }): Promise<{ queryStoreKey: string; query: GraphQuery }> {
+      queryCatalog?: string;
+    }): Promise<{ queryCatalogKey: string; query: GraphQuery }> {
       const response = await fetch(
         `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}`,
         {
@@ -259,18 +259,18 @@ export function createAuthApiClient(options: AuthClientOptions) {
           body: JSON.stringify({
             sql: input.sql,
             ...(typeof input.description === "string" ? { description: input.description } : {}),
-            ...(input.queryStore ? { queryStore: input.queryStore } : {}),
+            ...(input.queryCatalog ? { queryCatalog: input.queryCatalog } : {}),
           }),
         },
       );
-      return parseApiResponse<{ queryStoreKey: string; query: GraphQuery }>(response, "graph-query-save-workspace.v1");
+      return parseApiResponse<{ queryCatalogKey: string; query: GraphQuery }>(response, "graph-query-save-workspace.v1");
     },
 
     async runGraphQuery(input: {
       workspaceId: string;
       graphKey: string;
       name: string;
-      queryStore?: string;
+      queryCatalog?: string;
       limit?: number;
     }): Promise<GraphQueryRunResult> {
       const response = await fetch(
@@ -279,7 +279,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
           method: "POST",
           headers,
           body: JSON.stringify({
-            ...(input.queryStore ? { queryStore: input.queryStore } : {}),
+            ...(input.queryCatalog ? { queryCatalog: input.queryCatalog } : {}),
             ...(typeof input.limit === "number" ? { limit: input.limit } : {}),
           }),
         },

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { inspectGraphStore, inspectQueryStore } from "@chris-test/graph-db";
+import { inspectGraphStore, inspectQueryCatalog } from "@chris-test/graph-db";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
@@ -8,10 +8,10 @@ import { formatPretty } from "../../util/pretty.js";
 import {
   getLocalFideWarnings,
   inspectFideJsonlStore,
-  listConfiguredQueryStoreKeys,
+  listConfiguredQueryCatalogKeys,
   listConfiguredStoreTargetKeys,
   resolveGraphTarget,
-  resolveQueryStore,
+  resolveQueryCatalog,
   resolveStoreTarget,
 } from "@chris-test/graph";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
@@ -63,14 +63,14 @@ async function getGraphStatus(target: ReturnType<typeof resolveStoreTarget>) {
   };
 }
 
-async function getQueryStoreStatus(key: string) {
-  const store = resolveQueryStore(new Map<string, string | boolean>([["query-store", key]]));
-  const inspection = await inspectQueryStore(store);
+async function getQueryCatalogStatus(key: string) {
+  const store = resolveQueryCatalog(new Map<string, string | boolean>([["query-catalog", key]]));
+  const inspection = await inspectQueryCatalog(store);
   return {
     ...inspection,
     next: {
       buildHelpCommand: "fide graph build -h",
-      buildCommand: `fide graph build --query-store ${store.key}`,
+      buildCommand: `fide graph build --query-catalog ${store.key}`,
     },
   };
 }
@@ -105,19 +105,19 @@ async function getRuntimeStatusOverview() {
     };
   }));
 
-  const queryStoreKeys = listConfiguredQueryStoreKeys();
-  const queryStores = await Promise.all(queryStoreKeys.map(async (key) => {
-    const detailed = await getQueryStoreStatus(key);
+  const queryCatalogKeys = listConfiguredQueryCatalogKeys();
+  const queryCatalogs = await Promise.all(queryCatalogKeys.map(async (key) => {
+    const detailed = await getQueryCatalogStatus(key);
     return {
       key,
-      storeType: detailed.storeType,
+      catalogType: detailed.catalogType,
       next: detailed.next,
     };
   }));
 
   return {
     graphs,
-    queryStores,
+    queryCatalogs,
   };
 }
 
@@ -134,13 +134,13 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
   }
 
   const graphKey = typeof flags.get("graph") === "string" ? String(flags.get("graph")) : null;
-  const queryStore = typeof flags.get("query-store") === "string" ? String(flags.get("query-store")) : null;
+  const queryCatalog = typeof flags.get("query-catalog") === "string" ? String(flags.get("query-catalog")) : null;
   const hasFideDir = flags.has("fide-dir");
 
-  if (graphKey && queryStore) {
-    throw new Error("Pass either `--graph` or `--query-store`, not both.");
+  if (graphKey && queryCatalog) {
+    throw new Error("Pass either `--graph` or `--query-catalog`, not both.");
   }
-  if ((graphKey || queryStore) && hasFideDir) {
+  if ((graphKey || queryCatalog) && hasFideDir) {
     throw new Error("`--fide-dir` only applies to local status. Omit it when targeting a configured store.");
   }
 
@@ -151,7 +151,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
       scope: "graph-status.v1",
       local: null,
       graphs: [await getGraphStatus(resolveStoreTarget(targetFlags))],
-      queryStores: [],
+      queryCatalogs: [],
     };
     if (useJson) {
       printJson(payload);
@@ -161,13 +161,13 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     return 0;
   }
 
-  if (queryStore) {
+  if (queryCatalog) {
     const payload = {
       ok: true,
       scope: "graph-status.v1",
       local: null,
       graphs: [],
-      queryStores: [await getQueryStoreStatus(queryStore)],
+      queryCatalogs: [await getQueryCatalogStatus(queryCatalog)],
     };
     if (useJson) {
       printJson(payload);

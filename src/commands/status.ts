@@ -55,7 +55,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
       settingsPath,
       settingsPresent: existsSync(settingsPath),
       graphCount: Object.keys(projectSettings?.graphs ?? {}).length,
-      queryStoreCount: Object.keys(projectSettings?.queryStores ?? {}).length,
+      queryCatalogCount: Object.keys(projectSettings?.queryCatalogs ?? {}).length,
     },
     workspace: {
       settingsPath: resolveAuthSettingsPath(),

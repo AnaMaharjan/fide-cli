@@ -17,6 +17,7 @@
     "graph-draft",
     "graph-get",
     "graph-list",
+    "graph-query",
     "graph-save",
     "graph-status",
     "--- Graph Query ---",

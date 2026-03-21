@@ -53,9 +53,9 @@ function formatGraphStatus(payload: PrettyRenderable): string {
     reachable?: boolean;
     missing?: string[];
   }>) : [];
-  const queryStores = Array.isArray(payload.queryStores) ? (payload.queryStores as Array<{
+  const queryCatalogs = Array.isArray(payload.queryCatalogs) ? (payload.queryCatalogs as Array<{
     key: string;
-    storeType: string;
+    catalogType: string;
     reachable?: boolean;
     missing?: string[];
   }>) : [];
@@ -92,16 +92,16 @@ function formatGraphStatus(payload: PrettyRenderable): string {
     }
   }
 
-  if (queryStores.length > 0) {
+  if (queryCatalogs.length > 0) {
     if (lines.length > 0) lines.push("");
     lines.push("Query Stores");
-    for (const store of queryStores) {
+    for (const store of queryCatalogs) {
       const status = store.reachable === false
         ? "unreachable"
         : Array.isArray(store.missing) && store.missing.length > 0
           ? "incomplete"
           : "ready";
-      lines.push(`  ${store.key}  ${store.storeType}  ${status}`);
+      lines.push(`  ${store.key}  ${store.catalogType}  ${status}`);
       if (Array.isArray(store.missing) && store.missing.length > 0) {
         lines.push(`    missing: ${store.missing.join(", ")}`);
       }

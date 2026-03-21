@@ -4,7 +4,7 @@ import {
   clearPostgresGraph,
   ensurePostgresGraphSchema,
   queryPostgresResolvedStatements,
-  replaceQueryStoreQueries,
+  replaceQueryCatalogQueries,
   appendSqliteGraphFromResolvedStatements,
   ensureSqliteGraphSchema,
   querySqliteResolvedStatements,
@@ -16,7 +16,7 @@ import {
   readJsonFile,
   readLocalQueries,
   resolveGraphTarget,
-  resolveQueryStore,
+  resolveQueryCatalog,
   resolveSettingsPath,
   resolveStoreTarget,
   type FideSettings,
@@ -132,18 +132,18 @@ function previewGraphBuild(target: Extract<ResolvedGraphStore, { type: "postgres
   };
 }
 
-function previewQueryStoreBuild(queryStore: ReturnType<typeof resolveQueryStore>, queries: Awaited<ReturnType<typeof readLocalQueries>>) {
+function previewQueryCatalogBuild(queryCatalog: ReturnType<typeof resolveQueryCatalog>, queries: Awaited<ReturnType<typeof readLocalQueries>>) {
   return {
     ok: true,
     scope: "graph-build.v1",
     mode: "dry-run",
     target: {
       graphStoreType: "postgres",
-      key: queryStore.key,
-      schema: queryStore.schema,
-      databaseUrlConfigured: Boolean(queryStore.databaseUrl),
-      databaseUrlSource: queryStore.databaseUrlSource,
-      databaseUrlEnv: queryStore.databaseUrlEnv,
+      key: queryCatalog.key,
+      schema: queryCatalog.schema,
+      databaseUrlConfigured: Boolean(queryCatalog.databaseUrl),
+      databaseUrlSource: queryCatalog.databaseUrlSource,
+      databaseUrlEnv: queryCatalog.databaseUrlEnv,
     },
     queryCount: queries.length,
     queries: queries.map((query) => ({
@@ -210,29 +210,29 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
   }
 
   const dryRun = hasFlag(flags, "dry-run");
-  const queryStoreKey = getStringFlag(flags, "query-store");
-  if (queryStoreKey) {
-    const queryStore = resolveQueryStore(new Map<string, string | boolean>([["query-store", queryStoreKey]]));
+  const queryCatalogKey = getStringFlag(flags, "query-catalog");
+  if (queryCatalogKey) {
+    const queryCatalog = resolveQueryCatalog(new Map<string, string | boolean>([["query-catalog", queryCatalogKey]]));
     const graphTarget = resolveGraphTarget(flags);
     const queries = await readLocalQueries(graphTarget.root);
     if (dryRun) {
-      printBuildPayload(flags, previewQueryStoreBuild(queryStore, queries));
+      printBuildPayload(flags, previewQueryCatalogBuild(queryCatalog, queries));
       return 0;
     }
-    const queryCount = await replaceQueryStoreQueries(queryStore, queries);
+    const queryCount = await replaceQueryCatalogQueries(queryCatalog, queries);
     printBuildPayload(flags, {
       ok: true,
       scope: "graph-build.v1",
       graphStoreType: "postgres",
-      key: queryStore.key,
-      schema: queryStore.schema,
+      key: queryCatalog.key,
+      schema: queryCatalog.schema,
       queryCount,
     });
     return 0;
   }
 
   const graphKey = getStringFlag(flags, "graph");
-  if (!graphKey) throw new Error("Missing required flag: --graph <name> or --query-store <name>.");
+  if (!graphKey) throw new Error("Missing required flag: --graph <name> or --query-catalog <name>.");
 
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
   assertRecipeTarget(target);
