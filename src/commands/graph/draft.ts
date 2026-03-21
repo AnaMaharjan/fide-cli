@@ -2,10 +2,11 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseFideId, STANDARD_CURIE_PREFIXES, statementDoc, type StatementInput } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
-import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { resolveGraphTarget } from "../../util/graph/target.js";
 import { getLocalFideWarnings } from "../../util/graph/local-disk-warning.js";
+import { graphDraftCommand } from "./metadata.js";
 import { resolveStatementsBatch } from "./shared.js";
 
 type DraftFrontmatter = {
@@ -91,45 +92,7 @@ function renderDraftFrontmatter(params: {
 }
 
 function draftHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide graph draft [--fide-dir <path>] --name <draft-name> <json>",
-          "  fide graph draft [--fide-dir <path>] --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
-          "  fide graph draft [--fide-dir <path>] --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
-        ],
-      },
-      {
-        title: "Flags",
-        items: [
-          "  --fide-dir <path>        Local .fide directory override",
-          "  --name <draft-name>      Draft file name without .md",
-          "  --path <draft-path>      Optional subdirectory under .fide/drafts/statements",
-          "  --description <text>     Optional draft description frontmatter",
-          "  --file <inputs>          Read statement inputs from a file",
-          "  --stdin                  Read statement inputs from stdin",
-          "  --format <json|jsonl|fsd>  Force input format",
-          "  --no-normalize           Disable reference identifier normalization",
-          "  --pretty, -p             Human-readable output",
-        ],
-      },
-      {
-        title: "Notes",
-        items: [
-          "  - Creates or updates a markdown statement draft for local editing.",
-          "  - Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
-          "  - Reusing the same --name and --path updates the existing draft metadata and content.",
-          "  - Use --path to organize drafts by feature, workflow, or topic.",
-          "  - Draft statement lines are labeled @1, @2, ... for local statement references.",
-          "  - Use [Statement/Statement:@2] or [Statement/Statement:relative/path.md@2] to refer to earlier draft statements.",
-          "  - Draft inputs are validated before write and will be validated again when later built into a statement store.",
-          "  - Use `fide graph write` for canonical JSONL statement batches.",
-        ],
-      },
-    ],
-  });
+  return renderCommandHelp(graphDraftCommand);
 }
 
 export async function runGraphDraft(args: string[]): Promise<number> {
@@ -233,7 +196,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
-    printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+    printJson(payload);
   } else {
     console.log(outPath);
   }

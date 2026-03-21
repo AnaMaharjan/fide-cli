@@ -3,6 +3,9 @@ import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
 import { runGraphStatus } from "./status.js";
 import { runGraphWrite } from "./write.js";
+import { runStoreBuild } from "../store/build.js";
+import { runStoreSql } from "../store/sql.js";
+import { runStoreStatus } from "../store/status.js";
 
 /**
  * Route `fide graph <command>` subcommands.
@@ -23,6 +26,18 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "status") {
     return runGraphStatus(args);
+  }
+
+  if (command === "stores") {
+    return runStoreStatus(args, "graph");
+  }
+
+  if (command === "sql") {
+    return runStoreSql(args, "graph");
+  }
+
+  if (command === "build") {
+    return runStoreBuild(args, "graph");
   }
 
   if (command === "defs") {

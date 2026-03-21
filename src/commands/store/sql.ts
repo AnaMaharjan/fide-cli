@@ -1,55 +1,20 @@
 import { createPgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
-import { applyFieldMask, printJson, readUtf8 } from "../../util/io.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
+import { printJson, readUtf8 } from "../../util/io.js";
 import { resolveStoreTarget } from "../../util/graph/target.js";
 import { executeSqliteQuery } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
+import { graphSqlCommand } from "../graph/metadata.js";
 import { readStdinUtf8 } from "../graph/shared.js";
 
 function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
-function sqlHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide store sql --store <name> <sql>",
-          "  fide store sql --store <name> --file <query.sql>",
-          "  fide store sql --store <name> --stdin",
-        ],
-      },
-      {
-        title: "Flags",
-        items: [
-          "  --store <name>           Configured sqlite or postgres store name",
-          "  --file <query.sql>       Read SQL from a file",
-          "  --stdin                  Read SQL from stdin",
-          "  --allow-write            Allow write SQL",
-          "  --fields <mask>          Output field mask (e.g. rows,rowCount)",
-          "  --pretty, -p             Human-readable output",
-        ],
-      },
-      {
-        title: "Examples",
-        items: [
-          "  fide store sql --store primary 'select * from statements limit 10'",
-          "  fide store sql --store sqlite 'select * from statements limit 10'",
-          "  fide store sql --store primary --file queries/statements.sql",
-        ],
-      },
-      {
-        title: "Notes",
-        items: [
-          "  - `fide store sql` is for ad hoc SQL against built statement stores.",
-          "  - Author statements and saved queries locally with `fide graph write`, then use `fide store build` to push them into stores.",
-        ],
-      },
-    ],
-  });
+function sqlHelp(commandName = "fide graph sql"): string {
+  void commandName;
+  return renderCommandHelp(graphSqlCommand);
 }
 
 function isReadOnlySql(sql: string): boolean {
@@ -85,10 +50,10 @@ async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typ
   return { parsed, sql: "" };
 }
 
-export async function runStoreSql(args: string[]): Promise<number> {
+export async function runStoreSql(args: string[], invocation: "graph" | "store" = "graph"): Promise<number> {
   const initialParsed = parseArgs(args);
   if (hasFlag(initialParsed.flags, "help")) {
-    console.log(sqlHelp());
+    console.log(sqlHelp("fide graph sql"));
     return 0;
   }
 
@@ -98,14 +63,14 @@ export async function runStoreSql(args: string[]): Promise<number> {
     throw new Error("Missing required flag: --store <name>.");
   }
   if (!sql.trim()) {
-    console.error("Missing SQL for `store sql`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
-    console.error(sqlHelp());
+    console.error(`Missing SQL for \`${invocation} sql\`. Use \`--stdin\`, \`--file <path>\`, or pass SQL inline.`);
+    console.error(sqlHelp("fide graph sql"));
     return 1;
   }
 
   const allowWrite = hasFlag(flags, "allow-write");
   if (flags.has("save") || flags.has("description") || flags.has("query-store")) {
-    throw new Error("`fide store sql` no longer supports saved-query writes. Author queries locally, then build them into a query store.");
+    throw new Error("Saved-query writes are no longer supported here. Author queries locally with `fide graph write --query`, then build them into a query store.");
   }
   if (!allowWrite && !isReadOnlySql(sql)) {
     throw new Error("Write SQL requires `--allow-write`.");
@@ -114,7 +79,7 @@ export async function runStoreSql(args: string[]): Promise<number> {
   const graphTarget = resolveStoreTarget(flags);
 
   if (graphTarget.type === "fide-jsonl") {
-    throw new Error("`fide store sql` only supports sqlite and postgres stores. Use `fide graph write` for local `.fide` statements or build a sqlite/postgres store first.");
+    throw new Error("This command only supports sqlite and postgres stores. Use `fide graph write` for local `.fide` statements or build a sqlite/postgres store first.");
   }
 
   if (graphTarget.type === "postgres") {
@@ -138,7 +103,7 @@ export async function runStoreSql(args: string[]): Promise<number> {
         rows,
       };
       if (shouldUseJsonOutput(flags)) {
-        printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+        printJson(payload);
       } else {
         console.log(JSON.stringify(rows, null, 2));
       }
@@ -159,7 +124,7 @@ export async function runStoreSql(args: string[]): Promise<number> {
     warnings: getSqliteWarnings(graphTarget.file, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
-    printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+    printJson(payload);
   } else {
     console.log(JSON.stringify(result.rows, null, 2));
   }

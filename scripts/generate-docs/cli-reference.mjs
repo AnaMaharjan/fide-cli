@@ -19,11 +19,10 @@ const DOC_PAGES = [
   { slug: "graph-write", tokens: ["graph", "write"], surfaces: ["graph.write", "graph.write.query"] },
   { slug: "graph-draft", tokens: ["graph", "draft"], surfaces: ["graph.draft"] },
   { slug: "graph-status", tokens: ["graph", "status"], surfaces: ["graph.status"] },
+  { slug: "graph-stores", tokens: ["graph", "stores"], surfaces: ["graph.stores"] },
+  { slug: "graph-sql", tokens: ["graph", "sql"], surfaces: ["graph.sql"] },
+  { slug: "graph-build", tokens: ["graph", "build"], surfaces: ["graph.build"] },
   { slug: "graph-defs", tokens: ["graph", "defs"], surfaces: ["graph.defs"] },
-  { slug: "store", tokens: ["store"] },
-  { slug: "store-status", tokens: ["store", "status"], surfaces: ["store.status"] },
-  { slug: "store-sql", tokens: ["store", "sql"], surfaces: ["store.sql"] },
-  { slug: "store-build", tokens: ["store", "build"], surfaces: ["store.build"] },
   { slug: "auth", tokens: ["auth"] },
   { slug: "auth-login", tokens: ["auth", "login"], surfaces: ["auth.login"] },
   { slug: "auth-logout", tokens: ["auth", "logout"], surfaces: ["auth.logout"] },
@@ -63,11 +62,7 @@ const PAGE_GROUPS = [
   },
   {
     title: "Graph",
-    pages: ["graph", "graph-write", "graph-draft", "graph-status", "graph-defs"],
-  },
-  {
-    title: "Store",
-    pages: ["store", "store-status", "store-sql", "store-build"],
+    pages: ["graph", "graph-write", "graph-draft", "graph-status", "graph-stores", "graph-sql", "graph-build", "graph-defs"],
   },
   {
     title: "Auth",

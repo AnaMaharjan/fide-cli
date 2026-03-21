@@ -1,4 +1,5 @@
 import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
+import { GRAPH_COMMAND_SCHEMAS } from "../commands/graph/metadata.js";
 
 /**
  * Machine-readable command schemas for agent introspection.
@@ -7,6 +8,7 @@ import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 const FIDE_ENTITY_TYPE_ENUM = Object.keys(FIDE_ENTITY_TYPES).sort();
 
 export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ name: string; type: string; required?: boolean; description?: string; enum?: string[] }>; output: Record<string, string> }> = {
+  ...GRAPH_COMMAND_SCHEMAS,
   "graph.write": {
     command: "fide graph write",
     params: [
@@ -16,7 +18,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
       { name: "no-normalize", type: "boolean", required: false },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-      { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,outPath)" },
     ],
     output: {
       root: "string",
@@ -24,32 +25,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       mode: "string",
       outPath: "string",
       warnings: "string[]",
-    },
-  },
-  "graph.draft": {
-    command: "fide graph draft",
-    params: [
-      { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
-      { name: "name", type: "string", required: true, description: "Draft file name without .md" },
-      { name: "path", type: "string", required: false, description: "Optional subdirectory under .fide/drafts/statements" },
-      { name: "description", type: "string", required: false, description: "Optional draft description frontmatter" },
-      { name: "stdin", type: "boolean", required: false, description: "Primary agent path: read statement inputs from stdin" },
-      { name: "file", type: "string", required: false, description: "Primary agent path: input file path" },
-      { name: "format", type: "string", required: false, enum: ["json", "jsonl", "fsd"] },
-      { name: "no-normalize", type: "boolean", required: false },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-      { name: "fields", type: "string", required: false, description: "Output field mask (e.g. root,outPath)" },
-    ],
-    output: {
-      name: "string",
-      root: "string",
-      statementCount: "number",
-      mode: "string",
-      outPath: "string",
-      createdAtUTC: "string",
-      updatedAtUTC: "string",
-      updateCount: "number",
-      next: "object",
     },
   },
   "graph.write.query": {
@@ -70,96 +45,6 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
       name: "string",
       outPath: "string",
       warnings: "string[]",
-    },
-  },
-  "graph.status": {
-    command: "fide graph status",
-    params: [
-      { name: "fide-dir", type: "string", required: false, description: "Optional local .fide directory override" },
-    ],
-    output: {
-      ok: "boolean",
-      configured: "boolean",
-      root: "string",
-      connection: "string",
-      configuredFromSettings: "boolean",
-      fideDir: "string",
-      statementsDir: "string",
-      statementsDirPresent: "boolean",
-      missing: "string[]",
-      key: "string?",
-      warnings: "string[]",
-      next: "object",
-    },
-  },
-  "store.sql": {
-    command: "fide store sql",
-    params: [
-      { name: "store", type: "string", required: true, description: "Configured sqlite or postgres statement store name" },
-      { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },
-      { name: "file", type: "string", required: false, description: "Read SQL from a file" },
-      { name: "allow-write", type: "boolean", required: false, description: "Allow write queries" },
-      { name: "fields", type: "string", required: false, description: "Comma-separated field mask (e.g. rows,rowCount)" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      storeType: "string",
-      key: "string?",
-      file: "string?",
-      schema: "string?",
-      rowCount: "number",
-      rows: "array",
-      warnings: "string[]?",
-    },
-  },
-  "store.build": {
-    command: "fide store build",
-    params: [
-      { name: "statements", type: "string", required: false, description: "Configured statement store name with a recipe" },
-      { name: "queries", type: "string", required: false, description: "Configured query store name" },
-      { name: "fields", type: "string", required: false, description: "Output field mask (e.g. storeType,statementCount,steps)" },
-      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
-    ],
-    output: {
-      ok: "boolean",
-      storeType: "string",
-      key: "string?",
-      file: "string?",
-      schema: "string?",
-      statementCount: "number",
-      queryCount: "number?",
-      steps: "array<{ from: string, statementCount: number }>",
-      lastRunAt: "string",
-      warnings: "string[]?",
-    },
-  },
-  "store.status": {
-    command: "fide store status",
-    params: [
-      { name: "store", type: "string", required: false, description: "Optional configured statement store name; omitted means all configured statement stores" },
-    ],
-    output: {
-      ok: "boolean",
-      storeType: "string?",
-      key: "string?",
-      configured: "boolean?",
-      configuredFromSettings: "boolean?",
-      databaseUrlConfigured: "boolean?",
-      databaseUrlSource: "string?",
-      databaseUrlEnv: "string?",
-      schema: "string?",
-      file: "string?",
-      dir: "string?",
-      recipe: "array<{ from: string, sql?: string }>?",
-      lastRunAt: "string?",
-      lastRunStatementsAdded: "number?",
-      reachable: "boolean?",
-      missing: "string[]?",
-      error: "string?",
-      warnings: "string[]?",
-      next: "object?",
-      stores: "array<{ key: string, storeType: string, warnings?: string[], next?: object }>?",
     },
   },
   "auth.login": {

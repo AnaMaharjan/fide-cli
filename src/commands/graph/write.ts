@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
-import { applyFieldMask, printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { resolveGraphTarget } from "../../util/graph/target.js";
 import { getLocalFideWarnings } from "../../util/graph/local-disk-warning.js";
 import { renderQueryFile } from "../../util/query/files.js";
@@ -43,7 +43,7 @@ function writeHelp(): string {
         items: [
           "  - Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
           "  - With `--query`, writes SQL files under .fide/queries/<statement-store>/<query-name>.sql.",
-          "  - `fide graph write` only writes to a local .fide directory. Use `fide store sql` or `fide store build` for configured stores.",
+          "  - `fide graph write` only writes to a local .fide directory. Use `fide graph sql` or `fide graph build` for configured stores.",
         ],
       },
     ],
@@ -165,7 +165,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     return 1;
   }
   if (graphTarget.type !== "local") {
-    throw new Error("`graph write` only supports local `.fide` directories. Use `fide store sql` or `fide store build` for configured sqlite or postgres stores.");
+    throw new Error("`graph write` only supports local `.fide` directories. Use `fide graph sql` or `fide graph build` for configured sqlite or postgres stores.");
   }
 
   const statementsDir = resolveStatementsDir(graphTarget.root);
@@ -204,7 +204,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
   };
   if (shouldUseJsonOutput(flags)) {
-    printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+    printJson(payload);
   } else {
     console.log(outPath);
   }

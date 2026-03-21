@@ -29,7 +29,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
           items: [
             "  - `fide graph status` reports local `.fide` directory status.",
             "  - Uses `FIDE_DIR` or the nearest `.fide` directory when `--fide-dir` is omitted.",
-            "  - Use `fide store status` for configured sqlite/postgres backends.",
+            "  - Use `fide graph stores` for configured sqlite/postgres backends and query-store build state.",
           ],
         },
       ],
@@ -43,7 +43,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`fide graph status` only supports local .fide directories. Use `fide store status` for configured sqlite/postgres stores.");
+    throw new Error("`fide graph status` only supports local .fide directories. Use `fide graph stores` for configured sqlite/postgres stores.");
   }
 
   const { root, configuredFromSettings } = graphTarget;

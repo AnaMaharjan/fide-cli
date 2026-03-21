@@ -18,8 +18,7 @@ function helpText(): string {
         {
           title: "Groups",
           items: [
-            "  graph    Statement authoring in local .fide directories and graph definitions",
-            "  store    Configured statement stores and store builds",
+            "  graph    Graph authoring, configured store access, builds, and graph definitions",
             "  auth     CLI authentication and API key management",
             "  workspace Workspace inspection and service-account provisioning",
             "  docs     Resolve canonical docs pointers to local source content",
@@ -31,8 +30,8 @@ function helpText(): string {
           items: [
             "  fide graph write '<json>'             Write statement inputs into the local .fide directory",
             "  fide graph write --query --store sqlite --name recentStatements 'select * from statements limit 10'",
-            "  fide store sql --store primary 'select * from statements limit 10'",
-            "  fide store build --statements combined",
+            "  fide graph sql --store primary 'select * from statements limit 10'",
+            "  fide graph build --statements combined",
             "  fide auth login --api-key fide_sk_...",
             "  fide workspace list",
           ],
@@ -76,10 +75,6 @@ export async function runCli(argv: string[]): Promise<number> {
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);
-      }
-      case "store": {
-        const { runStoreCommand } = await import("./commands/store/index.js");
-        return await runStoreCommand(command, rest);
       }
       case "auth": {
         const { runAuthCommand } = await import("./commands/auth/index.js");

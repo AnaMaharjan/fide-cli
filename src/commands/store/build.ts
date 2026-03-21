@@ -1,8 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { createPgClient } from "@chris-test/db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
-import { applyFieldMask, printJson } from "../../util/io.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
+import { printJson } from "../../util/io.js";
 import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_ROOTS_TABLE, GRAPH_STATEMENT_ROOTS_TABLE, GRAPH_STATEMENTS_TABLE, resolveGraphTarget, resolveStoreTarget, validateGraphSettings, type FideSettings, type GraphRecipeStep, type ResolvedStatementStore } from "../../util/graph/target.js";
 import { queryFideJsonlResolvedStatements } from "../../util/graph/fide-jsonl.js";
 import {
@@ -17,6 +17,7 @@ import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
 import { readLocalQueries } from "../../util/query/files.js";
 import { replaceQueryStoreQueries } from "../../util/query/postgres.js";
 import { resolveQueryStore } from "../../util/query/target.js";
+import { graphBuildCommand } from "../graph/metadata.js";
 
 function printBuildProgress(flags: Map<string, string | boolean>, message: string): void {
   if (shouldUseJsonOutput(flags)) return;
@@ -27,44 +28,9 @@ function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
-function buildHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide store build --statements <name>",
-          "  fide store build --queries <name>",
-        ],
-      },
-      {
-        title: "Flags",
-        items: [
-          "  --statements <name>      Configured statement store name with a recipe",
-          "  --queries <name>         Configured query store name",
-          "  --fields <mask>          Output field mask (e.g. storeType,statementCount,steps)",
-          "  --pretty, -p             Human-readable output",
-        ],
-      },
-      {
-        title: "Examples",
-        items: [
-          "  fide store build --statements sqlite",
-          "  fide store build --statements combined",
-          "  fide store build --queries postgresQueries",
-        ],
-      },
-      {
-        title: "Notes",
-        items: [
-          "  - Recipe SQL may include $lastRunAt for incremental runs.",
-          "  - On the first run, $lastRunAt resolves to 1970-01-01T00:00:00.000Z.",
-          "  - Local fide-jsonl recipe steps may use fromDateUTC/toDateUTC; these apply at UTC date granularity based on .fide/statements/YYYY/MM/DD folders.",
-          "  - Query-store builds load local .fide/queries/<statement-store>/<name>.sql files.",
-        ],
-      },
-    ],
-  });
+function buildHelp(commandName = "fide graph build"): string {
+  void commandName;
+  return renderCommandHelp(graphBuildCommand);
 }
 
 function escapeSqlString(value: string): string {
@@ -400,15 +366,15 @@ async function queryRecipeStep(step: GraphRecipeStep, lastRunAt: string | null):
   return { source, rows: await querySqliteResolvedStatements(source.file, sql) };
 }
 
-export async function runStoreBuild(args: string[]): Promise<number> {
+export async function runStoreBuild(args: string[], invocation: "graph" | "store" = "graph"): Promise<number> {
   const parsed = parseArgs(args);
   const flags = parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    console.log(buildHelp());
+    console.log(buildHelp("fide graph build"));
     return 0;
   }
   if (flags.has("store") || flags.has("query-store")) {
-    throw new Error("`fide store build` now uses `--statements <name>` or `--queries <name>`, not `--store` or `--query-store`.");
+    throw new Error("This command now uses `--statements <name>` or `--queries <name>`, not `--store` or `--query-store`.");
   }
   if (flags.has("queries")) {
     const queryFlags = new Map<string, string | boolean>(flags);
@@ -425,7 +391,7 @@ export async function runStoreBuild(args: string[]): Promise<number> {
       queryCount,
     };
     if (shouldUseJsonOutput(flags)) {
-      printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+      printJson(payload);
     } else {
       console.log(JSON.stringify(payload, null, 2));
     }
@@ -495,7 +461,7 @@ export async function runStoreBuild(args: string[]): Promise<number> {
   if (target.key) await writeStoreRunState(target.key, lastRunAt, totalStatementCount);
 
   if (shouldUseJsonOutput(flags)) {
-    printJson(applyFieldMask(payload, getStringFlag(flags, "fields")));
+    printJson(payload);
   } else {
     console.log(JSON.stringify(payload, null, 2));
   }

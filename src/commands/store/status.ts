@@ -1,12 +1,13 @@
 import { createPgClient } from "@chris-test/db";
 import { hasFlag, parseArgs } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, listConfiguredStoreTargetKeys, resolveStoreTarget, type ResolvedStatementStore } from "../../util/graph/target.js";
 import { inspectFideJsonlStore } from "../../util/graph/fide-jsonl.js";
 import { inspectSqliteGraph } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { listConfiguredQueryStoreKeys, resolveQueryStore } from "../../util/query/target.js";
+import { graphStoresCommand } from "../graph/metadata.js";
 
 function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
@@ -17,48 +18,25 @@ function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres
     };
   }
   const next: Record<string, string> = {
-    sqlHelpCommand: "fide store sql -h",
-    sqlCommand: `fide store sql --store ${key} ...`,
+    sqlHelpCommand: "fide graph sql -h",
+    sqlCommand: `fide graph sql --store ${key} ...`,
   };
   if (Array.isArray(recipe) && recipe.length > 0) {
-    next.buildHelpCommand = "fide store build -h";
-    next.buildCommand = `fide store build --statements ${key}`;
+    next.buildHelpCommand = "fide graph build -h";
+    next.buildCommand = `fide graph build --statements ${key}`;
   }
   return next;
 }
 
-export async function runStoreStatus(args: string[] = []): Promise<number> {
+export async function runStoreStatus(args: string[] = [], invocation: "graph" | "store" = "graph"): Promise<number> {
   const { flags, positionals } = parseArgs(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    console.log(renderHelp({
-      sections: [
-        {
-          title: "Usage",
-          items: [
-            "  fide store status",
-            "  fide store status --store <name>",
-          ],
-        },
-        {
-          title: "Flags",
-          items: [
-            "  --store <name>   Configured statement store name",
-          ],
-        },
-        {
-          title: "Notes",
-          items: [
-            "  - With no store, returns all configured statement stores and query stores.",
-            "  - Use `fide graph status` for local .fide directory status.",
-          ],
-        },
-      ],
-    }));
+    console.log(renderCommandHelp(graphStoresCommand));
     return 0;
   }
 
   if (positionals.length > 1) {
-    throw new Error("`store status` accepts at most one positional store.");
+    throw new Error("`graph stores` accepts at most one positional store.");
   }
   if (positionals.length === 1) {
     if (flags.has("store")) {
@@ -280,8 +258,8 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
         storeType: "postgres",
         key: store.key,
         next: {
-          buildHelpCommand: "fide store build -h",
-          buildCommand: `fide store build --queries ${store.key}`,
+          buildHelpCommand: "fide graph build -h",
+          buildCommand: `fide graph build --queries ${store.key}`,
         },
         configured: true,
         databaseUrlConfigured: false,
@@ -326,8 +304,8 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
         storeType: "postgres",
         key: store.key,
         next: {
-          buildHelpCommand: "fide store build -h",
-          buildCommand: `fide store build --queries ${store.key}`,
+          buildHelpCommand: "fide graph build -h",
+          buildCommand: `fide graph build --queries ${store.key}`,
         },
         configured: true,
         databaseUrlConfigured: true,
@@ -343,8 +321,8 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
         storeType: "postgres",
         key: store.key,
         next: {
-          buildHelpCommand: "fide store build -h",
-          buildCommand: `fide store build --queries ${store.key}`,
+          buildHelpCommand: "fide graph build -h",
+          buildCommand: `fide graph build --queries ${store.key}`,
         },
         configured: true,
         databaseUrlConfigured: true,
@@ -376,20 +354,20 @@ export async function runStoreStatus(args: string[] = []): Promise<number> {
       storeType: detailed.storeType,
       warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
-        statusCommand: `fide store status --store ${key}`,
+        statusCommand: `fide graph stores --store ${key}`,
         ...(("storeType" in detailed && detailed.storeType === "fide-jsonl")
           ? {
             writeHelpCommand: "fide graph write -h",
             writeCommand: "fide graph write ...",
           }
           : {
-            sqlHelpCommand: "fide store sql -h",
-            sqlCommand: `fide store sql --store ${key} ...`,
+            sqlHelpCommand: "fide graph sql -h",
+            sqlCommand: `fide graph sql --store ${key} ...`,
           }),
         ...(Array.isArray(detailed.recipe) && detailed.recipe.length > 0 && detailed.storeType !== "fide-jsonl"
           ? {
-            buildHelpCommand: "fide store build -h",
-            buildCommand: `fide store build --statements ${key}`,
+            buildHelpCommand: "fide graph build -h",
+            buildCommand: `fide graph build --statements ${key}`,
           }
           : {}),
       },
