@@ -3,6 +3,12 @@ import { dirname, resolve } from "node:path";
 
 let envLoaded = false;
 
+export type FideDirResolution = {
+  fideDir: string;
+  root: string;
+  source: "env" | "nearest" | "default";
+};
+
 export function ensureFideEnvLoaded(): void {
   if (envLoaded) return;
   envLoaded = true;
@@ -48,6 +54,33 @@ export function resolveFideDir(root: string = process.cwd()): string {
   return resolveEnvFideDir(root)
     ?? findNearestFideDir(root)
     ?? resolve(root, ".fide");
+}
+
+export function resolveFideContext(root: string = process.cwd()): FideDirResolution {
+  const envFideDir = resolveEnvFideDir(root);
+  if (envFideDir) {
+    return {
+      fideDir: envFideDir,
+      root: dirname(envFideDir),
+      source: "env",
+    };
+  }
+
+  const nearestFideDir = findNearestFideDir(root);
+  if (nearestFideDir) {
+    return {
+      fideDir: nearestFideDir,
+      root: dirname(nearestFideDir),
+      source: "nearest",
+    };
+  }
+
+  const fideDir = resolve(root, ".fide");
+  return {
+    fideDir,
+    root: dirname(fideDir),
+    source: "default",
+  };
 }
 
 export function resolveFideRoot(root: string = process.cwd()): string {

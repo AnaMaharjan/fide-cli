@@ -9,6 +9,17 @@ const FIDE_ENTITY_TYPE_ENUM = Object.keys(FIDE_ENTITY_TYPES).sort();
 
 export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ name: string; type: string; required?: boolean; description?: string; enum?: string[] }>; output: Record<string, string> }> = {
   ...GRAPH_COMMAND_SCHEMAS,
+  status: {
+    command: "fide status",
+    params: [
+      { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
+    ],
+    output: {
+      machine: "object",
+      project: "object",
+      workspace: "object",
+    },
+  },
   "graph.write": {
     command: "fide graph write",
     params: [
@@ -300,7 +311,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide workspace queries get",
     params: [
       { name: "workspace", type: "string", required: false, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
-      { name: "statement-store", type: "string", required: true, description: "Statement store key referenced by the saved query" },
+      { name: "graph", type: "string", required: true, description: "Graph key referenced by the saved query" },
       { name: "name", type: "string", required: true, description: "Saved query name" },
       { name: "query-store", type: "string", required: false, description: "Hosted query store key when a workspace has more than one query store configured." },
       { name: "pretty", type: "boolean", required: false, description: "Human-readable output" },
@@ -318,7 +329,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     command: "fide workspace queries run",
     params: [
       { name: "workspace", type: "string", required: true, description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings." },
-      { name: "statement-store", type: "string", required: true, description: "Statement store key referenced by the saved query" },
+      { name: "graph", type: "string", required: true, description: "Graph key referenced by the saved query" },
       { name: "name", type: "string", required: true, description: "Saved query name" },
       { name: "query-store", type: "string", required: false, description: "Hosted query store key when a workspace has more than one query store configured." },
       { name: "limit", type: "number", required: false, description: "Maximum number of rows to return, capped server-side." },

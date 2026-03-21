@@ -17,11 +17,11 @@ function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres
   }
   const next: Record<string, string> = {
     queryHelpCommand: "fide graph query -h",
-    queryCommand: `fide graph query --statement-store ${key} ...`,
+    queryCommand: `fide graph query --graph ${key} ...`,
   };
   if (Array.isArray(recipe) && recipe.length > 0) {
     next.buildHelpCommand = "fide graph build -h";
-    next.buildCommand = `fide graph build --statement-store ${key}`;
+    next.buildCommand = `fide graph build --graph ${key}`;
   }
   return next;
 }
@@ -321,7 +321,7 @@ export async function getQueryStoreStatus(key: string) {
 
 export async function getRuntimeStatusOverview() {
   const configuredKeys = listConfiguredStoreTargetKeys();
-  const statementStores = await Promise.all(configuredKeys.map(async (key) => {
+  const graphs = await Promise.all(configuredKeys.map(async (key) => {
     const targetFlags = new Map<string, string | boolean>();
     targetFlags.set("store", key);
     const resolved = resolveStoreTarget(targetFlags);
@@ -331,7 +331,7 @@ export async function getRuntimeStatusOverview() {
       storeType: detailed.storeType,
       warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
-        statusCommand: `fide graph status --statement-store ${key}`,
+        statusCommand: `fide graph status --graph ${key}`,
         ...(("storeType" in detailed && detailed.storeType === "fide-jsonl")
           ? {
             writeHelpCommand: "fide graph write -h",
@@ -339,12 +339,12 @@ export async function getRuntimeStatusOverview() {
           }
           : {
             queryHelpCommand: "fide graph query -h",
-            queryCommand: `fide graph query --statement-store ${key} ...`,
+            queryCommand: `fide graph query --graph ${key} ...`,
           }),
         ...(Array.isArray(detailed.recipe) && detailed.recipe.length > 0 && detailed.storeType !== "fide-jsonl"
           ? {
             buildHelpCommand: "fide graph build -h",
-            buildCommand: `fide graph build --statement-store ${key}`,
+            buildCommand: `fide graph build --graph ${key}`,
           }
           : {}),
       },
@@ -362,17 +362,17 @@ export async function getRuntimeStatusOverview() {
   }));
 
   return {
-    statementStores,
+    graphs,
     queryStores,
   };
 }
 
 export async function runStoreStatus(flags: Map<string, string | boolean>): Promise<number> {
-  const statementStore = getStringFlag(flags, "statement-store");
+  const statementStore = getStringFlag(flags, "graph");
   const queryStore = getStringFlag(flags, "query-store");
 
   if (statementStore && queryStore) {
-    throw new Error("Pass either `--statement-store` or `--query-store`, not both.");
+    throw new Error("Pass either `--graph` or `--query-store`, not both.");
   }
 
   if (statementStore) {

@@ -19,6 +19,7 @@ function schemaHelp(): string {
         title: "Examples",
         items: [
           "  fide schema",
+          "  fide schema status",
           "  fide schema graph.write",
           "  fide schema graph.query",
         ],

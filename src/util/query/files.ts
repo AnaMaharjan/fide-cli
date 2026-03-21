@@ -1,8 +1,8 @@
 import { readdir, readFile } from "node:fs/promises";
-import { basename, extname, resolve } from "node:path";
+import { basename, extname, relative, resolve, sep } from "node:path";
 
 export type QueryDefinition = {
-  statementStoreKey: string;
+  graphKey: string;
   name: string;
   description: string | null;
   sql: string;
@@ -16,10 +16,10 @@ export function resolveQueriesDir(root: string): string {
   return resolve(root, ".fide", "queries");
 }
 
-export function renderQueryFile(sql: string, options: { description: string | null; statementStoreKey: string }): string {
+export function renderQueryFile(sql: string, options: { description: string | null; graphKey: string }): string {
+  void options.graphKey;
   const normalizedSql = sql.trim();
   const lines: string[] = [];
-  lines.push(`-- statement-store: ${options.statementStoreKey}`);
   if (options.description && options.description.trim().length > 0) {
     lines.push(`-- description: ${options.description.trim()}`);
     lines.push("");
@@ -28,11 +28,10 @@ export function renderQueryFile(sql: string, options: { description: string | nu
   return `${lines.join("\n")}\n`;
 }
 
-export function parseQueryFile(content: string): { statementStoreKey: string; description: string | null; sql: string } {
+export function parseQueryFile(content: string): { description: string | null; sql: string } {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   let index = 0;
   let description: string | null = null;
-  let statementStoreKey: string | null = null;
 
   while (index < lines.length) {
     const line = lines[index];
@@ -47,12 +46,6 @@ export function parseQueryFile(content: string): { statementStoreKey: string; de
       index += 1;
       continue;
     }
-    const statementStoreMatch = /^--\s*statement-store\s*:\s*(.+)$/i.exec(trimmed);
-    if (statementStoreMatch) {
-      statementStoreKey = statementStoreMatch[1].trim() || null;
-      index += 1;
-      continue;
-    }
     break;
   }
 
@@ -60,10 +53,7 @@ export function parseQueryFile(content: string): { statementStoreKey: string; de
   if (!sql) {
     throw new Error("Query file is missing SQL body.");
   }
-  if (!statementStoreKey) {
-    throw new Error("Query file is missing statement-store metadata.");
-  }
-  return { statementStoreKey, description, sql };
+  return { description, sql };
 }
 
 async function listSqlFiles(dir: string): Promise<string[]> {
@@ -95,8 +85,14 @@ export async function readLocalQueries(root: string): Promise<LocalQueryDefiniti
   for (const file of files) {
     const content = await readFile(file, "utf8");
     const parsed = parseQueryFile(content);
+    const relativePath = relative(queriesDir, file);
+    const pathSegments = relativePath.split(sep).filter(Boolean);
+    const graphFromPath = pathSegments[0] ?? null;
+    if (!graphFromPath) {
+      throw new Error(`Query file must live under .fide/queries/<graph>/: ${file}`);
+    }
     queries.push({
-      statementStoreKey: parsed.statementStoreKey,
+      graphKey: graphFromPath,
       name: basename(file, ".sql"),
       description: parsed.description,
       sql: parsed.sql,

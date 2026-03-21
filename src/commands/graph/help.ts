@@ -27,10 +27,10 @@ export function graphCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide graph write '[{ ... statement inputs ... }]'",
-          "  fide graph query write --statement-store sqlite --name recentStatements 'select * from statements limit 10'",
+          "  fide graph query write --graph sqlite --name recentStatements 'select * from statements limit 10'",
           "  fide graph status",
-          `  ${graphQueryCommand.examples?.[0] ?? "fide graph query --statement-store primary 'select * from statements limit 10'"}`,
-          `  ${graphBuildCommand.examples?.[1] ?? "fide graph build --statement-store combined"}`,
+          `  ${graphQueryCommand.examples?.[0] ?? "fide graph query --graph primary 'select * from statements limit 10'"}`,
+          `  ${graphBuildCommand.examples?.[1] ?? "fide graph build --graph combined"}`,
           "  fide graph draft --file inputs.json",
           "  fide graph defs",
         ],
@@ -39,7 +39,7 @@ export function graphCommandHelp(): string {
         title: "Notes",
         items: [
           "  - Local authoring commands (`write`, `draft`) resolve `--fide-dir <path>`, `FIDE_DIR`, the nearest `.fide` directory, then the current working directory.",
-          "  - `status` shows local graph status by default and can target configured runtime backends with `--statement-store` or `--query-store`.",
+          "  - `status` shows local graph status by default and can target configured runtime backends with `--graph` or `--query-store`.",
           "  - `query` executes ad hoc graph queries, and `query write` saves local query definitions.",
           "  - Runtime commands (`query`, `build`) operate on configured statement stores and query stores.",
         ],

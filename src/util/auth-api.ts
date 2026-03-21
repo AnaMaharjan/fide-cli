@@ -61,7 +61,7 @@ export type WorkspaceConnection = {
 };
 
 export type WorkspaceQuery = {
-  statementStoreKey: string;
+  graphKey: string;
   name: string;
   description: string | null;
   sql: string;
@@ -77,7 +77,7 @@ export type WorkspaceQueryRunResult = WorkspaceQuery & {
 };
 
 export type WorkspaceQuerySummary = {
-  statementStoreKey: string;
+  graphKey: string;
   name: string;
   description: string | null;
 };
@@ -270,7 +270,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async getWorkspaceQuery(input: {
       workspaceId: string;
-      statementStoreKey: string;
+      graphKey: string;
       name: string;
       queryStore?: string;
     }): Promise<WorkspaceQuery> {
@@ -278,7 +278,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
       if (input.queryStore) search.set("queryStore", input.queryStore)
       const suffix = search.size > 0 ? `?${search.toString()}` : ""
       const response = await fetch(
-        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.statementStoreKey)}/${encodeURIComponent(input.name)}${suffix}`,
+        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}${suffix}`,
         {
           method: "GET",
           headers,
@@ -289,13 +289,13 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async runWorkspaceQuery(input: {
       workspaceId: string;
-      statementStoreKey: string;
+      graphKey: string;
       name: string;
       queryStore?: string;
       limit?: number;
     }): Promise<WorkspaceQueryRunResult> {
       const response = await fetch(
-        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.statementStoreKey)}/${encodeURIComponent(input.name)}/run`,
+        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}/run`,
         {
           method: "POST",
           headers,

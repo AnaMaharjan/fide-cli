@@ -59,8 +59,8 @@ export async function runStoreSql(args: string[], invocation: "graph" | "store" 
 
   const { parsed, sql } = await resolveQuerySql(args);
   const flags = parsed.flags;
-  if (!flags.has("statement-store")) {
-    throw new Error("Missing required flag: --statement-store <name>.");
+  if (!flags.has("graph")) {
+    throw new Error("Missing required flag: --graph <name>.");
   }
   if (!sql.trim()) {
     console.error(`Missing query text for \`graph query\`. Use \`--stdin\`, \`--file <path>\`, or pass the query inline.`);

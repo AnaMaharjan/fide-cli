@@ -19,19 +19,19 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     throw new Error("`graph status` does not accept positional arguments.");
   }
 
-  const statementStore = typeof flags.get("statement-store") === "string" ? String(flags.get("statement-store")) : null;
+  const statementStore = typeof flags.get("graph") === "string" ? String(flags.get("graph")) : null;
   const queryStore = typeof flags.get("query-store") === "string" ? String(flags.get("query-store")) : null;
   const hasFideDir = flags.has("fide-dir");
 
   if (statementStore && queryStore) {
-    throw new Error("Pass either `--statement-store` or `--query-store`, not both.");
+    throw new Error("Pass either `--graph` or `--query-store`, not both.");
   }
   if ((statementStore || queryStore) && hasFideDir) {
     throw new Error("`--fide-dir` only applies to local status. Omit it when targeting a configured store.");
   }
 
   if (statementStore) {
-    const targetFlags = new Map<string, string | boolean>([["statement-store", statementStore]]);
+    const targetFlags = new Map<string, string | boolean>([["graph", statementStore]]);
     printJson({
       ok: true,
       statementStore: await getStatementStoreStatus(resolveStoreTarget(targetFlags)),

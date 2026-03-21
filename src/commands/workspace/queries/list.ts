@@ -19,7 +19,7 @@ export async function runWorkspaceQueriesList(args: string[]): Promise<number> {
   const next: Record<string, string> = {}
   const first = result.queries[0]
   if (first) {
-    next.get = `fide workspace queries get --workspace ${selection.workspaceId} --statement-store ${first.statementStoreKey} --name ${first.name}${queryStore ? ` --query-store ${queryStore}` : ""}`
+    next.get = `fide workspace queries get --workspace ${selection.workspaceId} --graph ${first.graphKey} --name ${first.name}${queryStore ? ` --query-store ${queryStore}` : ""}`
   }
 
   const payload = okResponse("workspace-queries-list.v1", {
@@ -38,7 +38,7 @@ export async function runWorkspaceQueriesList(args: string[]): Promise<number> {
     printJson(payload);
   } else {
     for (const query of result.queries) {
-      console.log(`${query.statementStoreKey} ${query.name}`);
+      console.log(`${query.graphKey} ${query.name}`);
     }
   }
   return 0;

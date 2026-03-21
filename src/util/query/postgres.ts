@@ -13,19 +13,19 @@ export async function ensureQueryStoreSchema(store: ResolvedQueryStore): Promise
     await client.unsafe(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS ${queriesTableQualified} (
-        statement_store_key TEXT NOT NULL,
+        graph_key TEXT NOT NULL,
         name TEXT NOT NULL,
         sql TEXT NOT NULL,
         description TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (statement_store_key, name)
+        PRIMARY KEY (graph_key, name)
       );
     `);
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS ${schema}."query_runs" (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        statement_store_key TEXT NOT NULL,
+        graph_key TEXT NOT NULL,
         query_name TEXT NOT NULL,
         sql TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL CHECK (status IN ('running', 'success', 'error')),
@@ -33,8 +33,8 @@ export async function ensureQueryStoreSchema(store: ResolvedQueryStore): Promise
         result_json JSONB,
         started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         finished_at TIMESTAMPTZ,
-        FOREIGN KEY (statement_store_key, query_name)
-          REFERENCES ${queriesTableQualified}(statement_store_key, name)
+        FOREIGN KEY (graph_key, query_name)
+          REFERENCES ${queriesTableQualified}(graph_key, name)
           ON DELETE CASCADE
       );
     `);
@@ -57,10 +57,10 @@ export async function replaceQueryStoreQueries(store: ResolvedQueryStore, querie
       for (const query of queries) {
         await tx.unsafe(
           `
-          INSERT INTO "queries" (name, statement_store_key, sql, description)
+          INSERT INTO "queries" (name, graph_key, sql, description)
           VALUES ($1, $2, $3, $4)
           `,
-          [query.name, query.statementStoreKey, query.sql, query.description],
+          [query.name, query.graphKey, query.sql, query.description],
         );
       }
       return queries.length;

@@ -8,23 +8,24 @@ This reference is generated from the CLI's live `--help` output and schema surfa
 ## Top Level
 
 - [`fide`](./fide) - Fide CLI
-- [`fide docs`](./docs) - Resolve canonical docs pointers to local source content
-- [`fide schema`](./schema) - Introspect command schemas
+- [`fide status`](./status) - Inspect active machine, project, and workspace context
+- [`fide docs`](./docs)
+- [`fide schema`](./schema)
 
 ## Graph
 
-- [`fide graph`](./graph) - Graph authoring, configured store access, builds, and graph definitions
+- [`fide graph`](./graph)
 - [`fide graph write`](./graph-write) - Write statement inputs into a local .fide directory
 - [`fide graph draft`](./graph-draft) - Create a markdown statement draft in a local .fide directory
 - [`fide graph status`](./graph-status) - Inspect local graph state and configured runtime status
-- [`fide graph query`](./graph-query) - Run an ad hoc graph query against a configured statement store
+- [`fide graph query`](./graph-query) - Run an ad hoc graph query against a configured graph
 - [`fide graph query write`](./graph-query-write) - Save a local graph query definition
 - [`fide graph build`](./graph-build) - Build configured statement or query stores from graph sources
 - [`fide graph defs`](./graph-defs) - Inspect statement and entity definitions
 
 ## Auth
 
-- [`fide auth`](./auth) - CLI authentication and API key management
+- [`fide auth`](./auth)
 - [`fide auth login`](./auth-login) - Save API-key-based auth for the CLI
 - [`fide auth logout`](./auth-logout) - Remove saved machine-level auth settings
 - [`fide auth status`](./auth-status) - Inspect machine-level auth settings and remote validity
@@ -36,7 +37,7 @@ This reference is generated from the CLI's live `--help` output and schema surfa
 
 ## Workspace
 
-- [`fide workspace`](./workspace) - Workspace inspection and service-account provisioning
+- [`fide workspace`](./workspace)
 - [`fide workspace list`](./workspace-list) - List accessible workspaces
 - [`fide workspace get`](./workspace-get) - Inspect a workspace by id
 - [`fide workspace members`](./workspace-members) - List members for a workspace
@@ -54,4 +55,4 @@ This reference is generated from the CLI's live `--help` output and schema surfa
 - [`fide workspace connections create`](./workspace-connections-create) - Create workspace connection metadata
 - [`fide workspace queries`](./workspace-queries) - List and inspect hosted workspace queries
 - [`fide workspace queries list`](./workspace-queries-list) - List hosted queries for a workspace
-- [`fide workspace queries get`](./workspace-queries-get) - Get a hosted query by statement store key and name
+- [`fide workspace queries get`](./workspace-queries-get) - Get a hosted query by graph key and name

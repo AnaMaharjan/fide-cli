@@ -32,7 +32,7 @@ function queryCommandHelp(): string {
       {
         title: "Flags",
         items: [
-          "  --statement-store <name>   Configured sqlite or postgres statement store name",
+          "  --graph <name>             Configured graph key",
           "  --file <query.sql>         Read SQL from a file",
           "  --stdin                    Read SQL from stdin",
           "  --allow-write              Allow write SQL",
@@ -42,15 +42,15 @@ function queryCommandHelp(): string {
       {
         title: "Examples",
         items: [
-          `  ${graphQueryCommand.examples?.[0] ?? "fide graph query --statement-store primary 'select * from statements limit 10'"}`,
-          `  ${graphQueryWriteCommand.examples?.[0] ?? "fide graph query write --statement-store primary --name recentStatements 'select * from statements limit 10'"}`,
+          `  ${graphQueryCommand.examples?.[0] ?? "fide graph query --graph primary 'select * from statements limit 10'"}`,
+          `  ${graphQueryWriteCommand.examples?.[0] ?? "fide graph query write --graph primary --name recentStatements 'select * from statements limit 10'"}`,
         ],
       },
       {
         title: "Notes",
         items: [
-          "  - `fide graph query` executes an ad hoc query against a configured statement store.",
-          "  - `fide graph query write` saves a local query definition under `.fide/queries/<name>.sql`.",
+          "  - `fide graph query` executes an ad hoc query against a configured graph.",
+          "  - `fide graph query write` saves a local query definition under `.fide/queries/<graph>/<name>.sql`.",
         ],
       },
     ],
@@ -81,10 +81,10 @@ export async function runGraphQueryWrite(args: string[]): Promise<number> {
 
   const { parsed, sql } = await resolveQuerySql(args);
   const flags = parsed.flags;
-  const statementStoreKey = getStringFlag(flags, "statement-store");
+  const graphKey = getStringFlag(flags, "graph");
   const name = getStringFlag(flags, "name");
   const description = getStringFlag(flags, "description");
-  if (!statementStoreKey) throw new Error("Missing required flag: --statement-store <name>.");
+  if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
   if (!name) throw new Error("Missing required flag: --name <query-name>.");
   if (!sql.trim()) {
     console.error("Missing SQL for `graph query write`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
@@ -97,17 +97,17 @@ export async function runGraphQueryWrite(args: string[]): Promise<number> {
     throw new Error("`fide graph query write` only supports local .fide directories.");
   }
 
-  const outPath = resolve(resolveQueriesDir(graphTarget.root), `${name}.sql`);
+  const outPath = resolve(resolveQueriesDir(graphTarget.root), graphKey, `${name}.sql`);
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, renderQueryFile(sql, {
-    statementStoreKey,
+    graphKey,
     description: description ?? null,
   }));
 
   const payload = {
     ok: true,
     mode: "query",
-    statementStoreKey,
+    graphKey,
     name,
     outPath,
     warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),

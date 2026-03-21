@@ -17,6 +17,7 @@ const CHECK_MODE = process.argv.includes("--check");
 const RESPONSE_ENVELOPE_KEYS = new Set(["ok", "scope", "command", "next", "error"]);
 
 const SURFACES = [
+  { surface: "status", tokens: ["status"], sourcePath: "src/commands/status.ts", functionName: "runStatusCommand" },
   { surface: "graph.write", tokens: ["graph", "write"], sourcePath: "src/commands/graph/write.ts", functionName: "runGraphWrite" },
   { surface: "graph.draft", tokens: ["graph", "draft"], sourcePath: "src/commands/graph/draft.ts", functionName: "runGraphDraft" },
   { surface: "graph.query", tokens: ["graph", "query"], sourcePath: "src/commands/store/sql.ts", functionName: "runStoreSql" },

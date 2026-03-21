@@ -36,14 +36,14 @@ export function workspaceCommandHelp(): string {
           "  fide workspace connections list --workspace <workspace-id>",
           "  fide workspace connections create --workspace <workspace-id> --slug primary-graph --kind postgres --connection '$DATABASE_URL'",
           "  fide workspace queries list --workspace <workspace-id>",
-          "  fide workspace queries get --workspace <workspace-id> --statement-store primary --name recent_entities",
+          "  fide workspace queries get --workspace <workspace-id> --graph primary --name recent_entities",
         ],
       },
       {
         title: "Notes",
         items: [
           "  - Use `graph` for local .fide authoring and local-first workflows.",
-          "  - Use `workspace` for shared hosted state, access control, settings, connections, and hosted queries.",
+          "  - Use `workspace` for shared hosted state, access control, settings, connections, hosted graphs, and hosted queries.",
           "  - Prefer --workspace for explicit cloud context. FIDE_WORKSPACE and saved machine settings are fallbacks.",
         ],
       },

@@ -16,6 +16,12 @@ function helpText(): string {
           ],
         },
         {
+          title: "Commands",
+          items: [
+            "  status   Inspect active machine, project, and workspace context",
+          ],
+        },
+        {
           title: "Groups",
           items: [
             "  graph    Graph authoring, configured store access, builds, and graph definitions",
@@ -28,10 +34,11 @@ function helpText(): string {
         {
           title: "Workflows",
           items: [
+            "  fide status",
             "  fide graph write '<json>'             Write statement inputs into the local .fide directory",
-            "  fide graph query write --statement-store sqlite --name recentStatements 'select * from statements limit 10'",
-            "  fide graph query --statement-store primary 'select * from statements limit 10'",
-            "  fide graph build --statement-store combined",
+            "  fide graph query write --graph sqlite --name recentStatements 'select * from statements limit 10'",
+            "  fide graph query --graph primary 'select * from statements limit 10'",
+            "  fide graph build --graph combined",
             "  fide auth login --api-key fide_sk_...",
             "  fide workspace list",
           ],
@@ -64,6 +71,11 @@ export async function runCli(argv: string[]): Promise<number> {
     if (group === "schema") {
       const { runSchemaCommand } = await import("./commands/schema/index.js");
       return await runSchemaCommand(command, rest);
+    }
+
+    if (group === "status") {
+      const { runStatusCommand } = await import("./commands/status.js");
+      return await runStatusCommand([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
     if (group === "docs") {

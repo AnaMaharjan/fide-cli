@@ -13,14 +13,15 @@ export function workspaceQueriesHelp(): string {
         title: "Commands",
         items: [
           "  list       List hosted queries for a workspace",
-          "  get        Get a hosted query by statement store key and name",
-          "  run        Execute a hosted saved query against the workspace graph store",
+          "  get        Get a hosted query by graph key and name",
+          "  run        Execute a hosted saved query against a selected graph",
         ],
       },
       {
         title: "Notes",
         items: [
           "  - Use --workspace <workspace-id> to select a workspace explicitly.",
+          "  - Use --graph <key> to target a workspace graph.",
           "  - Use --query-store <key> when a workspace has more than one hosted query store configured.",
           "  - Use --limit <n> to cap execution result size on run.",
           "  - Hosted queries use the same canonical query shape as local saved queries, without local file metadata.",

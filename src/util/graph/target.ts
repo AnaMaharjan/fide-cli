@@ -29,7 +29,7 @@ type GraphRunStateCompat = GraphRunState & {
   lastRunStatementsAdded?: number;
 };
 
-type PostgresStatementStoreSettings = {
+type PostgresGraphStoreSettings = {
   type: "postgres";
   connection?: string;
   schema: string;
@@ -37,7 +37,7 @@ type PostgresStatementStoreSettings = {
   metadata?: GraphRunState["metadata"];
 };
 
-type SqliteStatementStoreSettings = {
+type SqliteGraphStoreSettings = {
   type: "sqlite";
   connection: string;
   gitignore?: boolean;
@@ -45,7 +45,7 @@ type SqliteStatementStoreSettings = {
   metadata?: GraphRunState["metadata"];
 };
 
-type FideJsonlStatementStoreSettings = {
+type FideJsonlGraphStoreSettings = {
   type: "fide-jsonl";
   connection: string;
   recipe?: GraphRecipe;
@@ -53,7 +53,7 @@ type FideJsonlStatementStoreSettings = {
 };
 
 export type FideSettings = {
-  statementStores?: Record<string, PostgresStatementStoreSettings | SqliteStatementStoreSettings | FideJsonlStatementStoreSettings>;
+  graphs?: Record<string, PostgresGraphStoreSettings | SqliteGraphStoreSettings | FideJsonlGraphStoreSettings>;
   queryStores?: Record<string, QueryStoreSettings>;
 };
 
@@ -128,7 +128,7 @@ function normalizeGraphRunState(state: GraphRunStateCompat | null | undefined): 
 function validateRecipe(
   key: string,
   recipe: GraphRecipe,
-  statementStores: Record<string, PostgresStatementStoreSettings | SqliteStatementStoreSettings | FideJsonlStatementStoreSettings>,
+  graphs: Record<string, PostgresGraphStoreSettings | SqliteGraphStoreSettings | FideJsonlGraphStoreSettings>,
 ): void {
   if (!Array.isArray(recipe) || recipe.length === 0) {
     throw new Error(`Store "${key}" recipe must be a non-empty array of recipe steps.`);
@@ -144,7 +144,7 @@ function validateRecipe(
     if (step.from === key) {
       throw new Error(`Store "${key}" recipe step ${index + 1} cannot reference itself.`);
     }
-    const source = statementStores[step.from];
+    const source = graphs[step.from];
     if (!source) {
       throw new Error(`Store "${key}" recipe step ${index + 1} references unknown store "${step.from}". Define it in settings.json first.`);
     }
@@ -170,34 +170,34 @@ function validateRecipe(
 }
 
 export function validateGraphSettings(settings: FideSettings): void {
-  const statementStores = settings.statementStores ?? {};
-  for (const [key, store] of Object.entries(statementStores)) {
+  const graphs = settings.graphs ?? {};
+  for (const [key, store] of Object.entries(graphs)) {
     if (store.type === "postgres" && (typeof store.schema !== "string" || store.schema.trim().length === 0)) {
       throw new Error(
-        `Statement store "${key}" must include schema in settings.json. Suggested schema: "fide_graph".`,
+        `Graph "${key}" must include schema in settings.json. Suggested schema: "fide_graph".`,
       );
     }
     if ((store.type === "sqlite" || store.type === "fide-jsonl") && (typeof store.connection !== "string" || store.connection.trim().length === 0)) {
-      throw new Error(`Statement store "${key}" must include connection in settings.json.`);
+      throw new Error(`Graph "${key}" must include connection in settings.json.`);
     }
     if (!store.recipe) continue;
-    validateRecipe(key, store.recipe, statementStores);
+    validateRecipe(key, store.recipe, graphs);
   }
   validateQueryStoreSettings(settings);
 }
 
 export function listConfiguredStoreTargetKeys(root: string = process.cwd()): string[] {
   const settings = readSettings(root);
-  return Object.keys(settings?.statementStores ?? {});
+  return Object.keys(settings?.graphs ?? {});
 }
 
-function getConfiguredStatementStore(
+function getConfiguredGraphStore(
   settings: FideSettings | null,
   key: string,
-): { key: string | null; store: PostgresStatementStoreSettings | SqliteStatementStoreSettings | FideJsonlStatementStoreSettings | null } {
-  const store = settings?.statementStores?.[key] ?? null;
+): { key: string | null; store: PostgresGraphStoreSettings | SqliteGraphStoreSettings | FideJsonlGraphStoreSettings | null } {
+  const store = settings?.graphs?.[key] ?? null;
   if (!store) {
-    throw new Error(`Unknown store in settings.json: ${key}`);
+    throw new Error(`Unknown graph in settings.json: ${key}`);
   }
   return { key, store };
 }
@@ -241,7 +241,7 @@ function resolvePathWithinFideDir(connection: string): string {
 
 function resolvePostgresStore(settings: FideSettings | null, key: string): ResolvedPostgresStatementStore {
   ensureFideEnvLoaded();
-  const configured = getConfiguredStatementStore(settings, key);
+  const configured = getConfiguredGraphStore(settings, key);
   const postgresStore = configured.store?.type === "postgres" ? configured.store : null;
   if (!postgresStore) {
     throw new Error(`Store "${key}" is not a postgres store.`);
@@ -294,7 +294,7 @@ function resolvePostgresStore(settings: FideSettings | null, key: string): Resol
 
 function resolveSqliteStore(settings: FideSettings | null, key: string): ResolvedSqliteStatementStore {
   ensureFideEnvLoaded();
-  const configured = getConfiguredStatementStore(settings, key);
+  const configured = getConfiguredGraphStore(settings, key);
   const sqliteStore = configured.store?.type === "sqlite" ? configured.store : null;
   if (!sqliteStore) {
     throw new Error(`Store "${key}" is not a sqlite store.`);
@@ -313,7 +313,7 @@ function resolveSqliteStore(settings: FideSettings | null, key: string): Resolve
 }
 
 function resolveFideJsonlStore(settings: FideSettings | null, key: string): ResolvedFideJsonlStatementStore {
-  const configured = getConfiguredStatementStore(settings, key);
+  const configured = getConfiguredGraphStore(settings, key);
   const jsonlStore = configured.store?.type === "fide-jsonl" ? configured.store : null;
   if (!jsonlStore) {
     throw new Error(`Store "${key}" is not a fide-jsonl store.`);
@@ -330,16 +330,16 @@ function resolveFideJsonlStore(settings: FideSettings | null, key: string): Reso
 
 export function resolveStoreTarget(flags: Map<string, string | boolean>): ResolvedStoreTarget {
   const settings = readSettings(process.cwd());
-  const store = getStringFlag(flags, "statement-store") ?? getStringFlag(flags, "store");
-  if (!store) {
-    throw new Error("Missing required flag: --statement-store <name>.");
+  const graph = getStringFlag(flags, "graph") ?? getStringFlag(flags, "store");
+  if (!graph) {
+    throw new Error("Missing required flag: --graph <name>.");
   }
 
-  const configured = getConfiguredStatementStore(settings, store);
-  if (configured.store?.type === "postgres") return resolvePostgresStore(settings, store);
-  if (configured.store?.type === "sqlite") return resolveSqliteStore(settings, store);
-  if (configured.store?.type === "fide-jsonl") return resolveFideJsonlStore(settings, store);
-  throw new Error(`Unsupported store type for "${store}".`);
+  const configured = getConfiguredGraphStore(settings, graph);
+  if (configured.store?.type === "postgres") return resolvePostgresStore(settings, graph);
+  if (configured.store?.type === "sqlite") return resolveSqliteStore(settings, graph);
+  if (configured.store?.type === "fide-jsonl") return resolveFideJsonlStore(settings, graph);
+  throw new Error(`Unsupported graph type for "${graph}".`);
 }
 
 export function resolveGraphTarget(flags: Map<string, string | boolean>): ResolvedGraphTarget {

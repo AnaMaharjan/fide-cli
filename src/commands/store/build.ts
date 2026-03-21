@@ -42,15 +42,104 @@ function renderRecipeSql(sql: string, lastRunAt: string | null): string {
   return sql.replaceAll("$lastRunAt", `'${escapeSqlString(resolvedLastRunAt)}'`);
 }
 
+function describeStatementStore(target: ResolvedStatementStore) {
+  if (target.type === "postgres") {
+    return {
+      storeType: "postgres",
+      key: target.key,
+      schema: target.schema,
+      databaseUrlConfigured: Boolean(target.databaseUrl),
+      databaseUrlSource: target.databaseUrlSource,
+      databaseUrlEnv: target.databaseUrlEnv,
+    };
+  }
+  if (target.type === "sqlite") {
+    return {
+      storeType: "sqlite",
+      key: target.key,
+      file: target.file,
+      warnings: getSqliteWarnings(target.file, { gitignore: target.gitignore }),
+    };
+  }
+  return {
+    storeType: "fide-jsonl",
+    key: target.key,
+    dir: target.dir,
+  };
+}
+
+function describeRecipeStep(step: GraphRecipeStep, source: ResolvedStatementStore, lastRunAt: string | null) {
+  const sql = typeof step.sql === "string" ? renderRecipeSql(step.sql, lastRunAt) : null;
+  return {
+    from: step.from,
+    source: describeStatementStore(source),
+    usesSql: Boolean(sql),
+    sql,
+    fromDateUTC: step.fromDateUTC ?? null,
+    toDateUTC: step.toDateUTC ?? null,
+  };
+}
+
+function printBuildPayload(flags: Map<string, string | boolean>, payload: Record<string, unknown>): void {
+  if (shouldUseJsonOutput(flags)) {
+    printJson(payload);
+  } else {
+    console.log(JSON.stringify(payload, null, 2));
+  }
+}
+
+function previewStatementBuild(target: Extract<ResolvedStatementStore, { type: "postgres" | "sqlite" }>) {
+  const recipe = target.recipe ?? [];
+  const previousLastRunAt = target.runState?.metadata?.lastRunAt ?? null;
+  const steps = recipe.map((step) => {
+    const source = resolveStoreTarget(new Map<string, string | boolean>([["store", step.from]]));
+    if (sameGraphLocation(target, source)) {
+      throw new Error(`Store "${target.key ?? "unknown"}" recipe step source "${step.from}" points at the same physical store as the destination store.`);
+    }
+    return describeRecipeStep(step, source, previousLastRunAt);
+  });
+
+  return {
+    ok: true,
+    mode: "dry-run",
+    target: describeStatementStore(target),
+    lastRunAt: previousLastRunAt,
+    stepCount: steps.length,
+    steps,
+  };
+}
+
+function previewQueryStoreBuild(queryStore: ReturnType<typeof resolveQueryStore>, queries: Awaited<ReturnType<typeof readLocalQueries>>) {
+  return {
+    ok: true,
+    mode: "dry-run",
+    target: {
+      storeType: "postgres",
+      key: queryStore.key,
+      schema: queryStore.schema,
+      databaseUrlConfigured: Boolean(queryStore.databaseUrl),
+      databaseUrlSource: queryStore.databaseUrlSource,
+      databaseUrlEnv: queryStore.databaseUrlEnv,
+    },
+    queryCount: queries.length,
+    queries: queries.map((query) => ({
+      name: query.name,
+      graphKey: query.graphKey,
+      description: query.description,
+      file: query.file,
+    })),
+  };
+}
+
 async function writeStoreRunState(key: string, lastRunAt: string, lastRunStatementsAdded: number): Promise<void> {
   const settingsPath = resolveSettingsPath(process.cwd());
   const current = readJsonFile<FideSettings>(settingsPath) ?? {};
-  current.statementStores = current.statementStores ?? {};
-  const store = current.statementStores[key];
+  current.graphs = current.graphs ?? {};
+  const store = current.graphs[key];
   if (!store) {
     throw new Error(`Unknown store in settings.json: ${key}`);
   }
-  current.statementStores[key] = {
+  current.graphs[key] = {
     ...store,
     metadata: {
       lastRunAt,
@@ -373,8 +462,9 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
     console.log(buildHelp("fide graph build"));
     return 0;
   }
+  const dryRun = hasFlag(flags, "dry-run");
   if (flags.has("store") || flags.has("statements") || flags.has("queries")) {
-    throw new Error("This command uses `--statement-store <name>` or `--query-store <name>`, not `--store`, `--statements`, or `--queries`.");
+    throw new Error("This command uses `--graph <name>` or `--query-store <name>`, not `--store`, `--statements`, or `--queries`.");
   }
   if (flags.has("query-store")) {
     const queryFlags = new Map<string, string | boolean>(flags);
@@ -382,6 +472,10 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
     const queryStore = resolveQueryStore(queryFlags);
     const graphTarget = resolveGraphTarget(flags);
     const queries = await readLocalQueries(graphTarget.root);
+    if (dryRun) {
+      printBuildPayload(flags, previewQueryStoreBuild(queryStore, queries));
+      return 0;
+    }
     const queryCount = await replaceQueryStoreQueries(queryStore, queries);
     const payload = {
       ok: true,
@@ -390,24 +484,24 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
       schema: queryStore.schema,
       queryCount,
     };
-    if (shouldUseJsonOutput(flags)) {
-      printJson(payload);
-    } else {
-      console.log(JSON.stringify(payload, null, 2));
-    }
+    printBuildPayload(flags, payload);
     return 0;
   }
 
-  if (!flags.has("statement-store")) throw new Error("Missing required flag: --statement-store <name> or --query-store <name>.");
+  if (!flags.has("graph")) throw new Error("Missing required flag: --graph <name> or --query-store <name>.");
 
   const statementFlags = new Map<string, string | boolean>(flags);
-  statementFlags.set("store", String(flags.get("statement-store")));
+  statementFlags.set("store", String(flags.get("graph")));
 
   const target = resolveStoreTarget(statementFlags);
   assertRecipeTarget(target);
-  const recipe = target.recipe;
+  const recipe = target.recipe ?? null;
   if (!recipe) throw new Error(`Store "${target.key ?? "unknown"}" has no recipe.`);
   const previousLastRunAt = target.runState?.metadata?.lastRunAt ?? null;
+  if (dryRun) {
+    printBuildPayload(flags, previewStatementBuild(target));
+    return 0;
+  }
   printBuildProgress(flags, `Building statement store ${JSON.stringify(target.key ?? "unknown")}...`);
 
   for (const step of recipe) {
@@ -460,10 +554,6 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
 
   if (target.key) await writeStoreRunState(target.key, lastRunAt, totalStatementCount);
 
-  if (shouldUseJsonOutput(flags)) {
-    printJson(payload);
-  } else {
-    console.log(JSON.stringify(payload, null, 2));
-  }
+  printBuildPayload(flags, payload);
   return 0;
 }

@@ -7,12 +7,12 @@ import { requireWorkspaceApiClient } from "../shared.js";
 export async function runWorkspaceQueriesRun(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
-  const statementStoreKey = getStringFlag(flags, "statement-store");
+  const graphKey = getStringFlag(flags, "graph");
   const name = getStringFlag(flags, "name");
   const queryStore = getStringFlag(flags, "query-store");
   const limitFlag = getStringFlag(flags, "limit");
 
-  if (!statementStoreKey) throw new Error("Missing required flag: --statement-store");
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
   if (!name) throw new Error("Missing required flag: --name");
   const limit = limitFlag ? Number(limitFlag) : undefined;
   if (limitFlag && (!Number.isInteger(limit) || Number(limit) <= 0)) {
@@ -23,7 +23,7 @@ export async function runWorkspaceQueriesRun(args: string[]): Promise<number> {
   const { auth, client } = await requireWorkspaceApiClient();
   const result = await client.runWorkspaceQuery({
     workspaceId: selection.workspaceId,
-    statementStoreKey,
+    graphKey,
     name,
     ...(queryStore ? { queryStore } : {}),
     ...(typeof limit === "number" ? { limit } : {}),
@@ -38,7 +38,7 @@ export async function runWorkspaceQueriesRun(args: string[]): Promise<number> {
   }, {
     command: "fide workspace queries run",
     next: {
-      get: `fide workspace queries get --workspace ${selection.workspaceId} --statement-store ${statementStoreKey} --name ${name}${queryStore ? ` --query-store ${queryStore}` : ""}`,
+      get: `fide workspace queries get --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}${queryStore ? ` --query-store ${queryStore}` : ""}`,
     },
   });
 

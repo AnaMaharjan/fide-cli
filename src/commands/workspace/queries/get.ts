@@ -7,18 +7,18 @@ import { requireWorkspaceApiClient } from "../shared.js";
 export async function runWorkspaceQueriesGet(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
-  const statementStoreKey = getStringFlag(flags, "statement-store");
+  const graphKey = getStringFlag(flags, "graph");
   const name = getStringFlag(flags, "name");
   const queryStore = getStringFlag(flags, "query-store");
 
-  if (!statementStoreKey) throw new Error("Missing required flag: --statement-store");
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
   if (!name) throw new Error("Missing required flag: --name");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient();
   const query = await client.getWorkspaceQuery({
     workspaceId: selection.workspaceId,
-    statementStoreKey,
+    graphKey,
     name,
     ...(queryStore ? { queryStore } : {}),
   });

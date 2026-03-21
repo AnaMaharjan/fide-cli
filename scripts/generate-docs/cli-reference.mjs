@@ -15,6 +15,7 @@ const GENERATED_PATHS = [
 
 const DOC_PAGES = [
   { slug: "fide", tokens: [] },
+  { slug: "status", tokens: ["status"], surfaces: ["status"] },
   { slug: "graph", tokens: ["graph"] },
   { slug: "graph-write", tokens: ["graph", "write"], surfaces: ["graph.write"] },
   { slug: "graph-draft", tokens: ["graph", "draft"], surfaces: ["graph.draft"] },
@@ -58,7 +59,7 @@ const DOC_PAGES = [
 const PAGE_GROUPS = [
   {
     title: "Top Level",
-    pages: ["fide", "docs", "schema"],
+    pages: ["fide", "status", "docs", "schema"],
   },
   {
     title: "Graph",
