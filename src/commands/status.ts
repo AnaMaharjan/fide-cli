@@ -5,53 +5,11 @@ import { renderCommandHelp } from "../util/command-metadata.js";
 import { createAuthApiClient } from "../util/auth-api.js";
 import { readStoredAuthSettings, resolveAuthSettings, resolveAuthSettingsPath } from "../util/auth-settings.js";
 import { printJson } from "../util/io.js";
+import { formatPretty } from "../util/pretty.js";
 import { okResponse } from "../util/response.js";
 import { statusCommand } from "./metadata.js";
 import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/fide-dir.js";
 import { resolveWorkspaceSelection } from "../util/workspace-settings.js";
-
-function renderPrettyStatus(payload: ReturnType<typeof okResponse<{
-  machine: Record<string, unknown>;
-  project: Record<string, unknown>;
-  workspace: Record<string, unknown>;
-}>>): string {
-  const machine = payload.machine as {
-    authConfigured: boolean;
-    authValid: boolean;
-    authSource: string | null;
-    baseUrl: string | null;
-    authError: string | null;
-  };
-  const project = payload.project as {
-    root: string;
-    fideDir: string;
-    source: string;
-    settingsPresent: boolean;
-  };
-  const workspace = payload.workspace as {
-    selected: string | null;
-    source: string | null;
-  };
-
-  const lines = [
-    "Machine",
-    `  auth: ${machine.authConfigured ? (machine.authValid ? "configured and valid" : "configured but invalid") : "not configured"}`,
-    `  source: ${machine.authSource ?? "none"}`,
-    `  base URL: ${machine.baseUrl ?? "none"}`,
-    ...(machine.authError ? [`  error: ${machine.authError}`] : []),
-    "",
-    "Project",
-    `  root: ${project.root}`,
-    `  .fide: ${project.fideDir}`,
-    `  source: ${project.source}`,
-    `  settings: ${project.settingsPresent ? "present" : "missing"}`,
-    "",
-    "Workspace",
-    `  selected: ${workspace.selected ?? "none"}`,
-    `  source: ${workspace.source ?? "none"}`,
-  ];
-  return lines.join("\n");
-}
 
 export async function runStatusCommand(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
@@ -111,7 +69,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(renderPrettyStatus(payload));
+    console.log(formatPretty("status.v1", payload) ?? JSON.stringify(payload, null, 2));
   }
   return 0;
 }

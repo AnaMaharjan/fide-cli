@@ -1,5 +1,18 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderHelp } from "./util/help.js";
 import { printCliError } from "./util/error.js";
+
+function readCliVersion(): string {
+  const srcDir = dirname(fileURLToPath(import.meta.url));
+  const packageJsonPath = resolve(srcDir, "..", "package.json");
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version?: unknown };
+  if (typeof packageJson.version !== "string" || packageJson.version.trim().length === 0) {
+    throw new Error("CLI package version is missing from package.json.");
+  }
+  return packageJson.version;
+}
 
 function helpText(): string {
   return [
@@ -10,6 +23,7 @@ function helpText(): string {
         {
           title: "Usage",
           items: [
+            "  fide --version",
             "  fide <group> [command] [flags]",
             "  fide docs <path>",
             "  fide schema [surface]",
@@ -49,6 +63,7 @@ function helpText(): string {
           title: "Flags",
           items: [
             "  --pretty, -p   Human-readable text output (default is JSON)",
+            "  --version      Show CLI version",
             "  --help, -h     Show help",
           ],
         },
@@ -66,6 +81,11 @@ export async function runCli(argv: string[]): Promise<number> {
   try {
     if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
       console.log(helpText());
+      return 0;
+    }
+
+    if (argv[0] === "--version") {
+      console.log(readCliVersion());
       return 0;
     }
 

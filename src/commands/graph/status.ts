@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { inspectGraphStore, inspectQueryStore } from "@chris-test/graph-db";
-import { hasFlag, parseArgs } from "../../util/args.js";
+import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import {
   getLocalFideWarnings,
   inspectFideJsonlStore,
@@ -16,9 +17,9 @@ import {
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { graphStatusCommand } from "./metadata.js";
 
-function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
+function nextCommands(key: string | null, recipe: unknown, graphStoreType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
-  if (storeType === "fide-jsonl") {
+  if (graphStoreType === "fide-jsonl") {
     return {
       writeHelpCommand: "fide graph statements write -h",
       writeCommand: "fide graph statements write ...",
@@ -35,12 +36,12 @@ function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres
   return next;
 }
 
-async function getStatementStoreStatus(target: ReturnType<typeof resolveStoreTarget>) {
+async function getGraphStatus(target: ReturnType<typeof resolveStoreTarget>) {
   if (target.type === "fide-jsonl") {
     const inspection = await inspectFideJsonlStore(target.dir);
     return {
       ok: true,
-      storeType: "fide-jsonl" as const,
+      graphStoreType: "fide-jsonl" as const,
       key: target.key,
       configured: true,
       reachable: inspection.reachable,
@@ -78,14 +79,14 @@ async function getRuntimeStatusOverview() {
   const configuredKeys = listConfiguredStoreTargetKeys();
   const graphs = await Promise.all(configuredKeys.map(async (key) => {
     const resolved = resolveStoreTarget(new Map<string, string | boolean>([["graph", key]]));
-    const detailed = await getStatementStoreStatus(resolved);
+    const detailed = await getGraphStatus(resolved);
     return {
       key,
-      storeType: detailed.storeType,
+      graphStoreType: detailed.graphStoreType,
       warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
         statusCommand: `fide graph status --graph ${key}`,
-        ...(("storeType" in detailed && detailed.storeType === "fide-jsonl")
+        ...(("graphStoreType" in detailed && detailed.graphStoreType === "fide-jsonl")
           ? {
               writeHelpCommand: "fide graph statements write -h",
               writeCommand: "fide graph statements write ...",
@@ -94,7 +95,7 @@ async function getRuntimeStatusOverview() {
               queryHelpCommand: "fide graph query run -h",
               queryCommand: `fide graph query run --graph ${key} ...`,
             }),
-        ...(Array.isArray((detailed as { recipe?: unknown }).recipe) && (detailed as { recipe?: unknown[] }).recipe!.length > 0 && detailed.storeType !== "fide-jsonl"
+        ...(Array.isArray((detailed as { recipe?: unknown }).recipe) && (detailed as { recipe?: unknown[] }).recipe!.length > 0 && detailed.graphStoreType !== "fide-jsonl"
           ? {
               buildHelpCommand: "fide graph build -h",
               buildCommand: `fide graph build --graph ${key}`,
@@ -122,6 +123,7 @@ async function getRuntimeStatusOverview() {
 
 export async function runGraphStatus(args: string[] = []): Promise<number> {
   const { flags, positionals } = parseArgs(args);
+  const useJson = shouldUseJsonOutput(flags);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(renderCommandHelp(graphStatusCommand));
     return 0;
@@ -131,31 +133,47 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     throw new Error("`graph status` does not accept positional arguments.");
   }
 
-  const statementStore = typeof flags.get("graph") === "string" ? String(flags.get("graph")) : null;
+  const graphKey = typeof flags.get("graph") === "string" ? String(flags.get("graph")) : null;
   const queryStore = typeof flags.get("query-store") === "string" ? String(flags.get("query-store")) : null;
   const hasFideDir = flags.has("fide-dir");
 
-  if (statementStore && queryStore) {
+  if (graphKey && queryStore) {
     throw new Error("Pass either `--graph` or `--query-store`, not both.");
   }
-  if ((statementStore || queryStore) && hasFideDir) {
+  if ((graphKey || queryStore) && hasFideDir) {
     throw new Error("`--fide-dir` only applies to local status. Omit it when targeting a configured store.");
   }
 
-  if (statementStore) {
-    const targetFlags = new Map<string, string | boolean>([["graph", statementStore]]);
-    printJson({
+  if (graphKey) {
+    const targetFlags = new Map<string, string | boolean>([["graph", graphKey]]);
+    const payload = {
       ok: true,
-      statementStore: await getStatementStoreStatus(resolveStoreTarget(targetFlags)),
-    });
+      scope: "graph-status.v1",
+      local: null,
+      graphs: [await getGraphStatus(resolveStoreTarget(targetFlags))],
+      queryStores: [],
+    };
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(formatPretty("graph-status.v1", payload) ?? JSON.stringify(payload, null, 2));
+    }
     return 0;
   }
 
   if (queryStore) {
-    printJson({
+    const payload = {
       ok: true,
-      queryStore: await getQueryStoreStatus(queryStore),
-    });
+      scope: "graph-status.v1",
+      local: null,
+      graphs: [],
+      queryStores: [await getQueryStoreStatus(queryStore)],
+    };
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(formatPretty("graph-status.v1", payload) ?? JSON.stringify(payload, null, 2));
+    }
     return 0;
   }
 
@@ -190,10 +208,16 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     warnings: getLocalFideWarnings(root, { gitignore: graphTarget.gitignore }),
   };
 
-  printJson({
+  const payload = {
     ok: true,
+    scope: "graph-status.v1",
     local,
     ...(await getRuntimeStatusOverview()),
-  });
+  };
+  if (useJson) {
+    printJson(payload);
+  } else {
+    console.log(formatPretty("graph-status.v1", payload) ?? JSON.stringify(payload, null, 2));
+  }
   return 0;
 }

@@ -1,6 +1,7 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
 import { workspaceListCommand } from "./metadata.js";
 import { requireWorkspaceApiClient } from "./shared.js";
@@ -32,13 +33,7 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    for (const workspace of result.workspaces) {
-      console.log(`${workspace.id} ${workspace.slug} ${workspace.name}`);
-    }
-    if (result.workspaces[0]) {
-      console.log("");
-      console.log(`Next: fide workspace members list --workspace ${result.workspaces[0].id}`);
-    }
+    console.log(formatPretty("workspace-list.v1", payload) ?? JSON.stringify(payload, null, 2));
   }
   return 0;
 }

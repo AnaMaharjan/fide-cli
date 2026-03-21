@@ -1,6 +1,7 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
+import { formatPretty } from "../../../util/pretty.js";
 import { okResponse } from "../../../util/response.js";
 import { getWorkspaceFlag } from "../../../util/workspace-settings.js";
 import { workspaceMembersCommand } from "../metadata.js";
@@ -36,9 +37,7 @@ export async function runWorkspaceMembers(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    for (const member of result.members) {
-      console.log(`${member.userId} ${member.userType ?? "unknown"} roles=${member.roles.join(",")} permissions=${member.permissions.join(",")}`);
-    }
+    console.log(formatPretty("workspace-members.v1", payload) ?? JSON.stringify(payload, null, 2));
   }
   return 0;
 }

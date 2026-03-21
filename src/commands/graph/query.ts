@@ -348,7 +348,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     }
     const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
     if (target.type === "fide-jsonl") {
-      throw new Error("This command only supports sqlite and postgres statement stores. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres store first.");
+      throw new Error("This command only supports sqlite and postgres graphs. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
     }
     const result = await executeGraphQuery({
       target,
@@ -411,7 +411,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
   const { query } = await readProjectQueryOrThrow(flags);
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
   if (target.type === "fide-jsonl") {
-    throw new Error("This command only supports sqlite and postgres statement stores. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres store first.");
+    throw new Error("This command only supports sqlite and postgres graphs. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
   }
   const result = await executeGraphQuery({
     target,

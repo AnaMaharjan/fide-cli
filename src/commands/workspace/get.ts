@@ -1,6 +1,7 @@
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
 import { getWorkspaceFlag } from "../../util/workspace-settings.js";
 import { workspaceGetCommand } from "./metadata.js";
@@ -35,7 +36,7 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`${workspace.id} ${workspace.slug} ${workspace.name}`);
+    console.log(formatPretty("workspace-get.v1", payload) ?? JSON.stringify(payload, null, 2));
   }
   return 0;
 }

@@ -21,12 +21,13 @@ import {
   resolveStoreTarget,
   type FideSettings,
   type GraphRecipeStep,
-  type ResolvedStatementStore,
+  type ResolvedGraphStore,
   validateGraphSettings,
 } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { graphBuildCommand } from "./metadata.js";
 
 function printBuildProgress(flags: Map<string, string | boolean>, message: string): void {
@@ -47,10 +48,10 @@ function renderRecipeSql(sql: string, lastRunAt: string | null): string {
   return sql.replaceAll("$lastRunAt", `'${escapeSqlString(resolvedLastRunAt)}'`);
 }
 
-function describeStatementStore(target: ResolvedStatementStore) {
+function describeGraphStore(target: ResolvedGraphStore) {
   if (target.type === "postgres") {
     return {
-      storeType: "postgres",
+      graphStoreType: "postgres",
       key: target.key,
       schema: target.schema,
       databaseUrlConfigured: Boolean(target.databaseUrl),
@@ -60,24 +61,24 @@ function describeStatementStore(target: ResolvedStatementStore) {
   }
   if (target.type === "sqlite") {
     return {
-      storeType: "sqlite",
+      graphStoreType: "sqlite",
       key: target.key,
       file: target.file,
       warnings: getLocalFideWarnings(process.cwd(), { gitignore: target.gitignore }),
     };
   }
   return {
-    storeType: "fide-jsonl",
+    graphStoreType: "fide-jsonl",
     key: target.key,
     dir: target.dir,
   };
 }
 
-function describeRecipeStep(step: GraphRecipeStep, source: ResolvedStatementStore, lastRunAt: string | null) {
+function describeRecipeStep(step: GraphRecipeStep, source: ResolvedGraphStore, lastRunAt: string | null) {
   const sql = typeof step.sql === "string" ? renderRecipeSql(step.sql, lastRunAt) : null;
   return {
     from: step.from,
-    source: describeStatementStore(source),
+    source: describeGraphStore(source),
     usesSql: Boolean(sql),
     sql,
     fromDateUTC: step.fromDateUTC ?? null,
@@ -89,11 +90,11 @@ function printBuildPayload(flags: Map<string, string | boolean>, payload: Record
   if (shouldUseJsonOutput(flags)) {
     printJson(payload);
   } else {
-    console.log(JSON.stringify(payload, null, 2));
+    console.log(formatPretty("graph-build.v1", payload) ?? JSON.stringify(payload, null, 2));
   }
 }
 
-function sameGraphLocation(a: ResolvedStatementStore, b: ResolvedStatementStore): boolean {
+function sameGraphLocation(a: ResolvedGraphStore, b: ResolvedGraphStore): boolean {
   if (a.type !== b.type) return false;
   if (a.type === "sqlite" && b.type === "sqlite") return a.file === b.file;
   if (a.type === "postgres" && b.type === "postgres") return a.databaseUrl === b.databaseUrl && a.schema === b.schema;
@@ -101,13 +102,13 @@ function sameGraphLocation(a: ResolvedStatementStore, b: ResolvedStatementStore)
   return false;
 }
 
-function assertRecipeTarget(target: ResolvedStatementStore): asserts target is Extract<ResolvedStatementStore, { type: "postgres" | "sqlite" }> {
+function assertRecipeTarget(target: ResolvedGraphStore): asserts target is Extract<ResolvedGraphStore, { type: "postgres" | "sqlite" }> {
   if (!target.recipe || target.recipe.length === 0) {
     throw new Error(`Store "${target.key ?? "unknown"}" has no recipe.`);
   }
 }
 
-function previewStatementBuild(target: Extract<ResolvedStatementStore, { type: "postgres" | "sqlite" }>) {
+function previewGraphBuild(target: Extract<ResolvedGraphStore, { type: "postgres" | "sqlite" }>) {
   const recipe = target.recipe ?? [];
   const previousLastRunAt = target.runState?.metadata?.lastRunAt ?? null;
   const steps = recipe.map((step) => {
@@ -120,8 +121,11 @@ function previewStatementBuild(target: Extract<ResolvedStatementStore, { type: "
 
   return {
     ok: true,
+    scope: "graph-build.v1",
     mode: "dry-run",
-    target: describeStatementStore(target),
+    target: describeGraphStore(target),
+    graphStoreType: target.type,
+    key: target.key,
     lastRunAt: previousLastRunAt,
     stepCount: steps.length,
     steps,
@@ -131,9 +135,10 @@ function previewStatementBuild(target: Extract<ResolvedStatementStore, { type: "
 function previewQueryStoreBuild(queryStore: ReturnType<typeof resolveQueryStore>, queries: Awaited<ReturnType<typeof readLocalQueries>>) {
   return {
     ok: true,
+    scope: "graph-build.v1",
     mode: "dry-run",
     target: {
-      storeType: "postgres",
+      graphStoreType: "postgres",
       key: queryStore.key,
       schema: queryStore.schema,
       databaseUrlConfigured: Boolean(queryStore.databaseUrl),
@@ -169,7 +174,7 @@ async function writeStoreRunState(key: string, lastRunAt: string, lastRunStateme
   await writeFile(settingsPath, `${JSON.stringify(current, null, 2)}\n`, "utf8");
 }
 
-async function queryRecipeStep(step: GraphRecipeStep, lastRunAt: string | null): Promise<{ source: ResolvedStatementStore; rows: ResolvedStatementRow[] }> {
+async function queryRecipeStep(step: GraphRecipeStep, lastRunAt: string | null): Promise<{ source: ResolvedGraphStore; rows: ResolvedStatementRow[] }> {
   const source = resolveStoreTarget(new Map<string, string | boolean>([["graph", step.from]]));
   const sql = typeof step.sql === "string" ? renderRecipeSql(step.sql, lastRunAt) : null;
 
@@ -217,7 +222,8 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
     const queryCount = await replaceQueryStoreQueries(queryStore, queries);
     printBuildPayload(flags, {
       ok: true,
-      storeType: "postgres",
+      scope: "graph-build.v1",
+      graphStoreType: "postgres",
       key: queryStore.key,
       schema: queryStore.schema,
       queryCount,
@@ -232,11 +238,11 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
   assertRecipeTarget(target);
   const previousLastRunAt = target.runState?.metadata?.lastRunAt ?? null;
   if (dryRun) {
-    printBuildPayload(flags, previewStatementBuild(target));
+      printBuildPayload(flags, previewGraphBuild(target));
     return 0;
   }
 
-  printBuildProgress(flags, `Building statement store ${JSON.stringify(target.key ?? "unknown")}...`);
+  printBuildProgress(flags, `Building graph ${JSON.stringify(target.key ?? "unknown")}...`);
 
   for (const step of target.recipe ?? []) {
     const source = resolveStoreTarget(new Map<string, string | boolean>([["graph", step.from]]));
@@ -275,7 +281,8 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
 
   printBuildPayload(flags, {
     ok: true,
-    storeType: target.type,
+    scope: "graph-build.v1",
+    graphStoreType: target.type,
     key: target.key,
     statementsAdded: totalStatements,
     warnings: target.type === "sqlite" ? getLocalFideWarnings(process.cwd(), { gitignore: target.gitignore }) : undefined,

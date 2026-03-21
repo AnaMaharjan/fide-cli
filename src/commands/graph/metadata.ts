@@ -120,16 +120,14 @@ export const graphStatusCommand = defineCommand({
   output: {
     ok: "boolean",
     local: "object?",
-    graph: "object?",
-    queryStore: "object?",
-    graphs: "array<{ key: string, storeType: string, warnings?: string[], next?: object }>?",
-    queryStores: "array<{ key: string, storeType: string, next?: object }>?",
+    graphs: "array<object>",
+    queryStores: "array<object>",
     next: "object?",
   },
   notes: [
-    "With no selector, returns local .fide status plus configured graph and query-store summaries.",
-    "Use `--graph <name>` for one configured graph.",
-    "Use `--query-store <name>` for one configured query store.",
+    "Always returns `graphs` and `queryStores` arrays so targeted and overview modes share the same top-level shape.",
+    "With no selector, also returns local .fide status.",
+    "Use `--graph <name>` or `--query-store <name>` to narrow the corresponding array to one item.",
   ],
 });
 
@@ -261,7 +259,7 @@ export const graphQueryRunCommand = defineCommand({
   ],
   output: {
     ok: "boolean?",
-    storeType: "string?",
+    graphStoreType: "string?",
     key: "string?",
     file: "string?",
     schema: "string?",
@@ -400,7 +398,7 @@ export const graphBuildCommand = defineCommand({
   output: {
     ok: "boolean",
     mode: "string?",
-    storeType: "string",
+    graphStoreType: "string",
     key: "string?",
     file: "string?",
     schema: "string?",
