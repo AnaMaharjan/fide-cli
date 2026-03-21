@@ -29,8 +29,8 @@ function helpText(): string {
           title: "Workflows",
           items: [
             "  fide graph write '<json>'             Write statement inputs into the local .fide directory",
-            "  fide graph write --query --store sqlite --name recentStatements 'select * from statements limit 10'",
-            "  fide graph sql --store primary 'select * from statements limit 10'",
+            "  fide graph write --query --statement-store sqlite --name recentStatements 'select * from statements limit 10'",
+            "  fide graph sql --statement-store primary 'select * from statements limit 10'",
             "  fide graph build --statements combined",
             "  fide auth login --api-key fide_sk_...",
             "  fide workspace list",

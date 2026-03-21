@@ -15,7 +15,6 @@
     "graph-write",
     "graph-draft",
     "graph-status",
-    "graph-stores",
     "graph-sql",
     "graph-build",
     "graph-defs",

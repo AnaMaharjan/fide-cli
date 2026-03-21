@@ -330,9 +330,9 @@ function resolveFideJsonlStore(settings: FideSettings | null, key: string): Reso
 
 export function resolveStoreTarget(flags: Map<string, string | boolean>): ResolvedStoreTarget {
   const settings = readSettings(process.cwd());
-  const store = getStringFlag(flags, "store");
+  const store = getStringFlag(flags, "statement-store") ?? getStringFlag(flags, "store");
   if (!store) {
-    throw new Error("Missing required flag: --store <name>.");
+    throw new Error("Missing required flag: --statement-store <name>.");
   }
 
   const configured = getConfiguredStatementStore(settings, store);

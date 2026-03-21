@@ -32,7 +32,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
     params: [
       { name: "fide-dir", type: "string", required: false, description: "Local .fide directory override" },
       { name: "query", type: "boolean", required: true, description: "Write a saved query file instead of statement inputs" },
-      { name: "store", type: "string", required: true, description: "Statement store key for this query file" },
+      { name: "statement-store", type: "string", required: true, description: "Statement store key for this query file" },
       { name: "name", type: "string", required: true, description: "Query file name without .sql" },
       { name: "description", type: "string", required: false, description: "Optional query description header" },
       { name: "stdin", type: "boolean", required: false, description: "Read SQL from stdin" },

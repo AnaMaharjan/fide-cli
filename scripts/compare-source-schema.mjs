@@ -24,7 +24,6 @@ const SURFACES = [
   { surface: "graph.defs", tokens: ["graph", "defs"], sourcePath: "src/commands/graph/defs.ts", functionName: "runGraphDefs" },
   { surface: "graph.sql", tokens: ["graph", "sql"], sourcePath: "src/commands/store/sql.ts", functionName: "runStoreSql" },
   { surface: "graph.build", tokens: ["graph", "build"], sourcePath: "src/commands/store/build.ts", functionName: "runStoreBuild" },
-  { surface: "graph.stores", tokens: ["graph", "stores"], sourcePath: "src/commands/store/status.ts", functionName: "runStoreStatus" },
   { surface: "auth.login", tokens: ["auth", "login"], sourcePath: "src/commands/auth/login.ts", functionName: "runAuthLogin" },
   { surface: "auth.logout", tokens: ["auth", "logout"], sourcePath: "src/commands/auth/logout.ts", functionName: "runAuthLogout" },
   { surface: "auth.status", tokens: ["auth", "status"], sourcePath: "src/commands/auth/status.ts", functionName: "runAuthStatus" },

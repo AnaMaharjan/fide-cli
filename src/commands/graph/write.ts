@@ -18,9 +18,9 @@ function writeHelp(): string {
           "  fide graph write [--fide-dir <path>] <json>",
           "  fide graph write [--fide-dir <path>] --file <inputs> [--format <json|jsonl|fsd>]",
           "  fide graph write [--fide-dir <path>] --stdin [--format <json|jsonl|fsd>]",
-          "  fide graph write --query --store <statement-store> --name <query-name> <sql>",
-          "  fide graph write --query --store <statement-store> --name <query-name> --file <query.sql>",
-          "  fide graph write --query --store <statement-store> --name <query-name> --stdin",
+          "  fide graph write --query --statement-store <name> --name <query-name> <sql>",
+          "  fide graph write --query --statement-store <name> --name <query-name> --file <query.sql>",
+          "  fide graph write --query --statement-store <name> --name <query-name> --stdin",
         ],
       },
       {
@@ -28,7 +28,7 @@ function writeHelp(): string {
         items: [
           "  --fide-dir <path>             Local .fide directory override",
           "  --query                       Write a saved query file instead of statement inputs",
-          "  --store <statement-store>     Statement store key used by a saved query",
+          "  --statement-store <name>      Statement store key used by a saved query",
           "  --name <query-name>           Query file name without .sql",
           "  --description <text>          Optional leading description header for a saved query",
           "  --file <inputs>               Read statement inputs from a file",
@@ -117,10 +117,10 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     }
     const { parsed, sql } = await resolveQuerySql(argsOrFlags);
     const flags = parsed.flags;
-    const statementStoreKey = getStringFlag(flags, "store");
+    const statementStoreKey = getStringFlag(flags, "statement-store");
     const name = getStringFlag(flags, "name");
     const description = getStringFlag(flags, "description");
-    if (!statementStoreKey) throw new Error("Missing required flag: --store <statement-store>.");
+    if (!statementStoreKey) throw new Error("Missing required flag: --statement-store <name>.");
     if (!name) throw new Error("Missing required flag: --name <query-name>.");
     if (!sql.trim()) {
       console.error("Missing SQL for `graph write --query`. Use `--stdin`, `--file <path>`, or pass SQL inline.");

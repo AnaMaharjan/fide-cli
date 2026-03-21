@@ -1,13 +1,11 @@
 import { createPgClient } from "@chris-test/db";
-import { hasFlag, parseArgs } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
+import { getStringFlag } from "../../util/args.js";
 import { printJson } from "../../util/io.js";
 import { GRAPH_REFERENCE_IDENTIFIERS_TABLE, GRAPH_STATEMENTS_TABLE, listConfiguredStoreTargetKeys, resolveStoreTarget, type ResolvedStatementStore } from "../../util/graph/target.js";
 import { inspectFideJsonlStore } from "../../util/graph/fide-jsonl.js";
 import { inspectSqliteGraph } from "../../util/graph/sqlite.js";
 import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { listConfiguredQueryStoreKeys, resolveQueryStore } from "../../util/query/target.js";
-import { graphStoresCommand } from "../graph/metadata.js";
 
 function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
@@ -19,7 +17,7 @@ function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres
   }
   const next: Record<string, string> = {
     sqlHelpCommand: "fide graph sql -h",
-    sqlCommand: `fide graph sql --store ${key} ...`,
+    sqlCommand: `fide graph sql --statement-store ${key} ...`,
   };
   if (Array.isArray(recipe) && recipe.length > 0) {
     next.buildHelpCommand = "fide graph build -h";
@@ -28,24 +26,7 @@ function nextCommands(key: string | null, recipe: unknown, storeType?: "postgres
   return next;
 }
 
-export async function runStoreStatus(args: string[] = [], invocation: "graph" | "store" = "graph"): Promise<number> {
-  const { flags, positionals } = parseArgs(args);
-  if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    console.log(renderCommandHelp(graphStoresCommand));
-    return 0;
-  }
-
-  if (positionals.length > 1) {
-    throw new Error("`graph stores` accepts at most one positional store.");
-  }
-  if (positionals.length === 1) {
-    if (flags.has("store")) {
-      throw new Error("Pass either a positional store or `--store`, not both.");
-    }
-    flags.set("store", positionals[0]);
-  }
-
-  async function statusForTarget(target: ResolvedStatementStore) {
+export async function getStatementStoreStatus(target: ResolvedStatementStore) {
     if (target.type === "postgres") {
       if (!target.databaseUrl) {
         return {
@@ -247,9 +228,9 @@ export async function runStoreStatus(args: string[] = [], invocation: "graph" | 
       error: inspection.error,
       warnings: getSqliteWarnings(target.file, { gitignore: target.gitignore }),
     };
-  }
+}
 
-  async function statusForQueryStore(key: string) {
+export async function getQueryStoreStatus(key: string) {
     const queryFlags = new Map<string, string | boolean>([["query-store", key]]);
     const store = resolveQueryStore(queryFlags);
     if (!store.databaseUrl) {
@@ -336,25 +317,21 @@ export async function runStoreStatus(args: string[] = [], invocation: "graph" | 
     } finally {
       await client.end({ timeout: 1 });
     }
-  }
+}
 
-  if (flags.has("store")) {
-    printJson(await statusForTarget(resolveStoreTarget(flags)));
-    return 0;
-  }
-
+export async function getRuntimeStatusOverview() {
   const configuredKeys = listConfiguredStoreTargetKeys();
-  const stores = await Promise.all(configuredKeys.map(async (key) => {
-    const targetFlags = new Map(flags);
+  const statementStores = await Promise.all(configuredKeys.map(async (key) => {
+    const targetFlags = new Map<string, string | boolean>();
     targetFlags.set("store", key);
     const resolved = resolveStoreTarget(targetFlags);
-    const detailed = await statusForTarget(resolved);
+    const detailed = await getStatementStoreStatus(resolved);
     return {
       key,
       storeType: detailed.storeType,
       warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
-        statusCommand: `fide graph stores --store ${key}`,
+        statusCommand: `fide graph status --statement-store ${key}`,
         ...(("storeType" in detailed && detailed.storeType === "fide-jsonl")
           ? {
             writeHelpCommand: "fide graph write -h",
@@ -362,7 +339,7 @@ export async function runStoreStatus(args: string[] = [], invocation: "graph" | 
           }
           : {
             sqlHelpCommand: "fide graph sql -h",
-            sqlCommand: `fide graph sql --store ${key} ...`,
+            sqlCommand: `fide graph sql --statement-store ${key} ...`,
           }),
         ...(Array.isArray(detailed.recipe) && detailed.recipe.length > 0 && detailed.storeType !== "fide-jsonl"
           ? {
@@ -376,7 +353,7 @@ export async function runStoreStatus(args: string[] = [], invocation: "graph" | 
 
   const queryStoreKeys = listConfiguredQueryStoreKeys();
   const queryStores = await Promise.all(queryStoreKeys.map(async (key) => {
-    const detailed = await statusForQueryStore(key);
+    const detailed = await getQueryStoreStatus(key);
     return {
       key,
       storeType: detailed.storeType,
@@ -384,10 +361,34 @@ export async function runStoreStatus(args: string[] = [], invocation: "graph" | 
     };
   }));
 
+  return {
+    statementStores,
+    queryStores,
+  };
+}
+
+export async function runStoreStatus(flags: Map<string, string | boolean>): Promise<number> {
+  const statementStore = getStringFlag(flags, "statement-store");
+  const queryStore = getStringFlag(flags, "query-store");
+
+  if (statementStore && queryStore) {
+    throw new Error("Pass either `--statement-store` or `--query-store`, not both.");
+  }
+
+  if (statementStore) {
+    const targetFlags = new Map<string, string | boolean>([["store", statementStore]]);
+    printJson(await getStatementStoreStatus(resolveStoreTarget(targetFlags)));
+    return 0;
+  }
+
+  if (queryStore) {
+    printJson(await getQueryStoreStatus(queryStore));
+    return 0;
+  }
+
   printJson({
     ok: true,
-    stores,
-    queryStores,
+    ...(await getRuntimeStatusOverview()),
   });
   return 0;
 }

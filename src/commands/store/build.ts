@@ -374,7 +374,7 @@ export async function runStoreBuild(args: string[], invocation: "graph" | "store
     return 0;
   }
   if (flags.has("store") || flags.has("query-store")) {
-    throw new Error("This command now uses `--statements <name>` or `--queries <name>`, not `--store` or `--query-store`.");
+    throw new Error("This command uses `--statements <name>` or `--queries <name>`, not `--store` or `--query-store`.");
   }
   if (flags.has("queries")) {
     const queryFlags = new Map<string, string | boolean>(flags);
