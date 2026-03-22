@@ -1,4 +1,3 @@
-import { runGraphDraft } from "./draft.js";
 import { runGraphBuild } from "./build.js";
 import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
@@ -18,10 +17,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "statements") {
     return runGraphStatementsCommand(args);
-  }
-
-  if (command === "draft") {
-    return runGraphDraft(args);
   }
 
   if (command === "status") {

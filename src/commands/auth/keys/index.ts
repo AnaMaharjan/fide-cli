@@ -22,7 +22,7 @@ export async function runAuthKeysCommand(args: string[]): Promise<number> {
     return runAuthKeysRevoke(rest);
   }
 
-  console.error(`Unknown auth keys command: ${command}`);
+  console.error(`Unknown keys command: ${command}`);
   console.error(authKeysHelp());
   return 1;
 }

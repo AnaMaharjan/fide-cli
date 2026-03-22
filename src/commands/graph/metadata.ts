@@ -31,13 +31,13 @@ export const graphWriteCommand = defineCommand({
 });
 
 export const graphDraftCommand = defineCommand({
-  surface: "graph.draft",
-  command: "fide graph draft",
+  surface: "graph.statements.draft",
+  command: "fide graph statements draft",
   summary: "Create a markdown statement draft in a local .fide directory",
   usage: [
-    "fide graph draft [--fide-dir <path>] --name <draft-name> <json>",
-    "fide graph draft [--fide-dir <path>] --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
-    "fide graph draft [--fide-dir <path>] --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
+    "fide graph statements draft [--fide-dir <path>] --name <draft-name> <json>",
+    "fide graph statements draft [--fide-dir <path>] --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
+    "fide graph statements draft [--fide-dir <path>] --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
   ],
   params: [
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },

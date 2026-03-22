@@ -28,6 +28,7 @@ function helpText(): string {
             "  fide login [flags]",
             "  fide logout [flags]",
             "  fide whoami [flags]",
+            "  fide keys <command> [flags]",
             "  fide docs <path>",
             "  fide schema [surface]",
           ],
@@ -36,6 +37,7 @@ function helpText(): string {
           title: "Commands",
           items: [
             "  login    Save auth for this machine",
+            "  keys     List, create, and revoke API keys",
             "  logout   Remove saved auth for a profile",
             "  status   Inspect machine, project, and workspace context",
             "  whoami   Show the current authenticated user",
@@ -45,7 +47,6 @@ function helpText(): string {
           title: "Groups",
           items: [
             "  graph    Local graph work and hosted graph/query management",
-            "  auth     Auth inspection and API key management",
             "  workspace Workspace info, members, roles, and settings",
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
@@ -57,6 +58,7 @@ function helpText(): string {
             "  fide status",
             "  fide login --profile work",
             "  fide whoami",
+            "  fide keys list",
             "  fide graph statements write '<json>'",
             "  fide graph list --workspace <workspace-id>",
             "  fide graph save --workspace <workspace-id> --graph primary --type postgres --schema fide_graph --connection-ref primary-graph",
@@ -121,6 +123,11 @@ export async function runCli(argv: string[]): Promise<number> {
       return await runAuthWhoami([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
+    if (group === "keys") {
+      const { runAuthKeysCommand } = await import("./commands/auth/keys/index.js");
+      return await runAuthKeysCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
     if (group === "docs") {
       const { runDocsCommand } = await import("./commands/docs.js");
       return await runDocsCommand([command, ...rest].filter((value): value is string => Boolean(value)));
@@ -130,10 +137,6 @@ export async function runCli(argv: string[]): Promise<number> {
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);
-      }
-      case "auth": {
-        const { runAuthCommand } = await import("./commands/auth/index.js");
-        return await runAuthCommand(command, rest);
       }
       case "workspace": {
         const { runWorkspaceCommand } = await import("./commands/workspace/index.js");

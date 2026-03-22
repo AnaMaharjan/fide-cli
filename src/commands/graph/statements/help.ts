@@ -13,6 +13,7 @@ export function graphStatementsHelp(): string {
         title: "Commands",
         items: [
           "  write      Write statement inputs into a local .fide directory",
+          "  draft      Create a markdown statement draft in a local .fide directory",
         ],
       },
       {
@@ -20,6 +21,7 @@ export function graphStatementsHelp(): string {
         items: [
           "  fide graph statements write '[{ ... statement inputs ... }]'",
           "  fide graph statements write --file inputs.json",
+          "  fide graph statements draft --name research-notes --file inputs.json",
         ],
       },
     ],

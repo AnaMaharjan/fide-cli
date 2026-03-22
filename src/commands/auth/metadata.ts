@@ -2,7 +2,7 @@ import { DEFAULT_FIDE_API_BASE_URL } from "../../util/auth-settings.js";
 import { commandSchemas, defineCommand } from "../../util/command-metadata.js";
 
 export const authLoginCommand = defineCommand({
-  surface: "auth.login",
+  surface: "login",
   command: "fide login",
   summary: "Save auth for this machine via browser handoff or API key",
   usage: [
@@ -39,7 +39,7 @@ export const authLoginCommand = defineCommand({
 });
 
 export const authLogoutCommand = defineCommand({
-  surface: "auth.logout",
+  surface: "logout",
   command: "fide logout",
   summary: "Remove saved auth for the selected profile",
   usage: [
@@ -56,33 +56,8 @@ export const authLogoutCommand = defineCommand({
   },
 });
 
-export const authStatusCommand = defineCommand({
-  surface: "auth.status",
-  command: "fide auth status",
-  summary: "Inspect resolved auth profile settings and remote validity",
-  usage: [
-    "fide auth status [--profile <name>] [--pretty|-p]",
-  ],
-  params: [
-    { name: "profile", type: "string", required: false, description: "Profile to inspect. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    configured: "boolean",
-    baseUrl: "string?",
-    profile: "string?",
-    source: "string?",
-    userSettingsPath: "string?",
-    storedSettingsPresent: "boolean",
-    envConfigured: "boolean",
-    resolutionError: "string?",
-    resolutionHint: "string?",
-    remote: "object<{ ok: boolean, error?: string }>",
-  },
-});
-
 export const authWhoamiCommand = defineCommand({
-  surface: "auth.whoami",
+  surface: "whoami",
   command: "fide whoami",
   summary: "Resolve the current authenticated user through the API",
   usage: [
@@ -100,11 +75,11 @@ export const authWhoamiCommand = defineCommand({
 });
 
 export const authKeysListCommand = defineCommand({
-  surface: "auth.keys.list",
-  command: "fide auth keys list",
+  surface: "keys.list",
+  command: "fide keys list",
   summary: "List API keys visible to the current authenticated user",
   usage: [
-    "fide auth keys list [--profile <name>] [--pretty|-p]",
+    "fide keys list [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
@@ -118,11 +93,11 @@ export const authKeysListCommand = defineCommand({
 });
 
 export const authKeysCreateCommand = defineCommand({
-  surface: "auth.keys.create",
-  command: "fide auth keys create",
+  surface: "keys.create",
+  command: "fide keys create",
   summary: "Create an API key",
   usage: [
-    "fide auth keys create --label <label> [--profile <name>] [--user-id <id>] [--expires-at <iso8601>] [--pretty|-p]",
+    "fide keys create --label <label> [--profile <name>] [--user-id <id>] [--expires-at <iso8601>] [--pretty|-p]",
   ],
   params: [
     { name: "label", type: "string", required: true, description: "Label for the new API key", valueLabel: "<label>" },
@@ -140,11 +115,11 @@ export const authKeysCreateCommand = defineCommand({
 });
 
 export const authKeysRevokeCommand = defineCommand({
-  surface: "auth.keys.revoke",
-  command: "fide auth keys revoke",
+  surface: "keys.revoke",
+  command: "fide keys revoke",
   summary: "Revoke an API key by id",
   usage: [
-    "fide auth keys revoke <id> [--profile <name>] [--pretty|-p]",
+    "fide keys revoke <id> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
@@ -161,7 +136,6 @@ export const authKeysRevokeCommand = defineCommand({
 export const AUTH_COMMAND_METADATA = [
   authLoginCommand,
   authLogoutCommand,
-  authStatusCommand,
   authWhoamiCommand,
   authKeysListCommand,
   authKeysCreateCommand,

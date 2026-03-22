@@ -20,7 +20,7 @@ export async function runAuthKeysList(args: string[]): Promise<number> {
     source: auth.source,
     apiKeys,
   }, {
-    command: "fide auth keys list",
+    command: "fide keys list",
   });
 
   if (useJson) {

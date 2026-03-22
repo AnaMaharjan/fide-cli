@@ -1,9 +1,0 @@
----
-title: "fide auth keys list"
-description: "fide auth keys list [--profile <name>] [--pretty|-p]"
-full: true
----
-
-import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
-
-<CLICommandPageInteractive data={{"name":"fide auth keys list","description":"fide auth keys list [--profile <name>] [--pretty|-p]","usage":["fide auth keys list [--profile <name>] [--pretty|-p]"],"arguments":[],"options":[{"name":"--pretty","shorthand":"-p","type":"boolean","description":"Human-readable output","required":false},{"name":"--profile","type":"string","required":false,"description":"Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile."}],"outputFields":[{"name":"baseUrl","type":"string","required":false},{"name":"source","type":"string","required":false},{"name":"apiKeys","type":"array","required":false}],"subcommands":[],"schemas":[{"surface":"auth.keys.list","command":"fide auth keys list","params":[{"name":"--profile","type":"string","required":false,"description":"Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile."},{"name":"--pretty","type":"boolean","description":"Human-readable output"}],"outputFields":[{"name":"baseUrl","type":"string","required":false},{"name":"source","type":"string","required":false},{"name":"apiKeys","type":"array","required":false}],"json":"{\n  \"command\": \"fide auth keys list\",\n  \"params\": [\n    {\n      \"name\": \"profile\",\n      \"type\": \"string\",\n      \"required\": false,\n      \"description\": \"Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.\"\n    },\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {\n    \"baseUrl\": \"string\",\n    \"source\": \"string\",\n    \"apiKeys\": \"array\"\n  }\n}"}],"examples":[],"notes":[]}} />

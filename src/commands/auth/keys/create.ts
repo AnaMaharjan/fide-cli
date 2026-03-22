@@ -33,7 +33,7 @@ export async function runAuthKeysCreate(args: string[]): Promise<number> {
     apiKey: created.apiKey,
     rawKey: created.rawKey,
   }, {
-    command: "fide auth keys create",
+    command: "fide keys create",
   });
 
   if (useJson) {

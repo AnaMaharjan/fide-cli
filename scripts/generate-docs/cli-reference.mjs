@@ -21,8 +21,16 @@ const TOP_LEVEL_DOC_PAGES = [
 
 const PAGE_GROUPS = [
   {
-    title: "Top Level",
+    title: "Core",
     match: (slug) => slug === "fide" || slug === "status" || slug === "docs" || slug === "schema",
+  },
+  {
+    title: "Auth",
+    match: (slug) => slug === "login" || slug === "logout" || slug === "whoami",
+  },
+  {
+    title: "Auth Keys",
+    match: (slug) => slug.startsWith("keys-"),
   },
   {
     title: "Graph",
@@ -35,14 +43,6 @@ const PAGE_GROUPS = [
   {
     title: "Graph Statements",
     match: (slug) => slug.startsWith("graph-statements-"),
-  },
-  {
-    title: "Auth",
-    match: (slug) => slug.startsWith("auth-") && !slug.startsWith("auth-keys-"),
-  },
-  {
-    title: "Auth Keys",
-    match: (slug) => slug.startsWith("auth-keys-"),
   },
   {
     title: "Workspace",

@@ -51,7 +51,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
     return 0;
   }
   if (hasFlag(initialParsed.flags, "draft")) {
-    throw new Error("`graph statements write` does not support `--draft`. Use `fide graph draft`.");
+    throw new Error("`graph statements write` does not support `--draft`. Use `fide graph statements draft`.");
   }
   if (hasFlag(initialParsed.flags, "query")) {
     throw new Error("`graph statements write` no longer supports `--query`. Use `fide graph query save`.");

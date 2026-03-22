@@ -6,7 +6,7 @@ export function authKeysHelp(): string {
       {
         title: "Usage",
         items: [
-          "  fide auth keys <command> [flags]",
+          "  fide keys <command> [flags]",
         ],
       },
       {
@@ -20,10 +20,10 @@ export function authKeysHelp(): string {
       {
         title: "Workflows",
         items: [
-          "  fide auth keys list",
-          "  fide auth keys create --label 'local agent'",
-          "  fide auth keys create --label 'workspace bot' --user-id <agent-user-id>",
-          "  fide auth keys revoke <id>",
+          "  fide keys list",
+          "  fide keys create --label 'local agent'",
+          "  fide keys create --label 'workspace bot' --user-id <agent-user-id>",
+          "  fide keys revoke <id>",
         ],
       },
     ],

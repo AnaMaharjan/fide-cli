@@ -26,7 +26,7 @@ export async function runAuthKeysRevoke(args: string[]): Promise<number> {
     id,
     ...result,
   }, {
-    command: "fide auth keys revoke",
+    command: "fide keys revoke",
   });
 
   if (useJson) {

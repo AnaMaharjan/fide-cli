@@ -1,4 +1,5 @@
 import { graphStatementsHelp } from "./help.js";
+import { runGraphDraft } from "../draft.js";
 import { runGraphWrite } from "./write.js";
 
 export async function runGraphStatementsCommand(args: string[]): Promise<number> {
@@ -10,6 +11,10 @@ export async function runGraphStatementsCommand(args: string[]): Promise<number>
 
   if (command === "write") {
     return runGraphWrite(rest);
+  }
+
+  if (command === "draft") {
+    return runGraphDraft(rest);
   }
 
   console.error(`Unknown graph statements command: ${command}`);

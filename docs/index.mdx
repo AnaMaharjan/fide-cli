@@ -5,18 +5,29 @@ description: "Generated command reference for the Fide CLI."
 
 This reference is generated from the CLI's live `--help` output and schema surfaces.
 
-## Top Level
+## Core
 
 - [`fide`](./fide) - Fide CLI
 - [`fide docs`](./docs)
 - [`fide schema`](./schema)
-- [`fide status`](./status) - Inspect active machine, project, and workspace context
+- [`fide status`](./status) - Inspect machine, project, and workspace context
+
+## Auth
+
+- [`fide login`](./login) - Save auth for this machine
+- [`fide logout`](./logout) - Remove saved auth for a profile
+- [`fide whoami`](./whoami) - Show the current authenticated user
+
+## Auth Keys
+
+- [`fide keys create`](./keys-create)
+- [`fide keys list`](./keys-list)
+- [`fide keys revoke`](./keys-revoke)
 
 ## Graph
 
 - [`fide graph build`](./graph-build)
 - [`fide graph defs`](./graph-defs)
-- [`fide graph draft`](./graph-draft)
 - [`fide graph get`](./graph-get)
 - [`fide graph list`](./graph-list)
 - [`fide graph save`](./graph-save)
@@ -31,17 +42,8 @@ This reference is generated from the CLI's live `--help` output and schema surfa
 
 ## Graph Statements
 
+- [`fide graph statements draft`](./graph-statements-draft)
 - [`fide graph statements write`](./graph-statements-write)
-
-## Auth
-
-- [`fide auth status`](./auth-status)
-
-## Auth Keys
-
-- [`fide auth keys create`](./auth-keys-create)
-- [`fide auth keys list`](./auth-keys-list)
-- [`fide auth keys revoke`](./auth-keys-revoke)
 
 ## Workspace
 

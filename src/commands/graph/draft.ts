@@ -105,7 +105,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
   const draftPath = getStringFlag(flags, "path");
   const descriptionFlag = getStringFlag(flags, "description");
   if (statementInputs.length === 0) {
-    console.error("Missing input for `graph draft`. Use `--stdin`, `--file <path>`, or pass JSON inline.");
+    console.error("Missing input for `graph statements draft`. Use `--stdin`, `--file <path>`, or pass JSON inline.");
     console.error(draftHelp());
     return 1;
   }
@@ -117,7 +117,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`graph draft` is only supported for local .fide directories.");
+    throw new Error("`graph statements draft` is only supported for local .fide directories.");
   }
 
   const normalizedInputs: StatementInput[] = batch.statements.map((statement) => ({
