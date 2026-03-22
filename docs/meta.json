@@ -45,8 +45,6 @@
     "--- Workspace Roles ---",
     "workspace-roles-grant",
     "workspace-roles-revoke",
-    "--- Workspace Service Accounts ---",
-    "workspace-service-accounts-create",
     "--- Workspace Settings ---",
     "workspace-settings-get",
     "workspace-settings-set"

@@ -13,7 +13,7 @@ export type MeResponse = {
   };
   user: {
     id: string | null;
-    type?: "human" | "agent" | "service_account" | null;
+    type?: "human" | "agent" | null;
     managementMode?: "self" | "workspace" | "controller" | null;
   };
   access: {
@@ -73,20 +73,13 @@ export type GraphQuerySummary = {
 
 export type WorkspaceMember = {
   userId: string;
-  userType?: "human" | "agent" | "service_account" | null;
+  userType?: "human" | "agent" | null;
   managementMode?: "self" | "workspace" | "controller" | null;
   apiKeysEnabled?: boolean | null;
   managingWorkspaceId?: string | null;
   createdAt: string;
   roles: string[];
   permissions: string[];
-};
-
-export type CreatedServiceAccount = {
-  userId: string;
-  workspaceId: string;
-  roleCode: string;
-  email: string;
 };
 
 export type WorkspaceMemberMutation = {
@@ -98,7 +91,20 @@ export type WorkspaceMemberMutation = {
 
 type AuthClientOptions = {
   baseUrl: string;
-  apiKey: string;
+  apiKey?: string;
+};
+
+export type AgentAuthRequestSummary = {
+  id: string;
+  status: "pending" | "completed" | "exchanged" | "expired" | "cancelled";
+  requestedWorkspaceId: string | null;
+  loopbackUrl: string | null;
+  agentLabel: string | null;
+  expiresAt: string;
+  completedAt: string | null;
+  exchangedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -134,10 +140,12 @@ async function parseApiResponse<T>(response: Response, fallbackScope: string): P
 
 export function createAuthApiClient(options: AuthClientOptions) {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
-  const headers = {
+  const headers: Record<string, string> = {
     "content-type": "application/json",
-    "x-api-key": options.apiKey,
   };
+  if (options.apiKey) {
+    headers["x-api-key"] = options.apiKey;
+  }
 
   return {
     async me(): Promise<MeResponse> {
@@ -175,6 +183,56 @@ export function createAuthApiClient(options: AuthClientOptions) {
         headers,
       });
       return parseApiResponse<{ ok: boolean }>(response, "auth-keys-revoke.v1");
+    },
+
+    async createAgentAuthRequest(input: {
+      requestedWorkspaceId?: string | null;
+      loopbackUrl?: string | null;
+      agentName?: string | null;
+      expiresInSeconds?: number;
+    }): Promise<{ request: AgentAuthRequestSummary; agentLoginUrl: string }> {
+      const response = await fetch(`${baseUrl}/v1/agent-auth/requests`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(input),
+      });
+      return parseApiResponse<{ request: AgentAuthRequestSummary; agentLoginUrl: string }>(response, "auth-agent-request-create.v1");
+    },
+
+    async getAgentAuthRequest(requestId: string): Promise<{ request: AgentAuthRequestSummary }> {
+      const response = await fetch(`${baseUrl}/v1/agent-auth/requests/${encodeURIComponent(requestId)}`, {
+        method: "GET",
+        headers,
+      });
+      return parseApiResponse<{ request: AgentAuthRequestSummary }>(response, "auth-agent-request-get.v1");
+    },
+
+    async exchangeAgentAuthRequest(input: {
+      requestId: string;
+      exchangeCode: string;
+    }): Promise<{
+      request: AgentAuthRequestSummary;
+      result: {
+        workspaceId: string;
+        agentUserId: string;
+        apiKey: string;
+        apiKeyPrefix: string;
+      };
+    }> {
+      const response = await fetch(`${baseUrl}/v1/agent-auth/requests/${encodeURIComponent(input.requestId)}/exchange`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ exchangeCode: input.exchangeCode }),
+      });
+      return parseApiResponse<{
+        request: AgentAuthRequestSummary;
+        result: {
+          workspaceId: string;
+          agentUserId: string;
+          apiKey: string;
+          apiKeyPrefix: string;
+        };
+      }>(response, "auth-agent-request-exchange.v1");
     },
 
     async listWorkspaces(): Promise<{ workspaces: WorkspaceSummary[] }> {
@@ -293,22 +351,6 @@ export function createAuthApiClient(options: AuthClientOptions) {
         headers,
       });
       return parseApiResponse<{ members: WorkspaceMember[] }>(response, "workspace-members.v1");
-    },
-
-    async createServiceAccount(input: {
-      workspaceId: string;
-      label: string;
-      roleCode: string;
-    }): Promise<CreatedServiceAccount> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/service-accounts`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          label: input.label,
-          roleCode: input.roleCode,
-        }),
-      });
-      return parseApiResponse<CreatedServiceAccount>(response, "workspace-service-account-create.v1");
     },
 
     async addWorkspaceMember(input: {

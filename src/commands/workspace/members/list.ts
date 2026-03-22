@@ -29,9 +29,6 @@ export async function runWorkspaceMembers(args: string[]): Promise<number> {
     members: result.members,
   }, {
     command: "fide workspace members list",
-    next: {
-      serviceAccountCreate: `fide workspace service-accounts create --workspace ${id} --label '<label>' --role workspace.member`,
-    },
   });
 
   if (useJson) {

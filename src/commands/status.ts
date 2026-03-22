@@ -43,7 +43,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
       authSource: resolvedAuth?.source ?? null,
       baseUrl: resolvedAuth?.baseUrl ?? null,
       storedSettingsPresent: Boolean(storedAuth),
-      envAuthConfigured: Boolean(process.env.FIDE_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
+      envAuthConfigured: Boolean(process.env.FIDE_API_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
       authValid: remote.ok,
       authError: remote.ok ? null : (remote.error ?? null),
     },

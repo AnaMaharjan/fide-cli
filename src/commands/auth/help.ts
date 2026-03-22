@@ -12,7 +12,7 @@ export function authCommandHelp(): string {
       {
         title: "Commands",
         items: [
-          "  login        Save API-key-based auth for the CLI",
+          "  login        Save auth for the CLI via API key or browser handoff",
           "  logout       Remove saved machine-level auth settings",
           "  status       Inspect machine-level auth settings and remote validity",
           "  whoami       Resolve the current authenticated user through the API",
@@ -22,7 +22,10 @@ export function authCommandHelp(): string {
       {
         title: "Workflows",
         items: [
-          "  fide auth login --base-url http://localhost:3200 --api-key fide_sk_...",
+          "  fide auth login",
+          "  fide auth login --web",
+          "  fide auth login --agent-name 'Research Agent'",
+          "  fide auth login --api-base-url http://localhost:3200 --api-key fide_sk_...",
           "  fide auth status",
           "  fide auth whoami",
           "  fide auth keys list",
@@ -33,12 +36,15 @@ export function authCommandHelp(): string {
       {
         title: "Notes",
         items: [
-          "  - Environment variables override saved settings: FIDE_BASE_URL and FIDE_API_KEY.",
-          "  - If FIDE_BASE_URL is not set, the CLI falls back to https://api.fide.work.",
+          "  - Environment variables override saved settings: FIDE_API_BASE_URL and FIDE_API_KEY.",
+          "  - If FIDE_API_BASE_URL is not set, the CLI falls back to https://api.fide.work.",
           "  - Machine-level auth settings live under ~/.fide/settings.json inside the env object.",
           "  - The same settings file can also store a selected workspace for cloud-mode commands.",
           "  - Workspace-level .fide settings are separate from the machine-level auth settings file.",
-          "  - login verifies the API key through the API before saving it locally.",
+          "  - login defaults to browser-based agent auth.",
+          "  - login --web explicitly starts browser-based agent auth.",
+          "  - login verifies the API key through the API when --api-key is provided.",
+          "  - Do not combine --web with --api-key.",
         ],
       },
     ],

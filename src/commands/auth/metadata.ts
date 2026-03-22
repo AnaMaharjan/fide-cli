@@ -1,26 +1,39 @@
-import { DEFAULT_FIDE_BASE_URL } from "../../util/auth-settings.js";
+import { DEFAULT_FIDE_API_BASE_URL } from "../../util/auth-settings.js";
 import { commandSchemas, defineCommand } from "../../util/command-metadata.js";
 
 export const authLoginCommand = defineCommand({
   surface: "auth.login",
   command: "fide auth login",
-  summary: "Save API-key-based auth for this machine",
+  summary: "Save auth for this machine via browser handoff or API key",
   usage: [
-    "fide auth login --api-key <key> [--base-url <url>] [--pretty|-p]",
+    "fide auth login [--web] [--api-base-url <url>] [--workspace <id>] [--agent-name <name>] [--pretty|-p]",
+    "fide auth login --api-key <key> [--api-base-url <url>] [--pretty|-p]",
   ],
   params: [
-    { name: "base-url", type: "string", description: `Base URL for Fide HTTP surfaces. Defaults to ${DEFAULT_FIDE_BASE_URL}.`, valueLabel: "<url>" },
-    { name: "api-key", type: "string", required: true, description: "Fide API key to save locally", valueLabel: "<key>" },
+    { name: "api-base-url", type: "string", description: `API base URL for Fide HTTP surfaces. Defaults to ${DEFAULT_FIDE_API_BASE_URL}.`, valueLabel: "<url>" },
+    { name: "web", type: "boolean", required: false, description: "Use browser-based agent auth handoff. This is also the default when --api-key is omitted." },
+    { name: "api-key", type: "string", required: false, description: "Fide API key to save locally for non-interactive machine auth.", valueLabel: "<key>" },
+    { name: "workspace", type: "string", required: false, description: "Optional preferred workspace for browser-based agent auth", valueLabel: "<id>" },
+    { name: "agent-name", type: "string", required: false, description: "Optional suggested agent name for browser-based agent auth", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
     baseUrl: "string?",
     source: "string?",
     user: "object?",
+    workspaceId: "string?",
+    requestId: "string?",
+    loopback: "boolean?",
   },
   notes: [
-    `--base-url defaults to ${DEFAULT_FIDE_BASE_URL}.`,
-    "This command verifies the API key with /v1/me before saving it.",
+    `--api-base-url defaults to ${DEFAULT_FIDE_API_BASE_URL}.`,
+    "With no mode flags, this command starts browser-based agent auth.",
+    "--web explicitly starts browser-based agent auth.",
+    "With --api-key, this command verifies the key with /v1/me before saving it.",
+    "Without --api-key, this command opens the browser to authorize a new workspace-managed agent and stores the returned API key locally.",
+    "--agent-name pre-fills the proposed agent name in the browser approval flow.",
+    "During browser-based login, the CLI prints the handoff URL immediately and waits for browser login. Press Ctrl+C to cancel.",
+    "Do not combine --web with --api-key.",
     "The saved settings are local to this machine.",
   ],
 });
@@ -105,7 +118,7 @@ export const authKeysCreateCommand = defineCommand({
   ],
   params: [
     { name: "label", type: "string", required: true, description: "Label for the new API key", valueLabel: "<label>" },
-    { name: "user-id", type: "string", description: "Optional target user id for workspace-managed service accounts", valueLabel: "<id>" },
+    { name: "user-id", type: "string", description: "Optional target user id for workspace-managed agents", valueLabel: "<id>" },
     { name: "expires-at", type: "string", description: "Optional ISO-8601 expiration timestamp", valueLabel: "<iso8601>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],

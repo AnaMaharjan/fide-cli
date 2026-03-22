@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
-export const DEFAULT_FIDE_BASE_URL = "https://api.fide.work";
+export const DEFAULT_FIDE_API_BASE_URL = "https://api.fide.work";
 
 export type StoredAuthSettings = {
   baseUrl: string;
@@ -34,7 +34,7 @@ export async function readStoredAuthSettings(): Promise<StoredAuthSettings | nul
     if (!env || typeof env !== "object") {
       return null;
     }
-    const baseUrl = typeof env.FIDE_BASE_URL === "string" ? env.FIDE_BASE_URL : DEFAULT_FIDE_BASE_URL;
+    const baseUrl = typeof env.FIDE_API_BASE_URL === "string" ? env.FIDE_API_BASE_URL : DEFAULT_FIDE_API_BASE_URL;
     const apiKey = typeof env.FIDE_API_KEY === "string" ? env.FIDE_API_KEY : null;
     if (!apiKey) {
       return null;
@@ -43,6 +43,23 @@ export async function readStoredAuthSettings(): Promise<StoredAuthSettings | nul
       baseUrl,
       apiKey,
     };
+  } catch {
+    return null;
+  }
+}
+
+export async function readStoredApiBaseUrl(): Promise<string | null> {
+  try {
+    const raw = await readFile(resolveAuthSettingsPath(), "utf8");
+    const parsed = JSON.parse(raw) as UserFideSettings;
+    const env = parsed.env;
+    if (!env || typeof env !== "object") {
+      return null;
+    }
+    const baseUrl = env.FIDE_API_BASE_URL;
+    return typeof baseUrl === "string" && baseUrl.trim().length > 0
+      ? baseUrl.trim()
+      : null;
   } catch {
     return null;
   }
@@ -62,7 +79,7 @@ export async function writeStoredAuthSettings(settings: StoredAuthSettings): Pro
     ...current,
     env: {
       ...(current.env ?? {}),
-      FIDE_BASE_URL: settings.baseUrl,
+      FIDE_API_BASE_URL: settings.baseUrl,
       FIDE_API_KEY: settings.apiKey,
     },
   };
@@ -77,7 +94,7 @@ export async function clearStoredAuthSettings(): Promise<void> {
     const raw = await readFile(path, "utf8");
     const current = JSON.parse(raw) as UserFideSettings;
     const env = { ...(current.env ?? {}) };
-    delete env.FIDE_BASE_URL;
+    delete env.FIDE_API_BASE_URL;
     delete env.FIDE_API_KEY;
 
     const { env: _ignoredEnv, ...rest } = current;
@@ -98,12 +115,12 @@ export async function clearStoredAuthSettings(): Promise<void> {
 
 export async function resolveAuthSettings(): Promise<ResolvedAuthSettings | null> {
   const path = resolveAuthSettingsPath();
-  const envBaseUrl = process.env.FIDE_BASE_URL?.trim();
+  const envBaseUrl = process.env.FIDE_API_BASE_URL?.trim();
   const envApiKey = process.env.FIDE_API_KEY?.trim();
 
   if (envApiKey) {
     return {
-      baseUrl: envBaseUrl ?? DEFAULT_FIDE_BASE_URL,
+      baseUrl: envBaseUrl ?? DEFAULT_FIDE_API_BASE_URL,
       apiKey: envApiKey,
       source: "env",
       path,
@@ -118,4 +135,23 @@ export async function resolveAuthSettings(): Promise<ResolvedAuthSettings | null
     source: "settings",
     path,
   };
+}
+
+export async function resolveApiBaseUrl(explicitBaseUrl?: string | null): Promise<string> {
+  const flagBaseUrl = explicitBaseUrl?.trim();
+  if (flagBaseUrl) {
+    return flagBaseUrl;
+  }
+
+  const envBaseUrl = process.env.FIDE_API_BASE_URL?.trim();
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  const storedBaseUrl = await readStoredApiBaseUrl();
+  if (storedBaseUrl) {
+    return storedBaseUrl;
+  }
+
+  return DEFAULT_FIDE_API_BASE_URL;
 }

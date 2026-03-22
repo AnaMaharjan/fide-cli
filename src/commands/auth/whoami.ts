@@ -16,7 +16,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
 
   const auth = await resolveAuthSettings();
   if (!auth) {
-    throw new Error("No Fide auth settings found. Run `fide auth login --base-url <url> --api-key <key>` or set FIDE_BASE_URL and FIDE_API_KEY.");
+    throw new Error("No Fide auth settings found. Run `fide auth login --api-base-url <url> --api-key <key>` or set FIDE_API_BASE_URL and FIDE_API_KEY.");
   }
 
   const me = await createAuthApiClient(auth).me();

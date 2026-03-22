@@ -33,7 +33,7 @@ export async function runAuthStatus(args: string[]): Promise<number> {
     source: resolved?.source ?? null,
     userSettingsPath: resolveAuthSettingsPath(),
     storedSettingsPresent: Boolean(stored),
-    envConfigured: Boolean(process.env.FIDE_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
+    envConfigured: Boolean(process.env.FIDE_API_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
     remote,
   }, {
     command: "fide auth status",

@@ -3,7 +3,6 @@ import { runWorkspaceList } from "./list.js";
 import { runWorkspaceGet } from "./get.js";
 import { runWorkspaceMembersCommand } from "./members/index.js";
 import { runWorkspaceRolesCommand } from "./roles/index.js";
-import { runWorkspaceServiceAccountsCommand } from "./service-accounts/index.js";
 import { runWorkspaceSettingsCommand } from "./settings/index.js";
 
 export async function runWorkspaceCommand(command: string | undefined, args: string[]): Promise<number> {
@@ -26,10 +25,6 @@ export async function runWorkspaceCommand(command: string | undefined, args: str
 
   if (command === "roles") {
     return runWorkspaceRolesCommand(args);
-  }
-
-  if (command === "service-accounts") {
-    return runWorkspaceServiceAccountsCommand(args);
   }
 
   if (command === "settings") {

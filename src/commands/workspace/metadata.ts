@@ -123,26 +123,6 @@ export const workspaceRolesRevokeCommand = defineCommand({
   },
 });
 
-export const workspaceServiceAccountCreateCommand = defineCommand({
-  surface: "workspace.service-accounts.create",
-  command: "fide workspace service-accounts create",
-  summary: "Create a workspace-managed service account",
-  usage: [
-    "fide workspace service-accounts create --workspace <workspace-id> --label <label> --role <role-code> [--pretty|-p]",
-  ],
-  params: [
-    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
-    { name: "label", type: "string", required: true, description: "Service-account label", valueLabel: "<label>" },
-    { name: "role", type: "string", required: true, description: "Initial role code for the new service account", valueLabel: "<role-code>" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    baseUrl: "string",
-    source: "string",
-    serviceAccount: "object",
-  },
-});
-
 export const workspaceSettingsGetCommand = defineCommand({
   surface: "workspace.settings.get",
   command: "fide workspace settings get",
@@ -192,7 +172,6 @@ export const WORKSPACE_COMMAND_METADATA = [
   workspaceMembersAddCommand,
   workspaceRolesGrantCommand,
   workspaceRolesRevokeCommand,
-  workspaceServiceAccountCreateCommand,
   workspaceSettingsGetCommand,
   workspaceSettingsSetCommand,
 ] as const;

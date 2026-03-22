@@ -51,7 +51,6 @@ const PAGE_GROUPS = [
       && slug !== "workspace-members"
       && !slug.startsWith("workspace-members-")
       && !slug.startsWith("workspace-roles-")
-      && !slug.startsWith("workspace-service-accounts-")
       && !slug.startsWith("workspace-settings-"),
   },
   {
@@ -61,10 +60,6 @@ const PAGE_GROUPS = [
   {
     title: "Workspace Roles",
     match: (slug) => slug.startsWith("workspace-roles-"),
-  },
-  {
-    title: "Workspace Service Accounts",
-    match: (slug) => slug.startsWith("workspace-service-accounts-"),
   },
   {
     title: "Workspace Settings",
