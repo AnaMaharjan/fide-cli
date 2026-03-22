@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
+import { stdin as input, stdout as output, stderr } from "node:process";
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
@@ -62,24 +62,55 @@ export async function runAuthLogin(args: string[]): Promise<number> {
 
     const opened = openBrowser(created.agentLoginUrl);
     const out = useJson ? console.error : console.log;
-    out("Starting browser login to authorize a new agent for this CLI.");
+    out("Authorize a new agent for this CLI");
+    out("");
     if (opened) {
-      out("Opening browser now. You can also use this URL directly:");
+      out("Opening browser now.");
+      out("If needed, open this URL on any device:");
     } else {
-      out("Browser auto-open was unavailable on this machine. Use this URL:");
+      out("Open this URL on any device:");
     }
     out(created.agentLoginUrl);
-    out("Waiting for browser login. Press Ctrl+C to cancel.");
+    out("");
+    out("After you click Authorize in the browser:");
+    out("- automatic local handoff may complete this for you");
+    out("- or paste the 8-digit code shown on the browser page");
+    out("");
+    out("Press Ctrl+C to cancel.");
+    out("");
 
-    let callback = await loopback.waitForCallback(5 * 60 * 1000);
-    if (!callback) {
-      const rl = createInterface({ input, output });
-      try {
-        const exchangeCode = (await rl.question("Paste exchange code from the browser: ")).trim();
-        callback = { requestId: created.request.id, exchangeCode: exchangeCode || null };
-      } finally {
-        rl.close();
-      }
+    const rl = createInterface({
+      input,
+      output: useJson ? stderr : output,
+    });
+
+    let callback: { requestId: string | null; exchangeCode: string | null } | null = null;
+    try {
+      const manualEntry = rl
+        .question("8-digit code: ")
+        .then((value) => ({
+          source: "manual" as const,
+          value: {
+            requestId: created.request.id,
+            exchangeCode: value.trim() || null,
+          },
+        }))
+        .catch(() => ({
+          source: "manual" as const,
+          value: null,
+        }));
+
+      const result = await Promise.race([
+        loopback.waitForCallback(15 * 60 * 1000).then((value) => ({
+          source: "loopback" as const,
+          value,
+        })),
+        manualEntry,
+      ]);
+
+      callback = result.value;
+    } finally {
+      rl.close();
     }
 
     if (!callback?.exchangeCode) {
