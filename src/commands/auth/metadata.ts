@@ -11,14 +11,14 @@ export const authLoginCommand = defineCommand({
     "fide login --clear-default [--pretty|-p]",
   ],
   params: [
-    { name: "api-base-url", type: "string", description: `API base URL for Fide HTTP surfaces. Defaults to ${DEFAULT_FIDE_API_BASE_URL}.`, valueLabel: "<url>" },
-    { name: "profile", type: "string", required: false, description: "Profile name to create or update. Defaults to `default` for login.", valueLabel: "<name>" },
-    { name: "set-default", type: "boolean", required: false, description: "Set the selected profile as the default profile after a successful login." },
-    { name: "clear-default", type: "boolean", required: false, description: "Clear the saved default profile without changing any stored profile auth." },
-    { name: "web", type: "boolean", required: false, description: "Use browser-based agent auth handoff. This is also the default when --api-key is omitted." },
-    { name: "api-key", type: "string", required: false, description: "Fide API key to save locally for non-interactive machine auth.", valueLabel: "<key>" },
-    { name: "workspace", type: "string", required: false, description: "Optional preferred workspace for browser-based agent auth", valueLabel: "<id>" },
-    { name: "agent-name", type: "string", required: false, description: "Optional suggested agent name for browser-based agent auth", valueLabel: "<name>" },
+    { name: "api-base-url", type: "string", description: `Fide API base URL. Defaults to ${DEFAULT_FIDE_API_BASE_URL}.`, valueLabel: "<url>" },
+    { name: "profile", type: "string", required: false, description: "Profile to create or update. If omitted, login uses `default`.", valueLabel: "<name>" },
+    { name: "set-default", type: "boolean", required: false, description: "Also make this profile the machine default after login." },
+    { name: "clear-default", type: "boolean", required: false, description: "Remove the saved default profile without changing any profile auth." },
+    { name: "web", type: "boolean", required: false, description: "Start browser-based agent login. This is the default when --api-key is omitted." },
+    { name: "api-key", type: "string", required: false, description: "Save an existing API key instead of using the browser flow.", valueLabel: "<key>" },
+    { name: "workspace", type: "string", required: false, description: "Preferred workspace for browser-based agent login.", valueLabel: "<id>" },
+    { name: "agent-name", type: "string", required: false, description: "Suggested agent name for browser-based agent login.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -31,19 +31,10 @@ export const authLoginCommand = defineCommand({
     loopback: "boolean?",
   },
   notes: [
-    `--api-base-url defaults to ${DEFAULT_FIDE_API_BASE_URL}.`,
-    "With no mode flags, this command starts browser-based agent auth.",
-    "--web explicitly starts browser-based agent auth.",
-    "With --api-key, this command verifies the key with /v1/me before saving it.",
-    "Without --api-key, this command opens the browser to authorize a new workspace-managed agent and stores the returned API key locally.",
-    "--agent-name pre-fills the proposed agent name in the browser approval flow.",
-    "During browser-based login, the CLI prints the handoff URL immediately and waits for browser login. Press Ctrl+C to cancel.",
+    "Without --api-key, login opens the browser to authorize a new workspace-managed agent and stores the returned API key locally.",
     "Do not combine --web with --api-key.",
-    "Login writes machine auth into ~/.fide/profiles/<name>/auth.json and workspace defaults into ~/.fide/profiles/<name>/settings.json.",
-    "Login does not set a default profile automatically.",
-    "Use `--set-default` to make the logged-in profile the default profile intentionally.",
-    "Use `--clear-default` to remove the saved default profile intentionally.",
-    "A default profile is optional for all other commands; they can also resolve from --profile, FIDE_PROFILE, or project .fide/settings.json.",
+    "Login writes auth into ~/.fide/profiles/<name>/auth.json and workspace defaults into ~/.fide/profiles/<name>/settings.json.",
+    "A default profile is optional. Other commands can resolve from --profile, FIDE_PROFILE, or project .fide/settings.json.",
   ],
 });
 
@@ -55,7 +46,7 @@ export const authLogoutCommand = defineCommand({
     "fide logout [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile name to clear. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Profile to clear. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -73,7 +64,7 @@ export const authStatusCommand = defineCommand({
     "fide auth status [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Profile to inspect. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -98,7 +89,7 @@ export const authWhoamiCommand = defineCommand({
     "fide whoami [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -116,7 +107,7 @@ export const authKeysListCommand = defineCommand({
     "fide auth keys list [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -135,8 +126,8 @@ export const authKeysCreateCommand = defineCommand({
   ],
   params: [
     { name: "label", type: "string", required: true, description: "Label for the new API key", valueLabel: "<label>" },
-    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
-    { name: "user-id", type: "string", description: "Optional target user id for workspace-managed agents", valueLabel: "<id>" },
+    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "user-id", type: "string", description: "Optional target agent user id", valueLabel: "<id>" },
     { name: "expires-at", type: "string", description: "Optional ISO-8601 expiration timestamp", valueLabel: "<iso8601>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -156,7 +147,7 @@ export const authKeysRevokeCommand = defineCommand({
     "fide auth keys revoke <id> [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {

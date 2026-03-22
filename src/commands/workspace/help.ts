@@ -35,11 +35,8 @@ export function workspaceCommandHelp(): string {
       {
         title: "Notes",
         items: [
-          "  - Use `graph` for graph authoring, graph runtime access, hosted graph configuration, and saved-query workflows.",
-          "  - Use `workspace` for shared hosted state, access control, agents, and settings.",
-          "  - Prefer --workspace for explicit cloud context. FIDE_WORKSPACE, project settings, and profile settings are fallbacks.",
-          "  - Use --profile or FIDE_PROFILE to select which machine profile authenticates the command.",
-          "  - A default profile is optional. Project settings or explicit flags can fully determine hosted context.",
+          "  - Use `workspace` for shared hosted state: workspaces, members, roles, and workspace settings.",
+          "  - `--workspace` and `--profile` are optional. Commands can also resolve from env, project `.fide/settings.json`, and profile defaults.",
         ],
       },
     ],

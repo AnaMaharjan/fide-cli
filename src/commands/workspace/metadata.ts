@@ -8,7 +8,7 @@ export const workspaceListCommand = defineCommand({
     "fide workspace list [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -27,7 +27,7 @@ export const workspaceGetCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -46,7 +46,7 @@ export const workspaceMembersCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -66,7 +66,7 @@ export const workspaceMembersAddCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "User id to add as a member", valueLabel: "<user-id>" },
     { name: "role", type: "string", required: true, description: "Explicit initial role code", valueLabel: "<role-code>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -90,7 +90,7 @@ export const workspaceRolesGrantCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "Target workspace member id", valueLabel: "<user-id>" },
     { name: "role", type: "string", required: true, description: "Role code to grant", valueLabel: "<role-code>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -114,7 +114,7 @@ export const workspaceRolesRevokeCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "Target workspace member id", valueLabel: "<user-id>" },
     { name: "role", type: "string", required: true, description: "Role code to revoke", valueLabel: "<role-code>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -137,8 +137,8 @@ export const workspaceSettingsGetCommand = defineCommand({
     "fide workspace settings get [--workspace <workspace-id>] [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "workspace", type: "string", description: "Workspace to read. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -158,8 +158,8 @@ export const workspaceSettingsSetCommand = defineCommand({
     "fide workspace settings set [--workspace <workspace-id>] [--profile <name>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
+    { name: "workspace", type: "string", description: "Workspace to write. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "stdin", type: "boolean", description: "Read a JSON object from stdin" },
     { name: "file", type: "string", description: "Read a JSON object from a file", valueLabel: "<path>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },

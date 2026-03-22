@@ -45,11 +45,9 @@ export function graphCommandHelp(): string {
         title: "Notes",
         items: [
           "  - Local authoring commands (`statements write`, `draft`) resolve `--fide-dir <path>`, `FIDE_DIR`, the nearest `.fide` directory, then the current working directory.",
-          "  - `status` shows local graph status by default and can target configured runtime backends with `--graph` or `--query-catalog`.",
-          "  - Hosted graph/query commands accept `--profile` and can inherit `profile` or `workspaceId` from project `.fide/settings.json`.",
           "  - `list`, `get`, and `save` operate on hosted workspace graphs.",
-          "  - `query` is the single namespace for ad hoc SQL, local saved queries, and hosted saved queries.",
-          "  - Runtime commands (`query`, `build`) operate on configured graphs and query catalogs.",
+          "  - `query` covers ad hoc SQL, local saved queries, and hosted saved queries.",
+          "  - Hosted graph/query commands accept `--profile` and can also resolve from project `.fide/settings.json`.",
         ],
       },
     ],
