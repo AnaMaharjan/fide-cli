@@ -20,7 +20,7 @@ export async function runAuthKeysCreate(args: string[]): Promise<number> {
 
   const userId = getStringFlag(flags, "user-id") ?? undefined;
   const expiresAt = getStringFlag(flags, "expires-at") ?? undefined;
-  const { auth, client } = await requireAuthApiClient();
+  const { auth, client } = await requireAuthApiClient(flags);
   const created = await client.createApiKey({
     label,
     ...(userId ? { userId } : {}),

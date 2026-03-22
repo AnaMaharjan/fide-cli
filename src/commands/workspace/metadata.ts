@@ -5,9 +5,10 @@ export const workspaceListCommand = defineCommand({
   command: "fide workspace list",
   summary: "List accessible workspaces",
   usage: [
-    "fide workspace list [--pretty|-p]",
+    "fide workspace list [--profile <name>] [--pretty|-p]",
   ],
   params: [
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -22,10 +23,11 @@ export const workspaceGetCommand = defineCommand({
   command: "fide workspace get",
   summary: "Inspect a workspace by id",
   usage: [
-    "fide workspace get --workspace <workspace-id> [--pretty|-p]",
+    "fide workspace get --workspace <workspace-id> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -40,10 +42,11 @@ export const workspaceMembersCommand = defineCommand({
   command: "fide workspace members list",
   summary: "List members for a workspace",
   usage: [
-    "fide workspace members list --workspace <workspace-id> [--pretty|-p]",
+    "fide workspace members list --workspace <workspace-id> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -59,10 +62,11 @@ export const workspaceMembersAddCommand = defineCommand({
   command: "fide workspace members add",
   summary: "Add a member to a workspace with an initial role",
   usage: [
-    "fide workspace members add --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+    "fide workspace members add --workspace <workspace-id> --user-id <user-id> --role <role-code> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "User id to add as a member", valueLabel: "<user-id>" },
     { name: "role", type: "string", required: true, description: "Explicit initial role code", valueLabel: "<role-code>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -82,10 +86,11 @@ export const workspaceRolesGrantCommand = defineCommand({
   command: "fide workspace roles grant",
   summary: "Grant a role to an existing workspace member",
   usage: [
-    "fide workspace roles grant --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+    "fide workspace roles grant --workspace <workspace-id> --user-id <user-id> --role <role-code> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "Target workspace member id", valueLabel: "<user-id>" },
     { name: "role", type: "string", required: true, description: "Role code to grant", valueLabel: "<role-code>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -105,10 +110,11 @@ export const workspaceRolesRevokeCommand = defineCommand({
   command: "fide workspace roles revoke",
   summary: "Revoke a role from an existing workspace member",
   usage: [
-    "fide workspace roles revoke --workspace <workspace-id> --user-id <user-id> --role <role-code> [--pretty|-p]",
+    "fide workspace roles revoke --workspace <workspace-id> --user-id <user-id> --role <role-code> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "Target workspace member id", valueLabel: "<user-id>" },
     { name: "role", type: "string", required: true, description: "Role code to revoke", valueLabel: "<role-code>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -128,10 +134,11 @@ export const workspaceSettingsGetCommand = defineCommand({
   command: "fide workspace settings get",
   summary: "Read workspace-managed settings from the API",
   usage: [
-    "fide workspace settings get [--workspace <workspace-id>] [--pretty|-p]",
+    "fide workspace settings get [--workspace <workspace-id>] [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -148,10 +155,11 @@ export const workspaceSettingsSetCommand = defineCommand({
   command: "fide workspace settings set",
   summary: "Write workspace-managed settings to the API",
   usage: [
-    "fide workspace settings set [--workspace <workspace-id>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
+    "fide workspace settings set [--workspace <workspace-id>] [--profile <name>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE or saved settings.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Explicit workspace selection. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "stdin", type: "boolean", description: "Read a JSON object from stdin" },
     { name: "file", type: "string", description: "Read a JSON object from a file", valueLabel: "<path>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },

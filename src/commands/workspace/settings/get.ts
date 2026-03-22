@@ -15,7 +15,7 @@ export async function runWorkspaceSettingsGet(args: string[]): Promise<number> {
   }
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const settings = await client.getWorkspaceSettings(selection.workspaceId);
   const payload = okResponse("workspace-settings-get.v1", {
     baseUrl: auth.baseUrl,

@@ -22,7 +22,7 @@ export function authKeysHelp(): string {
         items: [
           "  fide auth keys list",
           "  fide auth keys create --label 'local agent'",
-          "  fide auth keys create --label 'workspace bot' --user-id <service-account-user-id>",
+          "  fide auth keys create --label 'workspace bot' --user-id <agent-user-id>",
           "  fide auth keys revoke <id>",
         ],
       },

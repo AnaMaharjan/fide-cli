@@ -2,7 +2,8 @@ import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
-import { clearStoredAuthSettings, resolveAuthSettingsPath } from "../../util/auth-settings.js";
+import { clearStoredAuthSettings } from "../../util/auth-settings.js";
+import { resolveProfileAuthPath, resolveProfileSelection } from "../../util/profile-settings.js";
 import { authLogoutCommand } from "./metadata.js";
 
 export async function runAuthLogout(args: string[]): Promise<number> {
@@ -13,18 +14,24 @@ export async function runAuthLogout(args: string[]): Promise<number> {
     return 0;
   }
 
-  await clearStoredAuthSettings();
+  const profileSelection = await resolveProfileSelection(flags);
+  if (!profileSelection) {
+    throw new Error("No profile resolved for logout. A default profile is optional. Pass --profile <name>, set FIDE_PROFILE, use project .fide/settings.json, or run `fide login --profile <name>`.");
+  }
+
+  await clearStoredAuthSettings(profileSelection.profile);
   const payload = okResponse("auth-logout.v1", {
     cleared: true,
-    userSettingsPath: resolveAuthSettingsPath(),
+    profile: profileSelection.profile,
+    userSettingsPath: resolveProfileAuthPath(profileSelection.profile),
   }, {
-    command: "fide auth logout",
+    command: "fide logout",
   });
 
   if (useJson) {
     printJson(payload);
   } else {
-    console.log("Cleared saved Fide auth settings");
+    console.log(`Cleared saved Fide auth for profile ${profileSelection.profile}`);
   }
   return 0;
 }

@@ -1,6 +1,12 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { homedir } from "node:os";
+import { dirname } from "node:path";
+import { getStringFlag } from "./args.js";
+import {
+  ensureProfileAuthPathPermissions,
+  getProfileNotFoundError,
+  resolveProfileAuthPath,
+  resolveProfileSelection,
+} from "./profile-settings.js";
 
 export const DEFAULT_FIDE_API_BASE_URL = "https://api.fide.work";
 
@@ -10,37 +16,26 @@ export type StoredAuthSettings = {
 };
 
 export type ResolvedAuthSettings = StoredAuthSettings & {
-  source: "env" | "settings";
+  source: "env" | "profile";
   path: string;
+  profile: string | null;
 };
 
-type UserFideSettings = {
-  env?: Record<string, string>;
-} & Record<string, unknown>;
-
-function resolveConfigDir(): string {
-  return join(homedir(), ".fide");
-}
-
-export function resolveAuthSettingsPath(): string {
-  return join(resolveConfigDir(), "settings.json");
-}
-
-export async function readStoredAuthSettings(): Promise<StoredAuthSettings | null> {
+export async function readStoredAuthSettings(profile: string): Promise<StoredAuthSettings | null> {
   try {
-    const raw = await readFile(resolveAuthSettingsPath(), "utf8");
-    const parsed = JSON.parse(raw) as UserFideSettings;
-    const env = parsed.env;
-    if (!env || typeof env !== "object") {
-      return null;
-    }
-    const baseUrl = typeof env.FIDE_API_BASE_URL === "string" ? env.FIDE_API_BASE_URL : DEFAULT_FIDE_API_BASE_URL;
-    const apiKey = typeof env.FIDE_API_KEY === "string" ? env.FIDE_API_KEY : null;
+    const raw = await readFile(resolveProfileAuthPath(profile), "utf8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const apiBaseUrl = typeof parsed.apiBaseUrl === "string" && parsed.apiBaseUrl.trim().length > 0
+      ? parsed.apiBaseUrl.trim()
+      : DEFAULT_FIDE_API_BASE_URL;
+    const apiKey = typeof parsed.apiKey === "string" && parsed.apiKey.trim().length > 0
+      ? parsed.apiKey.trim()
+      : null;
     if (!apiKey) {
       return null;
     }
     return {
-      baseUrl,
+      baseUrl: apiBaseUrl,
       apiKey,
     };
   } catch {
@@ -48,73 +43,24 @@ export async function readStoredAuthSettings(): Promise<StoredAuthSettings | nul
   }
 }
 
-export async function readStoredApiBaseUrl(): Promise<string | null> {
-  try {
-    const raw = await readFile(resolveAuthSettingsPath(), "utf8");
-    const parsed = JSON.parse(raw) as UserFideSettings;
-    const env = parsed.env;
-    if (!env || typeof env !== "object") {
-      return null;
-    }
-    const baseUrl = env.FIDE_API_BASE_URL;
-    return typeof baseUrl === "string" && baseUrl.trim().length > 0
-      ? baseUrl.trim()
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function writeStoredAuthSettings(settings: StoredAuthSettings): Promise<void> {
-  const path = resolveAuthSettingsPath();
-  let current: UserFideSettings = {};
-  try {
-    const raw = await readFile(path, "utf8");
-    current = JSON.parse(raw) as UserFideSettings;
-  } catch {
-    current = {};
-  }
-
-  const next: UserFideSettings = {
-    ...current,
-    env: {
-      ...(current.env ?? {}),
-      FIDE_API_BASE_URL: settings.baseUrl,
-      FIDE_API_KEY: settings.apiKey,
-    },
-  };
-
+export async function writeStoredAuthSettings(profile: string, settings: StoredAuthSettings): Promise<void> {
+  const path = resolveProfileAuthPath(profile);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  await writeFile(path, `${JSON.stringify({
+    apiBaseUrl: settings.baseUrl,
+    apiKey: settings.apiKey,
+  }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  await ensureProfileAuthPathPermissions(profile);
 }
 
-export async function clearStoredAuthSettings(): Promise<void> {
-  const path = resolveAuthSettingsPath();
-  try {
-    const raw = await readFile(path, "utf8");
-    const current = JSON.parse(raw) as UserFideSettings;
-    const env = { ...(current.env ?? {}) };
-    delete env.FIDE_API_BASE_URL;
-    delete env.FIDE_API_KEY;
-
-    const { env: _ignoredEnv, ...rest } = current;
-    const next: UserFideSettings = Object.keys(env).length > 0
-      ? { ...rest, env }
-      : rest;
-
-    if (Object.keys(next).length === 0) {
-      await rm(path, { force: true });
-      return;
-    }
-
-    await writeFile(path, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-  } catch {
-    await rm(path, { force: true });
-  }
+export async function clearStoredAuthSettings(profile: string): Promise<void> {
+  await rm(resolveProfileAuthPath(profile), { force: true });
 }
 
-export async function resolveAuthSettings(): Promise<ResolvedAuthSettings | null> {
-  const path = resolveAuthSettingsPath();
+export async function resolveAuthSettings(
+  flags: Map<string, string | boolean> = new Map(),
+  root: string = process.cwd(),
+): Promise<ResolvedAuthSettings | null> {
   const envBaseUrl = process.env.FIDE_API_BASE_URL?.trim();
   const envApiKey = process.env.FIDE_API_KEY?.trim();
 
@@ -123,21 +69,34 @@ export async function resolveAuthSettings(): Promise<ResolvedAuthSettings | null
       baseUrl: envBaseUrl ?? DEFAULT_FIDE_API_BASE_URL,
       apiKey: envApiKey,
       source: "env",
-      path,
+      path: "env",
+      profile: null,
     };
   }
 
-  const stored = await readStoredAuthSettings();
-  if (!stored) return null;
+  const profileSelection = await resolveProfileSelection(flags, root);
+  if (!profileSelection) {
+    return null;
+  }
+
+  const stored = await readStoredAuthSettings(profileSelection.profile);
+  if (!stored) {
+    throw getProfileNotFoundError(profileSelection.profile);
+  }
 
   return {
     ...stored,
-    source: "settings",
-    path,
+    source: "profile",
+    path: resolveProfileAuthPath(profileSelection.profile),
+    profile: profileSelection.profile,
   };
 }
 
-export async function resolveApiBaseUrl(explicitBaseUrl?: string | null): Promise<string> {
+export async function resolveApiBaseUrl(
+  explicitBaseUrl?: string | null,
+  flags: Map<string, string | boolean> = new Map(),
+  root: string = process.cwd(),
+): Promise<string> {
   const flagBaseUrl = explicitBaseUrl?.trim();
   if (flagBaseUrl) {
     return flagBaseUrl;
@@ -148,9 +107,16 @@ export async function resolveApiBaseUrl(explicitBaseUrl?: string | null): Promis
     return envBaseUrl;
   }
 
-  const storedBaseUrl = await readStoredApiBaseUrl();
-  if (storedBaseUrl) {
-    return storedBaseUrl;
+  const profileFromFlag = getStringFlag(flags, "profile");
+  const profileSelection = await resolveProfileSelection(
+    profileFromFlag ? new Map([["profile", profileFromFlag]]) : flags,
+    root,
+  );
+  if (profileSelection) {
+    const stored = await readStoredAuthSettings(profileSelection.profile);
+    if (stored?.baseUrl) {
+      return stored.baseUrl;
+    }
   }
 
   return DEFAULT_FIDE_API_BASE_URL;

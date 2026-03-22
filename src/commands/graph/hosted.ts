@@ -107,7 +107,7 @@ export async function runGraphList(args: string[]): Promise<number> {
   }
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const settings = await client.getWorkspaceSettings(selection.workspaceId);
   const graphs = readGraphs(settings.settings);
   const records = Object.entries(graphs).map(([graphKey, graph]) => ({
@@ -152,7 +152,7 @@ export async function runGraphGet(args: string[]): Promise<number> {
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const settings = await client.getWorkspaceSettings(selection.workspaceId);
   const graph = readGraphs(settings.settings)[graphKey];
   if (!graph) {
@@ -190,7 +190,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const current = await client.getWorkspaceSettings(selection.workspaceId);
   const settings = current.settings;
   const graphs = readGraphs(settings);

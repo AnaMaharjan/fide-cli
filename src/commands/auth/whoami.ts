@@ -14,9 +14,9 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
     return 0;
   }
 
-  const auth = await resolveAuthSettings();
+  const auth = await resolveAuthSettings(flags);
   if (!auth) {
-    throw new Error("No Fide auth settings found. Run `fide auth login --api-base-url <url> --api-key <key>` or set FIDE_API_BASE_URL and FIDE_API_KEY.");
+    throw new Error("No Fide auth profile resolved. A default profile is optional. Pass --profile <name>, set FIDE_PROFILE, use project .fide/settings.json, or run `fide login --profile <name>`.");
   }
 
   const me = await createAuthApiClient(auth).me();
@@ -25,7 +25,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
     source: auth.source,
     user: me,
   }, {
-    command: "fide auth whoami",
+    command: "fide whoami",
   });
 
   if (useJson) {

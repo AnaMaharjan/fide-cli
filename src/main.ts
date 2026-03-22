@@ -25,6 +25,9 @@ function helpText(): string {
           items: [
             "  fide --version",
             "  fide <group> [command] [flags]",
+            "  fide login [flags]",
+            "  fide logout [flags]",
+            "  fide whoami [flags]",
             "  fide docs <path>",
             "  fide schema [surface]",
           ],
@@ -32,7 +35,10 @@ function helpText(): string {
         {
           title: "Commands",
           items: [
+            "  login    Save auth for this machine via browser handoff or API key",
+            "  logout   Remove saved auth for a profile",
             "  status   Inspect active machine, project, and workspace context",
+            "  whoami   Resolve the current authenticated user through the API",
           ],
         },
         {
@@ -40,7 +46,7 @@ function helpText(): string {
           items: [
             "  graph    Graph authoring, hosted graph management, queries, builds, and graph definitions",
             "  auth     CLI authentication and API key management",
-            "  workspace Workspace inspection and service-account provisioning",
+            "  workspace Workspace inspection, membership, roles, and settings",
             "  docs     Resolve canonical docs pointers to local source content",
             "  schema   Introspect command schemas",
           ],
@@ -49,13 +55,15 @@ function helpText(): string {
           title: "Workflows",
           items: [
           "  fide status",
+          "  fide login --profile work",
+          "  fide whoami",
           "  fide graph statements write '<json>'  Write statement inputs into the local .fide directory",
           "  fide graph list --workspace <workspace-id>",
           "  fide graph save --workspace <workspace-id> --graph primary --type postgres --schema fide_graph --connection-ref primary-graph",
           "  fide graph query save --graph sqlite --name recentStatements 'select * from statements limit 10'",
           "  fide graph query run --graph primary 'select * from statements limit 10'",
           "  fide graph build --graph combined",
-          "  fide auth login --api-key fide_sk_...",
+          "  fide login --api-key fide_sk_...",
           "  fide workspace list",
           ],
         },
@@ -98,6 +106,21 @@ export async function runCli(argv: string[]): Promise<number> {
     if (group === "status") {
       const { runStatusCommand } = await import("./commands/status.js");
       return await runStatusCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
+    if (group === "login") {
+      const { runAuthLogin } = await import("./commands/auth/login.js");
+      return await runAuthLogin([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
+    if (group === "logout") {
+      const { runAuthLogout } = await import("./commands/auth/logout.js");
+      return await runAuthLogout([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
+    if (group === "whoami") {
+      const { runAuthWhoami } = await import("./commands/auth/whoami.js");
+      return await runAuthWhoami([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
     if (group === "docs") {

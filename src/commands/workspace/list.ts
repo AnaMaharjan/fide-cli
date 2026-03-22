@@ -14,7 +14,7 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
     return 0;
   }
 
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const result = await client.listWorkspaces();
   const payload = okResponse("workspace-list.v1", {
     baseUrl: auth.baseUrl,

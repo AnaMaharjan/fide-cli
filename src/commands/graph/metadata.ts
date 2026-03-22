@@ -115,7 +115,7 @@ export const graphStatusCommand = defineCommand({
   params: [
     { name: "fide-dir", type: "string", description: "Optional local .fide directory override", valueLabel: "<path>" },
     { name: "graph", type: "string", description: "Configured graph key", valueLabel: "<name>" },
-    { name: "query-catalog", type: "string", description: "Configured query store name", valueLabel: "<name>" },
+    { name: "query-catalog", type: "string", description: "Configured query catalog key", valueLabel: "<name>" },
   ],
   output: {
     ok: "boolean",
@@ -136,10 +136,11 @@ export const graphListCommand = defineCommand({
   command: "fide graph list",
   summary: "List hosted graphs for a workspace",
   usage: [
-    "fide graph list --workspace <workspace-id>",
+    "fide graph list [--workspace <workspace-id>] [--profile <name>]",
   ],
   params: [
-    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Workspace id. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -159,10 +160,11 @@ export const graphGetCommand = defineCommand({
   command: "fide graph get",
   summary: "Inspect one hosted graph for a workspace",
   usage: [
-    "fide graph get --workspace <workspace-id> --graph <name>",
+    "fide graph get [--workspace <workspace-id>] [--profile <name>] --graph <name>",
   ],
   params: [
-    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Workspace id. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Hosted graph key", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -183,13 +185,14 @@ export const graphSaveCommand = defineCommand({
   command: "fide graph save",
   summary: "Save hosted graph configuration",
   usage: [
-    "fide graph save --workspace <workspace-id> --graph <name> --type postgres --schema <schema> --connection-ref <ref>",
-    "fide graph save --workspace <workspace-id> --graph <name> --type postgres --schema <schema> --connection <postgres-url>",
-    "fide graph save --workspace <workspace-id> --graph <name> --type sqlite --connection <path>",
-    "fide graph save --workspace <workspace-id> --graph <name> --stdin",
+    "fide graph save [--workspace <workspace-id>] [--profile <name>] --graph <name> --type postgres --schema <schema> --connection-ref <ref>",
+    "fide graph save [--workspace <workspace-id>] [--profile <name>] --graph <name> --type postgres --schema <schema> --connection <postgres-url>",
+    "fide graph save [--workspace <workspace-id>] [--profile <name>] --graph <name> --type sqlite --connection <path>",
+    "fide graph save [--workspace <workspace-id>] [--profile <name>] --graph <name> --stdin",
   ],
   params: [
-    { name: "workspace", type: "string", required: true, description: "Workspace id", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Workspace id. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", required: false, description: "Profile name override. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Hosted graph key", valueLabel: "<name>" },
     { name: "type", type: "string", enum: ["postgres", "sqlite", "fide-jsonl"], description: "Hosted graph store type" },
     { name: "schema", type: "string", description: "Postgres schema for postgres-backed graphs", valueLabel: "<schema>" },
@@ -232,6 +235,7 @@ export const graphQueryCommand = defineCommand({
   notes: [
     "Use `run` for ad hoc SQL or saved-query execution.",
     "Use `--workspace <id>` to target hosted saved queries; otherwise commands operate on the current project.",
+    "Hosted commands also accept `--profile <name>` and can inherit `profile` or `workspaceId` from project .fide/settings.json.",
   ],
 });
 
@@ -244,13 +248,14 @@ export const graphQueryRunCommand = defineCommand({
     "fide graph query run --graph <name> --file <query.sql>",
     "fide graph query run --graph <name> --stdin",
     "fide graph query run --graph <name> --name <query-name>",
-    "fide graph query run --workspace <workspace-id> --graph <name> --name <query-name>",
+    "fide graph query run [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace id for hosted saved-query execution", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace id for hosted saved-query execution. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override for hosted saved-query execution. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Configured or hosted graph key", valueLabel: "<name>" },
     { name: "name", type: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
-    { name: "query-catalog", type: "string", description: "Hosted query store key when a workspace has more than one query store configured.", valueLabel: "<name>" },
+    { name: "query-catalog", type: "string", description: "Hosted query catalog key when a workspace has more than one query catalog configured.", valueLabel: "<name>" },
     { name: "limit", type: "number", description: "Maximum row count for hosted saved-query execution", valueLabel: "<n>" },
     { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
     { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
@@ -286,13 +291,14 @@ export const graphQueryListCommand = defineCommand({
   usage: [
     "fide graph query list",
     "fide graph query list --graph <name>",
-    "fide graph query list --workspace <workspace-id>",
+    "fide graph query list [--workspace <workspace-id>] [--profile <name>]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace id for hosted query listing", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace id for hosted query listing. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override for hosted query listing. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", description: "Optional graph filter", valueLabel: "<name>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "query-catalog", type: "string", description: "Hosted query store key when a workspace has more than one query store configured.", valueLabel: "<name>" },
+    { name: "query-catalog", type: "string", description: "Hosted query catalog key when a workspace has more than one query catalog configured.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -313,14 +319,15 @@ export const graphQueryGetCommand = defineCommand({
   summary: "Read one project or hosted graph query",
   usage: [
     "fide graph query get --graph <name> --name <query-name>",
-    "fide graph query get --workspace <workspace-id> --graph <name> --name <query-name>",
+    "fide graph query get [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace id for hosted query reads", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace id for hosted query reads. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override for hosted query reads. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "query-catalog", type: "string", description: "Hosted query store key when a workspace has more than one query store configured.", valueLabel: "<name>" },
+    { name: "query-catalog", type: "string", description: "Hosted query catalog key when a workspace has more than one query catalog configured.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -341,15 +348,16 @@ export const graphQuerySaveCommand = defineCommand({
   usage: [
     "fide graph query save --graph <name> --name <query-name> <query>",
     "fide graph query save --graph <name> --name <query-name> --file <query.sql>",
-    "fide graph query save --workspace <workspace-id> --graph <name> --name <query-name> <query>",
+    "fide graph query save [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name> <query>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace id for hosted query writes", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace id for hosted query writes. Falls back to FIDE_WORKSPACE, project settings, or profile settings.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile name override for hosted query writes. Falls back to FIDE_PROFILE, project settings, or default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
     { name: "description", type: "string", description: "Optional query description", valueLabel: "<text>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "query-catalog", type: "string", description: "Hosted query store key when a workspace has more than one query store configured.", valueLabel: "<name>" },
+    { name: "query-catalog", type: "string", description: "Hosted query catalog key when a workspace has more than one query catalog configured.", valueLabel: "<name>" },
     { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
     { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -375,7 +383,7 @@ export const graphQuerySaveCommand = defineCommand({
   ],
   notes: [
     "Without `--workspace`, saves into the current project's `.fide/queries/<graph>/` directory.",
-    "With `--workspace`, saves into the hosted workspace query store.",
+    "With `--workspace`, saves into the hosted workspace query catalog.",
     "Hosted saved queries only support read-only SQL and are workspace-shared.",
   ],
 });
@@ -383,7 +391,7 @@ export const graphQuerySaveCommand = defineCommand({
 export const graphBuildCommand = defineCommand({
   surface: "graph.build",
   command: "fide graph build",
-  summary: "Build configured graph or query stores from graph sources",
+  summary: "Build configured graphs or query catalogs from graph sources",
   usage: [
     "fide graph build --graph <name>",
     "fide graph build --query-catalog <name>",
@@ -391,7 +399,7 @@ export const graphBuildCommand = defineCommand({
   ],
   params: [
     { name: "graph", type: "string", description: "Configured graph name with a recipe", valueLabel: "<name>" },
-    { name: "query-catalog", type: "string", description: "Configured query store name", valueLabel: "<name>" },
+    { name: "query-catalog", type: "string", description: "Configured query catalog key", valueLabel: "<name>" },
     { name: "dry-run", type: "boolean", description: "Resolve targets and inputs without mutating runtime state" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -421,7 +429,7 @@ export const graphBuildCommand = defineCommand({
     "Recipe SQL may include $lastRunAt for incremental runs.",
     "On the first run, $lastRunAt resolves to 1970-01-01T00:00:00.000Z.",
     "Local fide-jsonl recipe steps may use fromDateUTC/toDateUTC; these apply at UTC date granularity based on .fide/statements/YYYY/MM/DD folders.",
-    "Query-store builds load local .fide/queries/<graph>/<name>.sql files.",
+    "Query-catalog builds load local .fide/queries/<graph>/<name>.sql files.",
     "Use `--dry-run` to preview resolved build inputs and targets before mutating runtime state.",
   ],
 });

@@ -29,11 +29,11 @@ function queryCommandHelp(): string {
     "",
     "Examples:",
     "  fide graph query run --graph primary 'select * from statements limit 10'",
-    "  fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
+    "  fide graph query run --profile work --graph primary --name recentStatements",
     "  fide graph query list --graph primary",
-    "  fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
+    "  fide graph query get --profile work --graph primary --name recentStatements",
     "  fide graph query save --graph primary --name recentStatements 'select * from statements limit 10'",
-    "  fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
+    "  fide graph query save --profile work --graph primary --name recentStatements 'select * from statements limit 10'",
   ].join("\n");
 }
 
@@ -147,7 +147,7 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
   }
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const result = await client.saveGraphQuery({
     workspaceId: selection.workspaceId,
     graphKey,
@@ -223,7 +223,7 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
   const graphKey = getStringFlag(flags, "graph");
   const queryCatalog = getStringFlag(flags, "query-catalog");
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const result = await client.listGraphQueries({
     workspaceId: selection.workspaceId,
     ...(queryCatalog ? { queryCatalog } : {}),
@@ -298,7 +298,7 @@ async function runGraphQueryGetWorkspace(args: string[]): Promise<number> {
   const name = requireSavedQueryName(flags);
   const queryCatalog = getStringFlag(flags, "query-catalog");
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const query = await client.getGraphQuery({
     workspaceId: selection.workspaceId,
     graphKey,
@@ -379,7 +379,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
   if (workspaceId) {
     const useJson = shouldUseJsonOutput(flags);
     const selection = await resolveWorkspaceSelectionOrThrow(flags);
-    const { auth, client } = await requireWorkspaceApiClient();
+    const { auth, client } = await requireWorkspaceApiClient(flags);
     const result = await client.runGraphQuery({
       workspaceId: selection.workspaceId,
       graphKey,

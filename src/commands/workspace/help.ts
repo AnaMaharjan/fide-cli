@@ -23,6 +23,7 @@ export function workspaceCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide workspace list",
+          "  fide workspace list --profile work",
           "  fide workspace get --workspace <workspace-id>",
           "  fide workspace members list --workspace <workspace-id>",
           "  fide workspace members add --workspace <workspace-id> --user-id <user-id> --role workspace.viewer",
@@ -36,7 +37,9 @@ export function workspaceCommandHelp(): string {
         items: [
           "  - Use `graph` for graph authoring, graph runtime access, hosted graph configuration, and saved-query workflows.",
           "  - Use `workspace` for shared hosted state, access control, agents, and settings.",
-          "  - Prefer --workspace for explicit cloud context. FIDE_WORKSPACE and saved machine settings are fallbacks.",
+          "  - Prefer --workspace for explicit cloud context. FIDE_WORKSPACE, project settings, and profile settings are fallbacks.",
+          "  - Use --profile or FIDE_PROFILE to select which machine profile authenticates the command.",
+          "  - A default profile is optional. Project settings or explicit flags can fully determine hosted context.",
         ],
       },
     ],

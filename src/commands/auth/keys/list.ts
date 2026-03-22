@@ -13,7 +13,7 @@ export async function runAuthKeysList(args: string[]): Promise<number> {
     return 0;
   }
 
-  const { auth, client } = await requireAuthApiClient();
+  const { auth, client } = await requireAuthApiClient(flags);
   const { apiKeys } = await client.listApiKeys();
   const payload = okResponse("auth-keys-list.v1", {
     baseUrl: auth.baseUrl,

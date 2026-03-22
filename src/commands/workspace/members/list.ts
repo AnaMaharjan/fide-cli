@@ -20,7 +20,7 @@ export async function runWorkspaceMembers(args: string[]): Promise<number> {
     throw new Error("Missing required flag: --workspace");
   }
 
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const result = await client.listWorkspaceMembers(id);
   const payload = okResponse("workspace-members.v1", {
     baseUrl: auth.baseUrl,

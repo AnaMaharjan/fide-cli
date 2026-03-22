@@ -21,7 +21,7 @@ export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
   if (!userId) throw new Error("Missing required flag: --user-id");
   if (!roleCode) throw new Error("Missing required flag: --role");
 
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const result = await client.revokeWorkspaceRole({ workspaceId, userId, roleCode });
   const payload = okResponse("workspace-roles-revoke.v1", {
     baseUrl: auth.baseUrl,

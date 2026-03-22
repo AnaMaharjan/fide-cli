@@ -18,7 +18,7 @@ export async function runAuthKeysRevoke(args: string[]): Promise<number> {
     throw new Error("Missing required API key id");
   }
 
-  const { auth, client } = await requireAuthApiClient();
+  const { auth, client } = await requireAuthApiClient(flags);
   const result = await client.revokeApiKey(id);
   const payload = okResponse("auth-keys-revoke.v1", {
     baseUrl: auth.baseUrl,

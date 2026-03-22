@@ -1,14 +1,15 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 import { getStringFlag } from "./args.js";
-import { resolveAuthSettingsPath } from "./auth-settings.js";
+import { readStoredAuthSettings } from "./auth-settings.js";
+import {
+  readStoredProfileSettings,
+  resolveProfileSelection,
+  resolveProfileSettingsPath,
+  writeStoredProfileSettings,
+  getProfileNotFoundError,
+} from "./profile-settings.js";
+import { resolveProjectPointerSettings } from "./project-pointer.js";
 
-type UserFideSettings = {
-  env?: Record<string, string>;
-  workspace?: string;
-} & Record<string, unknown>;
-
-export type WorkspaceSelectionSource = "flag" | "env" | "settings";
+export type WorkspaceSelectionSource = "flag" | "env" | "project" | "profile";
 
 export type ResolvedWorkspaceSelection = {
   path: string;
@@ -16,61 +17,29 @@ export type ResolvedWorkspaceSelection = {
   workspaceId: string;
 };
 
-function resolveWorkspaceSettingsPath(): string {
-  return resolveAuthSettingsPath();
-}
-
-async function readStoredSettings(): Promise<UserFideSettings | null> {
-  try {
-    const raw = await readFile(resolveWorkspaceSettingsPath(), "utf8");
-    return JSON.parse(raw) as UserFideSettings;
-  } catch {
-    return null;
-  }
-}
-
-export async function readStoredWorkspaceSelection(): Promise<string | null> {
-  const stored = await readStoredSettings();
-  const workspace = stored?.workspace;
-  return typeof workspace === "string" && workspace.trim().length > 0
-    ? workspace.trim()
-    : null;
-}
-
-export async function writeStoredWorkspaceSelection(workspaceId: string | null): Promise<void> {
-  const path = resolveWorkspaceSettingsPath();
-  let current: UserFideSettings = {};
-  try {
-    const raw = await readFile(path, "utf8");
-    current = JSON.parse(raw) as UserFideSettings;
-  } catch {
-    current = {};
-  }
-
-  if (workspaceId?.trim()) {
-    current.workspace = workspaceId.trim();
-  } else {
-    delete current.workspace;
-  }
-
-  if (Object.keys(current).length === 0) {
-    await rm(path, { force: true });
-    return;
-  }
-
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(current, null, 2)}\n`, "utf8");
-}
-
 export function getWorkspaceFlag(flags: Map<string, string | boolean>): string | null {
   return getStringFlag(flags, "workspace");
 }
 
-export async function resolveWorkspaceSelection(flags: Map<string, string | boolean>): Promise<ResolvedWorkspaceSelection | null> {
+export async function readStoredWorkspaceSelection(profile: string): Promise<string | null> {
+  const stored = await readStoredProfileSettings(profile);
+  return typeof stored?.workspaceId === "string" && stored.workspaceId.trim().length > 0
+    ? stored.workspaceId.trim()
+    : null;
+}
+
+export async function writeStoredWorkspaceSelection(profile: string, workspaceId: string | null): Promise<void> {
+  await writeStoredProfileSettings(profile, { workspaceId: workspaceId ?? undefined });
+}
+
+export async function resolveWorkspaceSelection(
+  flags: Map<string, string | boolean>,
+  root: string = process.cwd(),
+): Promise<ResolvedWorkspaceSelection | null> {
   const flagWorkspace = getWorkspaceFlag(flags);
   if (flagWorkspace) {
     return {
-      path: resolveWorkspaceSettingsPath(),
+      path: "--workspace",
       source: "flag",
       workspaceId: flagWorkspace,
     };
@@ -79,17 +48,31 @@ export async function resolveWorkspaceSelection(flags: Map<string, string | bool
   const envWorkspace = process.env.FIDE_WORKSPACE?.trim();
   if (envWorkspace) {
     return {
-      path: resolveWorkspaceSettingsPath(),
+      path: "env",
       source: "env",
       workspaceId: envWorkspace,
     };
   }
 
-  const storedWorkspace = await readStoredWorkspaceSelection();
+  const projectPointer = resolveProjectPointerSettings(root);
+  if (projectPointer?.workspaceId) {
+    return {
+      path: projectPointer.path,
+      source: "project",
+      workspaceId: projectPointer.workspaceId,
+    };
+  }
+
+  const profileSelection = await resolveProfileSelection(flags, root);
+  if (!profileSelection) {
+    return null;
+  }
+
+  const storedWorkspace = await readStoredWorkspaceSelection(profileSelection.profile);
   if (storedWorkspace) {
     return {
-      path: resolveWorkspaceSettingsPath(),
-      source: "settings",
+      path: resolveProfileSettingsPath(profileSelection.profile),
+      source: "profile",
       workspaceId: storedWorkspace,
     };
   }
@@ -97,10 +80,21 @@ export async function resolveWorkspaceSelection(flags: Map<string, string | bool
   return null;
 }
 
-export async function resolveWorkspaceSelectionOrThrow(flags: Map<string, string | boolean>): Promise<ResolvedWorkspaceSelection> {
-  const selection = await resolveWorkspaceSelection(flags);
+export async function resolveWorkspaceSelectionOrThrow(
+  flags: Map<string, string | boolean>,
+  root: string = process.cwd(),
+): Promise<ResolvedWorkspaceSelection> {
+  const profileSelection = await resolveProfileSelection(flags, root);
+  if (profileSelection) {
+    const storedAuth = await readStoredAuthSettings(profileSelection.profile);
+    if (!storedAuth && profileSelection.source === "project") {
+      throw getProfileNotFoundError(profileSelection.profile);
+    }
+  }
+
+  const selection = await resolveWorkspaceSelection(flags, root);
   if (!selection) {
-    throw new Error("Missing workspace selection. Pass --workspace <workspace-id>, set FIDE_WORKSPACE, or save `workspace` in ~/.fide/settings.json.");
+    throw new Error("Missing workspace selection. Pass --workspace <workspace-id>, set FIDE_WORKSPACE, save `workspaceId` in project .fide/settings.json, or save it in the selected profile settings.");
   }
   return selection;
 }

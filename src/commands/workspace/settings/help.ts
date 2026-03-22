@@ -20,8 +20,9 @@ export function workspaceSettingsHelp(): string {
         title: "Notes",
         items: [
           "  - Use --workspace <workspace-id> to select a workspace explicitly.",
-          "  - FIDE_WORKSPACE overrides the saved selection.",
-          "  - A saved `workspace` value in ~/.fide/settings.json is used last.",
+          "  - FIDE_WORKSPACE overrides project and profile workspace defaults.",
+          "  - Project .fide/settings.json may provide `workspaceId` and `profile` pointer fields.",
+          "  - Profile workspace defaults live in ~/.fide/profiles/<name>/settings.json.",
           "  - Graph and query-catalog settings may still use connectionRef values, but graph management now lives under `fide graph`.",
         ],
       },

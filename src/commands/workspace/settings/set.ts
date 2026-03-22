@@ -49,7 +49,7 @@ export async function runWorkspaceSettingsSet(args: string[]): Promise<number> {
     throw new Error("Workspace settings must be a JSON object.");
   }
 
-  const { auth, client } = await requireWorkspaceApiClient();
+  const { auth, client } = await requireWorkspaceApiClient(flags);
   const result = await client.setWorkspaceSettings(selection.workspaceId, parsed as Record<string, unknown>);
   const payload = okResponse("workspace-settings-set.v1", {
     baseUrl: auth.baseUrl,
