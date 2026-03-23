@@ -6,7 +6,7 @@ let envLoaded = false;
 export type FideDirResolution = {
   fideDir: string;
   root: string;
-  source: "env" | "nearest" | "default";
+  source: string;
 };
 
 export function ensureFideEnvLoaded(): void {
@@ -26,6 +26,31 @@ export function ensureFideEnvLoaded(): void {
       // Ignore malformed env files; explicit process.env still wins.
     }
   }
+}
+
+function resolveEnvSourcePath(root: string): string | null {
+  const envPaths = [
+    resolve(root, ".env.local"),
+    resolve(root, ".env"),
+  ];
+
+  for (const envPath of envPaths) {
+    if (!existsSync(envPath)) continue;
+    try {
+      const contents = readFileSync(envPath, "utf8");
+      for (const line of contents.split(/\r?\n/u)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        if (/^(?:export\s+)?FIDE_DIR\s*=/u.test(trimmed)) {
+          return envPath;
+        }
+      }
+    } catch {
+      // Ignore unreadable env files; explicit process.env still wins.
+    }
+  }
+
+  return null;
 }
 
 function resolveEnvFideDir(root: string): string | null {
@@ -62,7 +87,7 @@ export function resolveFideContext(root: string = process.cwd()): FideDirResolut
     return {
       fideDir: envFideDir,
       root: dirname(envFideDir),
-      source: "env",
+      source: resolveEnvSourcePath(root) ?? "env",
     };
   }
 
@@ -71,7 +96,7 @@ export function resolveFideContext(root: string = process.cwd()): FideDirResolut
     return {
       fideDir: nearestFideDir,
       root: dirname(nearestFideDir),
-      source: "nearest",
+      source: nearestFideDir,
     };
   }
 
@@ -79,7 +104,7 @@ export function resolveFideContext(root: string = process.cwd()): FideDirResolut
   return {
     fideDir,
     root: dirname(fideDir),
-    source: "default",
+    source: fideDir,
   };
 }
 

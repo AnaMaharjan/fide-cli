@@ -20,23 +20,35 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     source: string | null;
   };
 
-  return [
+  const machineLines = [
     "Machine",
     `  auth: ${machine.authConfigured ? (machine.authValid ? "configured and valid" : "configured but invalid") : "not configured"}`,
-    `  source: ${machine.authSource ?? "none"}`,
-    `  base URL: ${machine.baseUrl ?? "none"}`,
+    ...(machine.authSource ? [`  source: ${machine.authSource}`] : []),
+    ...(machine.baseUrl ? [`  base URL: ${machine.baseUrl}`] : []),
     ...(machine.authError ? [`  error: ${machine.authError}`] : []),
     ...(!machine.authConfigured && machine.authResolutionHint ? [`  hint: ${machine.authResolutionHint}`] : []),
-    "",
+  ];
+
+  const projectLines = [
     "Project",
     `  root: ${project.root}`,
     `  .fide: ${project.fideDir}`,
     `  source: ${project.source}`,
     `  settings: ${project.settingsPresent ? "present" : "missing"}`,
-    "",
+  ];
+
+  const workspaceLines = [
     "Workspace",
-    `  selected: ${workspace.selected ?? "none"}`,
-    `  source: ${workspace.source ?? "none"}`,
+    ...(workspace.selected ? [`  selected: ${workspace.selected}`] : []),
+    ...(workspace.source ? [`  source: ${workspace.source}`] : []),
+  ];
+
+  return [
+    ...machineLines,
+    "",
+    ...projectLines,
+    "",
+    ...workspaceLines,
   ].join("\n");
 }
 

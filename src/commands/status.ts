@@ -12,6 +12,20 @@ import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/f
 import { resolveWorkspaceSelection } from "../util/workspace-settings.js";
 import { resolveProfileAuthPath, resolveProfileSelection, resolveProfileSettingsPath } from "../util/profile-settings.js";
 
+function omitNullFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => omitNullFields(item)) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entry]) => entry !== null)
+        .map(([key, entry]) => [key, omitNullFields(entry)]),
+    ) as T;
+  }
+  return value;
+}
+
 export async function runStatusCommand(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
@@ -81,7 +95,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   });
 
   if (useJson) {
-    printJson(payload);
+    printJson(omitNullFields(payload));
   } else {
     if (!resolvedAuth && !authResolutionError) {
       console.log("No Fide auth profile selected.");

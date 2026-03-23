@@ -2,6 +2,7 @@ import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { getStringFlag } from "./args.js";
+import { ensureFideEnvLoaded } from "./fide-dir.js";
 import { resolveProjectPointerSettings } from "./project-pointer.js";
 
 export type ProfileSelectionSource = "flag" | "env" | "project" | "config";
@@ -133,6 +134,8 @@ export async function resolveProfileSelection(
   flags: Map<string, string | boolean>,
   root: string = process.cwd(),
 ): Promise<ResolvedProfileSelection | null> {
+  ensureFideEnvLoaded();
+
   const flagProfile = normalizeProfileName(getStringFlag(flags, "profile"));
   if (flagProfile) {
     return {
