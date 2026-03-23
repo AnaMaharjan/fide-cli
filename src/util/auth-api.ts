@@ -17,7 +17,6 @@ export type MeResponse = {
     managementMode?: "self" | "workspace" | "controller" | null;
   };
   access: {
-    apiKeysEnabled?: boolean | null;
     managingWorkspaceId?: string | null;
     workspaceId: string | null;
     workspaceIds: string[];
@@ -75,7 +74,6 @@ export type WorkspaceMember = {
   userId: string;
   userType?: "human" | "agent" | null;
   managementMode?: "self" | "workspace" | "controller" | null;
-  apiKeysEnabled?: boolean | null;
   managingWorkspaceId?: string | null;
   createdAt: string;
   roles: string[];

@@ -7,6 +7,7 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     authSource: string | null;
     baseUrl: string | null;
     authError: string | null;
+    authResolutionHint?: string | null;
   };
   const project = payload.project as {
     root: string;
@@ -25,6 +26,7 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     `  source: ${machine.authSource ?? "none"}`,
     `  base URL: ${machine.baseUrl ?? "none"}`,
     ...(machine.authError ? [`  error: ${machine.authError}`] : []),
+    ...(!machine.authConfigured && machine.authResolutionHint ? [`  hint: ${machine.authResolutionHint}`] : []),
     "",
     "Project",
     `  root: ${project.root}`,

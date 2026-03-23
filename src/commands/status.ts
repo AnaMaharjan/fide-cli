@@ -29,7 +29,8 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   } catch (error) {
     authResolutionError = error instanceof Error ? error.message : String(error);
   }
-  let remote: { ok: boolean; error?: string } = { ok: false, error: "Not authenticated" };
+  const missingProfileHint = "No Fide auth profile selected. Use --profile <name>, set FIDE_PROFILE, set project .fide/settings.json, or run `fide login --profile <name>`.";
+  let remote: { ok: boolean; error?: string | null } = { ok: false, error: null };
   if (resolvedAuth) {
     try {
       await createAuthApiClient(resolvedAuth).me();
@@ -56,9 +57,9 @@ export async function runStatusCommand(args: string[]): Promise<number> {
       authValid: remote.ok,
       authResolutionError,
       authResolutionHint: !resolvedAuth
-        ? "A default profile is optional. Use --profile <name>, FIDE_PROFILE, project .fide/settings.json, or run `fide login --profile <name>`."
+        ? missingProfileHint
         : null,
-      authError: remote.ok ? null : (remote.error ?? null),
+      authError: resolvedAuth ? (remote.ok ? null : (remote.error ?? null)) : null,
     },
     project: {
       cwd: process.cwd(),
@@ -83,7 +84,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
     printJson(payload);
   } else {
     if (!resolvedAuth && !authResolutionError) {
-      console.log("No Fide auth profile resolved. A default profile is optional.");
+      console.log("No Fide auth profile selected.");
       console.log("Use --profile <name>, FIDE_PROFILE, project .fide/settings.json, or run `fide login --profile <name>`.");
       console.log("");
     }
