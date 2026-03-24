@@ -156,7 +156,6 @@ function formatGraphBuild(payload: PrettyRenderable): string {
 function formatWorkspaceList(payload: PrettyRenderable): string {
   const workspaces = Array.isArray(payload.workspaces) ? (payload.workspaces as Array<{
     id: string;
-    slug: string;
     name: string;
   }>) : [];
   const lines = ["Workspaces"];
@@ -165,7 +164,7 @@ function formatWorkspaceList(payload: PrettyRenderable): string {
     return lines.join("\n");
   }
   for (const workspace of workspaces) {
-    lines.push(`  ${workspace.id}  ${workspace.slug}  ${workspace.name}`);
+    lines.push(`  ${workspace.id}  ${workspace.name}`);
   }
   return lines.join("\n");
 }
@@ -173,14 +172,12 @@ function formatWorkspaceList(payload: PrettyRenderable): string {
 function formatWorkspaceGet(payload: PrettyRenderable): string {
   const workspace = payload.workspace as {
     id: string;
-    slug: string;
     name: string;
     roles?: string[];
   };
   return [
     "Workspace",
     `  id: ${workspace.id}`,
-    `  slug: ${workspace.slug}`,
     `  name: ${workspace.name}`,
     `  roles: ${Array.isArray(workspace.roles) && workspace.roles.length > 0 ? workspace.roles.join(", ") : "none"}`,
   ].join("\n");

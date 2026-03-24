@@ -38,7 +38,6 @@ export type ApiKeySummary = {
 
 export type WorkspaceSummary = {
   id: string;
-  slug: string;
   name: string;
   createdAt: string;
   roles: string[];
