@@ -10,10 +10,14 @@ import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.
 
 type HostedGraphRecord = {
   type: "postgres" | "sqlite" | "fide-jsonl";
-  schema?: string;
   connection?: string;
   connectionRef?: string;
-  gitignore?: boolean;
+  recipe?: unknown;
+  metadata?: unknown;
+};
+
+type HostedWorkspaceGraphInput = {
+  type: "postgres" | "sqlite" | "fide-jsonl";
   recipe?: unknown;
   metadata?: unknown;
 };
@@ -24,17 +28,29 @@ function readGraphs(settings: Record<string, unknown>): Record<string, HostedGra
   return raw as Record<string, HostedGraphRecord>;
 }
 
+function toHostedWorkspaceGraphInput(graph: HostedGraphRecord): HostedWorkspaceGraphInput {
+  return {
+    type: graph.type,
+    ...(graph.recipe !== undefined ? { recipe: graph.recipe } : {}),
+    ...(graph.metadata !== undefined ? { metadata: graph.metadata } : {}),
+  };
+}
+
 function readLocalProjectGraph(graphKey: string, root: string = process.cwd()): HostedGraphRecord | null {
   const settingsPath = resolveSettingsPath(root);
   const settings = readJsonFile<FideSettings>(settingsPath);
   return readGraphs((settings ?? {}) as Record<string, unknown>)[graphKey] ?? null;
 }
 
-async function readGraphInput(args: string[]): Promise<{ flags: Map<string, string | boolean>; graph: HostedGraphRecord }> {
+async function readGraphInput(args: string[]): Promise<{ flags: Map<string, string | boolean>; graph: HostedWorkspaceGraphInput }> {
   const { flags, positionals } = parseArgs(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(renderCommandHelp(graphSaveCommand));
-    return { flags, graph: { type: "postgres", schema: "" } };
+    return { flags, graph: { type: "postgres" } };
+  }
+
+  if (getStringFlag(flags, "connection") || getStringFlag(flags, "connection-ref")) {
+    throw new Error("`fide graph save` no longer accepts connection flags. Save graph metadata to the workspace and keep connection config in local project `.fide/settings.json`.");
   }
 
   const file = getStringFlag(flags, "file");
@@ -56,7 +72,7 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
         : positionals.join(" ");
     return {
       flags,
-      graph: JSON.parse(raw) as HostedGraphRecord,
+      graph: toHostedWorkspaceGraphInput(JSON.parse(raw) as HostedGraphRecord),
     };
   }
 
@@ -66,7 +82,7 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
     if (localGraph) {
       return {
         flags,
-        graph: localGraph,
+        graph: toHostedWorkspaceGraphInput(localGraph),
       };
     }
   }
@@ -74,47 +90,18 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
   const type = getStringFlag(flags, "type");
   if (!type || !["postgres", "sqlite", "fide-jsonl"].includes(type)) {
     if (graphKey) {
-      throw new Error(`No local project graph found for "${graphKey}". Pass --type/--schema/--connection-ref, --file, or --stdin.`);
+      throw new Error(`No local project graph found for "${graphKey}". Pass --type, --file, or --stdin.`);
     }
     throw new Error("Missing required flag: --type <postgres|sqlite|fide-jsonl>.");
   }
-  const graphType = type as HostedGraphRecord["type"];
-  const connection = getStringFlag(flags, "connection");
-  const connectionRef = getStringFlag(flags, "connection-ref");
+  const graphType = type as HostedWorkspaceGraphInput["type"];
   const recipeFile = getStringFlag(flags, "recipe-file");
   const recipe = recipeFile ? JSON.parse(await readUtf8(recipeFile)) : undefined;
-
-  if (graphType === "postgres") {
-    const schema = getStringFlag(flags, "schema");
-    if (!schema) throw new Error("Missing required flag: --schema <schema>.");
-    if (!connection && !connectionRef) {
-      throw new Error("Missing required graph connection. Pass either --connection or --connection-ref.");
-    }
-    if (connection && connectionRef) {
-      throw new Error("Provide exactly one of --connection or --connection-ref.");
-    }
-    return {
-      flags,
-      graph: {
-        type: graphType,
-        schema,
-        ...(connection ? { connection } : {}),
-        ...(connectionRef ? { connectionRef } : {}),
-        ...(recipe ? { recipe } : {}),
-      },
-    };
-  }
-
-  if (!connection) {
-    throw new Error("Missing required flag: --connection <value>.");
-  }
 
   return {
     flags,
     graph: {
       type: graphType,
-      connection,
-      ...(hasFlag(flags, "gitignore") ? { gitignore: true } : {}),
       ...(recipe ? { recipe } : {}),
     },
   };

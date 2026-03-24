@@ -61,7 +61,7 @@ function helpText(): string {
             "  fide keys list",
             "  fide graph statements write '<json>'",
             "  fide graph list --workspace <workspace-id>",
-            "  fide graph save --workspace <workspace-id> --graph primary --type postgres --schema fide_graph --connection-ref primary-graph",
+            "  fide graph save --workspace <workspace-id> --graph primary --type postgres",
             "  fide graph query run --graph primary 'select * from statements limit 10'",
             "  fide graph build --graph combined",
             "  fide workspace list",

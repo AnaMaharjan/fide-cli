@@ -33,7 +33,7 @@ function queryCommandHelp(): string {
     "  fide graph query list --graph primary",
     "  fide graph query get --profile work --graph primary --name recentStatements",
     "  fide graph query save --graph primary --name recentStatements 'select * from statements limit 10'",
-    "  fide graph query save --profile work --graph primary --name recentStatements 'select * from statements limit 10'",
+    "  fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
   ].join("\n");
 }
 
@@ -139,7 +139,6 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
   const graphKey = requireGraphKey(flags);
   const name = requireSavedQueryName(flags);
   const description = getStringFlag(flags, "description");
-  const queryCatalog = getStringFlag(flags, "query-catalog");
   if (!sql.trim()) {
     console.error("Missing SQL for `graph query save --workspace`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
     console.error(renderCommandHelp(graphQuerySaveCommand));
@@ -154,7 +153,6 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
     name,
     sql,
     ...(typeof description === "string" ? { description } : {}),
-    ...(queryCatalog ? { queryCatalog } : {}),
   });
 
   const payload = okResponse("graph-query-save-workspace.v1", {
@@ -162,13 +160,12 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
     source: auth.source,
     workspaceId: selection.workspaceId,
     workspaceSelectionSource: selection.source,
-    queryCatalogKey: result.queryCatalogKey,
     query: result.query,
   }, {
     command: "fide graph query save",
     next: {
-      get: `fide graph query get --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}${queryCatalog ? ` --query-catalog ${queryCatalog}` : ""}`,
-      run: `fide graph query run --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}${queryCatalog ? ` --query-catalog ${queryCatalog}` : ""}`,
+      get: `fide graph query get --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}`,
+      run: `fide graph query run --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}`,
     },
   });
 
@@ -221,13 +218,9 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
   }
 
   const graphKey = getStringFlag(flags, "graph");
-  const queryCatalog = getStringFlag(flags, "query-catalog");
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const result = await client.listGraphQueries({
-    workspaceId: selection.workspaceId,
-    ...(queryCatalog ? { queryCatalog } : {}),
-  });
+  const result = await client.listGraphQueries({ workspaceId: selection.workspaceId });
   const queries = graphKey
     ? result.queries.filter((query) => query.graphKey === graphKey)
     : result.queries;
@@ -235,7 +228,7 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
   const next: Record<string, string> = {};
   const first = queries[0];
   if (first) {
-    next.get = `fide graph query get --workspace ${selection.workspaceId} --graph ${first.graphKey} --name ${first.name}${queryCatalog ? ` --query-catalog ${queryCatalog}` : ""}`;
+    next.get = `fide graph query get --workspace ${selection.workspaceId} --graph ${first.graphKey} --name ${first.name}`;
   }
 
   const payload = okResponse("graph-query-list-workspace.v1", {
@@ -243,7 +236,6 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
     source: auth.source,
     workspaceId: selection.workspaceId,
     workspaceSelectionSource: selection.source,
-    queryCatalogKey: result.queryCatalogKey,
     queries,
   }, {
     command: "fide graph query list",
@@ -296,14 +288,12 @@ async function runGraphQueryGetWorkspace(args: string[]): Promise<number> {
 
   const graphKey = requireGraphKey(flags);
   const name = requireSavedQueryName(flags);
-  const queryCatalog = getStringFlag(flags, "query-catalog");
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
   const query = await client.getGraphQuery({
     workspaceId: selection.workspaceId,
     graphKey,
     name,
-    ...(queryCatalog ? { queryCatalog } : {}),
   });
 
   const payload = okResponse("graph-query-get-workspace.v1", {
@@ -315,8 +305,8 @@ async function runGraphQueryGetWorkspace(args: string[]): Promise<number> {
   }, {
     command: "fide graph query get",
     next: {
-      list: `fide graph query list --workspace ${selection.workspaceId}${queryCatalog ? ` --query-catalog ${queryCatalog}` : ""}`,
-      run: `fide graph query run --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}${queryCatalog ? ` --query-catalog ${queryCatalog}` : ""}`,
+      list: `fide graph query list --workspace ${selection.workspaceId}`,
+      run: `fide graph query run --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}`,
     },
   });
 
@@ -368,7 +358,6 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
   }
 
   const graphKey = requireGraphKey(flags);
-  const queryCatalog = getStringFlag(flags, "query-catalog");
   const workspaceId = getStringFlag(flags, "workspace");
   const limitFlag = getStringFlag(flags, "limit");
   const limit = limitFlag ? Number(limitFlag) : undefined;
@@ -384,7 +373,6 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
       workspaceId: selection.workspaceId,
       graphKey,
       name,
-      ...(queryCatalog ? { queryCatalog } : {}),
       ...(typeof limit === "number" ? { limit } : {}),
     });
     const payload = okResponse("graph-query-run-workspace.v1", {
@@ -396,7 +384,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     }, {
       command: "fide graph query run",
       next: {
-        get: `fide graph query get --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}${queryCatalog ? ` --query-catalog ${queryCatalog}` : ""}`,
+        get: `fide graph query get --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}`,
       },
     });
 
