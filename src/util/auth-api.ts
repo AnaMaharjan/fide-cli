@@ -43,10 +43,6 @@ export type WorkspaceSummary = {
   roles: string[];
 };
 
-export type WorkspaceSettingsResponse = {
-  settings: Record<string, unknown>;
-};
-
 export type WorkspaceGraph = {
   graphKey: string;
   type: "postgres" | "sqlite" | "fide-jsonl";
@@ -254,23 +250,6 @@ export function createAuthApiClient(options: AuthClientOptions) {
         headers,
       });
       return parseApiResponse<WorkspaceSummary>(response, "workspace-get.v1");
-    },
-
-    async getWorkspaceSettings(id: string): Promise<WorkspaceSettingsResponse> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/settings`, {
-        method: "GET",
-        headers,
-      });
-      return parseApiResponse<WorkspaceSettingsResponse>(response, "workspace-settings-get.v1");
-    },
-
-    async setWorkspaceSettings(id: string, settings: Record<string, unknown>): Promise<WorkspaceSettingsResponse> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/settings`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ settings }),
-      });
-      return parseApiResponse<WorkspaceSettingsResponse>(response, "workspace-settings-set.v1");
     },
 
     async listWorkspaceGraphs(workspaceId: string): Promise<WorkspaceGraph[]> {

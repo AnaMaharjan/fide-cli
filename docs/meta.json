@@ -42,9 +42,6 @@
     "workspace-members-list",
     "--- Workspace Roles ---",
     "workspace-roles-grant",
-    "workspace-roles-revoke",
-    "--- Workspace Settings ---",
-    "workspace-settings-get",
-    "workspace-settings-set"
+    "workspace-roles-revoke"
   ]
 }

@@ -255,6 +255,7 @@ export const graphQueryRunCommand = defineCommand({
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    targetScope: "string?",
     ok: "boolean?",
     graphStoreType: "string?",
     key: "string?",
@@ -273,6 +274,10 @@ export const graphQueryRunCommand = defineCommand({
     "fide graph query run --graph primary 'select * from statements limit 10'",
     "fide graph query run --graph primary --name recentStatements",
     "fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
+  ],
+  notes: [
+    "Without `--workspace` or `FIDE_WORKSPACE_ID`, `--name <query-name>` runs a local project saved query.",
+    "With `--workspace` or `FIDE_WORKSPACE_ID`, `--name <query-name>` runs a hosted workspace saved query.",
   ],
 });
 
@@ -293,6 +298,7 @@ export const graphQueryListCommand = defineCommand({
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    targetScope: "string",
     root: "string?",
     baseUrl: "string?",
     source: "string?",
@@ -301,6 +307,14 @@ export const graphQueryListCommand = defineCommand({
     queries: "array",
     next: "object?",
   },
+  examples: [
+    "fide graph query list",
+    "fide graph query list --workspace <workspace-id>",
+  ],
+  notes: [
+    "Without `--workspace` or `FIDE_WORKSPACE_ID`, lists local project queries.",
+    "With `--workspace` or `FIDE_WORKSPACE_ID`, lists hosted workspace queries.",
+  ],
 });
 
 export const graphQueryGetCommand = defineCommand({
@@ -320,6 +334,7 @@ export const graphQueryGetCommand = defineCommand({
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    targetScope: "string",
     root: "string?",
     baseUrl: "string?",
     source: "string?",
@@ -328,6 +343,14 @@ export const graphQueryGetCommand = defineCommand({
     query: "object",
     next: "object?",
   },
+  examples: [
+    "fide graph query get --graph primary --name recentStatements",
+    "fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
+  ],
+  notes: [
+    "Without `--workspace` or `FIDE_WORKSPACE_ID`, reads a local project query.",
+    "With `--workspace` or `FIDE_WORKSPACE_ID`, reads a hosted workspace query.",
+  ],
 });
 
 export const graphQuerySaveCommand = defineCommand({
@@ -351,6 +374,7 @@ export const graphQuerySaveCommand = defineCommand({
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    targetScope: "string",
     ok: "boolean?",
     mode: "string?",
     graphKey: "string?",

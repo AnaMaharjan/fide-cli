@@ -129,50 +129,6 @@ export const workspaceRolesRevokeCommand = defineCommand({
   },
 });
 
-export const workspaceSettingsGetCommand = defineCommand({
-  surface: "workspace.settings.get",
-  command: "fide workspace settings get",
-  summary: "Read workspace-managed settings from the API",
-  usage: [
-    "fide workspace settings get [--workspace <workspace-id>] [--profile <name>] [--pretty|-p]",
-  ],
-  params: [
-    { name: "workspace", type: "string", description: "Workspace to read. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    baseUrl: "string",
-    source: "string",
-    workspaceId: "string",
-    workspaceSelectionSource: "string",
-    settings: "object",
-  },
-});
-
-export const workspaceSettingsSetCommand = defineCommand({
-  surface: "workspace.settings.set",
-  command: "fide workspace settings set",
-  summary: "Write workspace-managed settings to the API",
-  usage: [
-    "fide workspace settings set [--workspace <workspace-id>] [--profile <name>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
-  ],
-  params: [
-    { name: "workspace", type: "string", description: "Workspace to write. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
-    { name: "stdin", type: "boolean", description: "Read a JSON object from stdin" },
-    { name: "file", type: "string", description: "Read a JSON object from a file", valueLabel: "<path>" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    baseUrl: "string",
-    source: "string",
-    workspaceId: "string",
-    workspaceSelectionSource: "string",
-    settings: "object",
-  },
-});
-
 export const WORKSPACE_COMMAND_METADATA = [
   workspaceListCommand,
   workspaceGetCommand,
@@ -180,8 +136,6 @@ export const WORKSPACE_COMMAND_METADATA = [
   workspaceMembersAddCommand,
   workspaceRolesGrantCommand,
   workspaceRolesRevokeCommand,
-  workspaceSettingsGetCommand,
-  workspaceSettingsSetCommand,
 ] as const;
 
 export const WORKSPACE_COMMAND_SCHEMAS = commandSchemas(WORKSPACE_COMMAND_METADATA);

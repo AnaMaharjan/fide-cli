@@ -17,6 +17,14 @@ import { requireWorkspaceApiClient } from "../workspace/shared.js";
 import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
 import { okResponse } from "../../util/response.js";
 
+type GraphQueryScope =
+  | { targetScope: "local" }
+  | {
+      targetScope: "workspace";
+      workspaceId: string;
+      workspaceSelectionSource: "flag" | "env";
+    };
+
 function queryCommandHelp(): string {
   return [
     renderCommandHelp(graphQueryCommand),
@@ -64,8 +72,24 @@ function requireGraphKey(flags: Map<string, string | boolean>): string {
   return graphKey;
 }
 
-async function shouldUseHostedQueryMode(flags: Map<string, string | boolean>): Promise<boolean> {
-  return Boolean(await resolveWorkspaceSelection(flags));
+export async function resolveGraphQueryScope(flags: Map<string, string | boolean>): Promise<GraphQueryScope> {
+  const selection = await resolveWorkspaceSelection(flags);
+  if (!selection) {
+    return { targetScope: "local" };
+  }
+  return {
+    targetScope: "workspace",
+    workspaceId: selection.workspaceId,
+    workspaceSelectionSource: selection.source,
+  };
+}
+
+function isWorkspaceScope(scope: GraphQueryScope): scope is Extract<GraphQueryScope, { targetScope: "workspace" }> {
+  return scope.targetScope === "workspace";
+}
+
+function projectQueryMissingError(graphKey: string, name: string): Error {
+  return new Error(`Local project query not found: ${graphKey}/${name}. Use \`fide graph query list\` to inspect local queries, or pass \`--workspace <workspace-id>\` / set \`FIDE_WORKSPACE_ID\` for hosted queries.`);
 }
 
 async function readProjectQueryOrThrow(flags: Map<string, string | boolean>): Promise<{ root: string; query: LocalQueryDefinition }> {
@@ -79,7 +103,7 @@ async function readProjectQueryOrThrow(flags: Map<string, string | boolean>): Pr
   const queries = await readLocalQueries(graphTarget.root);
   const query = queries.find((entry) => entry.graphKey === graphKey && entry.name === name);
   if (!query) {
-    throw new Error(`Project graph query not found: ${graphKey}/${name}`);
+    throw projectQueryMissingError(graphKey, name);
   }
   return { root: graphTarget.root, query };
 }
@@ -104,7 +128,7 @@ async function runGraphQuerySaveProject(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`fide graph query save` without `--workspace` only supports project .fide directories.");
+    throw new Error("`fide graph query save` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` or set `FIDE_WORKSPACE_ID` to save a hosted query.");
   }
 
   const outPath = resolve(resolveQueriesDir(graphTarget.root), graphKey, `${name}.sql`);
@@ -116,6 +140,7 @@ async function runGraphQuerySaveProject(args: string[]): Promise<number> {
 
   const payload = {
     ok: true,
+    targetScope: "local",
     mode: "query",
     graphKey,
     name,
@@ -160,6 +185,7 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
   });
 
   const payload = okResponse("graph-query-save-workspace.v1", {
+    targetScope: "workspace",
     baseUrl: auth.baseUrl,
     source: auth.source,
     workspaceId: selection.workspaceId,
@@ -191,7 +217,7 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`fide graph query list` without `--workspace` only supports project .fide directories.");
+    throw new Error("`fide graph query list` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` or set `FIDE_WORKSPACE_ID` to list hosted queries.");
   }
 
   const graphKey = getStringFlag(flags, "graph");
@@ -200,6 +226,7 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
     .map(({ file, ...query }) => query);
 
   const payload = {
+    targetScope: "local",
     root: graphTarget.root,
     queries,
   };
@@ -236,6 +263,7 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
   }
 
   const payload = okResponse("graph-query-list-workspace.v1", {
+    targetScope: "workspace",
     baseUrl: auth.baseUrl,
     source: auth.source,
     workspaceId: selection.workspaceId,
@@ -266,6 +294,7 @@ async function runGraphQueryGetProject(args: string[]): Promise<number> {
 
   const { root, query } = await readProjectQueryOrThrow(flags);
   const payload = {
+    targetScope: "local",
     root,
     query: {
       graphKey: query.graphKey,
@@ -301,6 +330,7 @@ async function runGraphQueryGetWorkspace(args: string[]): Promise<number> {
   });
 
   const payload = okResponse("graph-query-get-workspace.v1", {
+    targetScope: "workspace",
     baseUrl: auth.baseUrl,
     source: auth.source,
     workspaceId: selection.workspaceId,
@@ -352,6 +382,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     if (shouldUseJsonOutput(resolvedFlags)) {
       const localTarget = resolveGraphTarget(resolvedFlags);
       printJson({
+        targetScope: "local",
         ...result,
         ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
       });
@@ -368,7 +399,8 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     throw new Error("Invalid --limit value. Expected a positive integer.");
   }
 
-  if (await shouldUseHostedQueryMode(flags)) {
+  const queryScope = await resolveGraphQueryScope(flags);
+  if (isWorkspaceScope(queryScope)) {
     const useJson = shouldUseJsonOutput(flags);
     const selection = await resolveWorkspaceSelectionOrThrow(flags);
     const { auth, client } = await requireWorkspaceApiClient(flags);
@@ -379,6 +411,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
       ...(typeof limit === "number" ? { limit } : {}),
     });
     const payload = okResponse("graph-query-run-workspace.v1", {
+      targetScope: "workspace",
       baseUrl: auth.baseUrl,
       source: auth.source,
       workspaceId: selection.workspaceId,
@@ -412,6 +445,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
   if (shouldUseJsonOutput(flags)) {
     const localTarget = resolveGraphTarget(flags);
     printJson({
+      targetScope: "local",
       ...result,
       ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
     });
@@ -427,7 +461,8 @@ async function runGraphQueryListCommand(args: string[]): Promise<number> {
     console.log(renderCommandHelp(graphQueryListCommand));
     return 0;
   }
-  if (await shouldUseHostedQueryMode(parsed.flags)) {
+  const queryScope = await resolveGraphQueryScope(parsed.flags);
+  if (isWorkspaceScope(queryScope)) {
     return runGraphQueryListWorkspace(args);
   }
   return runGraphQueryListProject(args);
@@ -439,7 +474,8 @@ async function runGraphQueryGetCommand(args: string[]): Promise<number> {
     console.log(renderCommandHelp(graphQueryGetCommand));
     return 0;
   }
-  if (await shouldUseHostedQueryMode(parsed.flags)) {
+  const queryScope = await resolveGraphQueryScope(parsed.flags);
+  if (isWorkspaceScope(queryScope)) {
     return runGraphQueryGetWorkspace(args);
   }
   return runGraphQueryGetProject(args);
@@ -451,7 +487,8 @@ async function runGraphQuerySaveCommand(args: string[]): Promise<number> {
     console.log(renderCommandHelp(graphQuerySaveCommand));
     return 0;
   }
-  if (await shouldUseHostedQueryMode(parsed.flags)) {
+  const queryScope = await resolveGraphQueryScope(parsed.flags);
+  if (isWorkspaceScope(queryScope)) {
     return runGraphQuerySaveWorkspace(args);
   }
   return runGraphQuerySaveProject(args);

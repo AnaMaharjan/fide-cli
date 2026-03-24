@@ -47,7 +47,7 @@ function helpText(): string {
           title: "Groups",
           items: [
             "  graph    Local graph work and hosted graph/query management",
-            "  workspace Workspace info, members, roles, and settings",
+            "  workspace Workspace info, members, and roles",
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
           ],

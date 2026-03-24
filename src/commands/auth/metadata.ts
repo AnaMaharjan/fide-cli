@@ -33,7 +33,7 @@ export const authLoginCommand = defineCommand({
   notes: [
     "Without --api-key, login opens the browser to authorize a new workspace-managed agent and stores the returned API key locally.",
     "Do not combine --web with --api-key.",
-    "Login writes auth into ~/.fide/profiles/<name>/auth.json and workspace defaults into ~/.fide/profiles/<name>/settings.json.",
+    "Login writes auth into ~/.fide/profiles/<name>/auth.json and stores workspace context in ~/.fide/profiles/<name>/settings.json.",
     "A default profile is optional. Other commands can resolve auth from --profile, FIDE_PROFILE, or project .fide/settings.json.",
     "Hosted workspace selection is separate: use --workspace or FIDE_WORKSPACE_ID.",
   ],

@@ -3,7 +3,6 @@ import { runWorkspaceList } from "./list.js";
 import { runWorkspaceGet } from "./get.js";
 import { runWorkspaceMembersCommand } from "./members/index.js";
 import { runWorkspaceRolesCommand } from "./roles/index.js";
-import { runWorkspaceSettingsCommand } from "./settings/index.js";
 
 export async function runWorkspaceCommand(command: string | undefined, args: string[]): Promise<number> {
   if (!command || command === "--help" || command === "-h" || command === "help") {
@@ -25,10 +24,6 @@ export async function runWorkspaceCommand(command: string | undefined, args: str
 
   if (command === "roles") {
     return runWorkspaceRolesCommand(args);
-  }
-
-  if (command === "settings") {
-    return runWorkspaceSettingsCommand(args);
   }
 
   console.error(`Unknown workspace command: ${command}`);
