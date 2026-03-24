@@ -48,7 +48,7 @@ export async function resolveWorkspaceSelectionOrThrow(
 ): Promise<ResolvedWorkspaceSelection> {
   const selection = await resolveWorkspaceSelection(flags);
   if (!selection) {
-    throw new Error("Missing workspace selection. Pass --workspace <workspace-id> or set FIDE_WORKSPACE_ID.");
+    throw new Error("Missing workspace selection. Pass --workspace <workspace_id> or set FIDE_WORKSPACE_ID.");
   }
   return selection;
 }

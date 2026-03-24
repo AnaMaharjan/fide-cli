@@ -6,7 +6,7 @@ export const authLoginCommand = defineCommand({
   command: "fide login",
   summary: "Save auth for this machine via browser handoff or API key",
   usage: [
-    "fide login [--web] [--profile <name>] [--set-default] [--api-base-url <url>] [--workspace <id>] [--agent-name <name>] [--pretty|-p]",
+    "fide login [--web] [--profile <name>] [--set-default] [--api-base-url <url>] [--workspace <workspace_id>] [--agent-name <name>] [--pretty|-p]",
     "fide login --api-key <key> [--profile <name>] [--set-default] [--api-base-url <url>] [--pretty|-p]",
     "fide login --clear-default [--pretty|-p]",
   ],
@@ -17,7 +17,7 @@ export const authLoginCommand = defineCommand({
     { name: "clear-default", type: "boolean", required: false, description: "Remove the saved default profile without changing any profile auth." },
     { name: "web", type: "boolean", required: false, description: "Start browser-based agent login. This is the default when --api-key is omitted." },
     { name: "api-key", type: "string", required: false, description: "Save an existing API key instead of using the browser flow.", valueLabel: "<key>" },
-    { name: "workspace", type: "string", required: false, description: "Preferred workspace for browser-based agent login.", valueLabel: "<id>" },
+    { name: "workspace", type: "string", required: false, description: "Preferred workspace public id for browser-based agent login (`workspace_*`).", valueLabel: "<workspace_id>" },
     { name: "agent-name", type: "string", required: false, description: "Suggested agent name for browser-based agent login.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -35,7 +35,7 @@ export const authLoginCommand = defineCommand({
     "Do not combine --web with --api-key.",
     "Login writes auth into ~/.fide/profiles/<name>/auth.json and stores workspace context in ~/.fide/profiles/<name>/settings.json.",
     "A default profile is optional. Other commands can resolve auth from --profile, FIDE_PROFILE, or project .fide/settings.json.",
-    "Hosted workspace selection is separate: use --workspace or FIDE_WORKSPACE_ID.",
+    "Hosted workspace selection is separate: use --workspace or FIDE_WORKSPACE_ID with a `workspace_*` id.",
   ],
 });
 
@@ -98,12 +98,12 @@ export const authKeysCreateCommand = defineCommand({
   command: "fide keys create",
   summary: "Create an API key",
   usage: [
-    "fide keys create --label <label> [--profile <name>] [--user-id <id>] [--expires-at <iso8601>] [--pretty|-p]",
+    "fide keys create --label <label> [--profile <name>] [--user-id <user_id>] [--expires-at <iso8601>] [--pretty|-p]",
   ],
   params: [
     { name: "label", type: "string", required: true, description: "Label for the new API key", valueLabel: "<label>" },
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
-    { name: "user-id", type: "string", description: "Optional target agent user id", valueLabel: "<id>" },
+    { name: "user-id", type: "string", description: "Optional target agent public user id (`user_*`).", valueLabel: "<user_id>" },
     { name: "expires-at", type: "string", description: "Optional ISO-8601 expiration timestamp", valueLabel: "<iso8601>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -120,7 +120,7 @@ export const authKeysRevokeCommand = defineCommand({
   command: "fide keys revoke",
   summary: "Revoke an API key by id",
   usage: [
-    "fide keys revoke <id> [--profile <name>] [--pretty|-p]",
+    "fide keys revoke <api_key_id> [--profile <name>] [--pretty|-p]",
   ],
   params: [
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },

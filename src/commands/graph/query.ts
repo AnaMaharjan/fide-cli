@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { executeGraphQuery } from "@chris-test/graph-db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
@@ -31,17 +32,20 @@ function queryCommandHelp(): string {
     "",
     "Commands:",
     `  run        ${graphQueryRunCommand.summary}`,
-    `  list       List project or hosted saved graph queries`,
-    `  get        Read one project or hosted saved graph query`,
+    `  list       List compact project or hosted saved graph query summaries`,
+    `  get        Read one full project or hosted saved graph query`,
     `  save       Save a project or hosted graph query`,
     "",
     "Examples:",
-    "  fide graph query run --graph primary 'select * from statements limit 10'",
-    "  fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
     "  fide graph query list --graph primary",
+    "  fide graph query list --workspace <workspace-id>",
     "  fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
+    "  fide graph query get --graph primary --name recentStatements",
     "  fide graph query save --graph primary --name recentStatements 'select * from statements limit 10'",
     "  fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
+    "  fide graph query run --graph primary 'select * from statements limit 10'",
+    "  fide graph query run --graph primary --name recentStatements",
+    "  fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
   ].join("\n");
 }
 
@@ -165,6 +169,7 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
   const { parsed, sql } = await resolveQuerySql(args);
   const flags = parsed.flags;
   const useJson = shouldUseJsonOutput(flags);
+  const dryRun = hasFlag(flags, "dry-run");
   const graphKey = requireGraphKey(flags);
   const name = requireSavedQueryName(flags);
   const description = getStringFlag(flags, "description");
@@ -176,6 +181,63 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
+  if (dryRun) {
+    let wouldChange = true;
+    try {
+      const existing = await client.getGraphQuery({
+        workspaceId: selection.workspaceId,
+        graphKey,
+        name,
+      });
+      const currentQuery = {
+        graphKey: existing.graphKey,
+        name: existing.name,
+        description: existing.description ?? null,
+        sql: existing.sql,
+      };
+      const nextQuery = {
+        graphKey,
+        name,
+        description: description ?? null,
+        sql,
+      };
+      wouldChange = !isDeepStrictEqual(currentQuery, nextQuery);
+    } catch (error) {
+      const status = typeof error === "object" && error && "status" in error ? (error as { status?: unknown }).status : null;
+      if (status !== 404) {
+        throw error;
+      }
+    }
+
+    const payload = okResponse("graph-query-save-workspace.v1", {
+      targetScope: "workspace",
+      dryRun: true,
+      wouldChange,
+      baseUrl: auth.baseUrl,
+      source: auth.source,
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      query: {
+        graphKey,
+        name,
+        description: description ?? null,
+        sql,
+      },
+    }, {
+      command: "fide graph query save",
+      next: {
+        get: `fide graph query get --workspace ${selection.workspaceId} --graph ${graphKey} --name ${name}`,
+      },
+    });
+
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(`Dry run: ${graphKey}/${name} ${wouldChange ? "would change" : "unchanged"}`);
+    }
+    return 0;
+  }
+
   const result = await client.saveGraphQuery({
     workspaceId: selection.workspaceId,
     graphKey,
@@ -223,7 +285,7 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
   const graphKey = getStringFlag(flags, "graph");
   const queries = (await readLocalQueries(graphTarget.root))
     .filter((query) => !graphKey || query.graphKey === graphKey)
-    .map(({ file, ...query }) => query);
+    .map(({ file, graphKey: currentGraphKey, name, description }) => ({ graphKey: currentGraphKey, name, description }));
 
   const payload = {
     targetScope: "local",
@@ -234,7 +296,8 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
     printJson(payload);
   } else {
     for (const query of queries) {
-      console.log(`${query.graphKey} ${query.name}`);
+      const description = query.description ? ` - ${query.description}` : "";
+      console.log(`${query.graphKey} ${query.name}${description}`);
     }
   }
   return 0;
@@ -278,7 +341,8 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
     printJson(payload);
   } else {
     for (const query of queries) {
-      console.log(`${query.graphKey} ${query.name}`);
+      const description = query.description ? ` - ${query.description}` : "";
+      console.log(`${query.graphKey} ${query.name}${description}`);
     }
   }
   return 0;

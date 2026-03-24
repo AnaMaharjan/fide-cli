@@ -3,9 +3,8 @@ import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
-import { getWorkspaceFlag } from "../../util/workspace-settings.js";
 import { workspaceGetCommand } from "./metadata.js";
-import { requireWorkspaceApiClient } from "./shared.js";
+import { requireHostedWorkspaceTarget, requireWorkspaceApiClient } from "./shared.js";
 
 export async function runWorkspaceGet(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
@@ -15,10 +14,8 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
     return 0;
   }
 
-  const id = getWorkspaceFlag(flags);
-  if (!id) {
-    throw new Error("Missing required flag: --workspace");
-  }
+  const selection = await requireHostedWorkspaceTarget(flags);
+  const id = selection.workspaceId;
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
   const workspace = await client.getWorkspace(id);

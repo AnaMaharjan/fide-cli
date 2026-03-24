@@ -107,24 +107,20 @@ export const graphStatusCommand = defineCommand({
     "fide graph status",
     "fide graph status --fide-dir <path>",
     "fide graph status --graph <name>",
-    "fide graph status --query-catalog <name>",
   ],
   params: [
     { name: "fide-dir", type: "string", description: "Optional local .fide directory override", valueLabel: "<path>" },
     { name: "graph", type: "string", description: "Configured graph key", valueLabel: "<name>" },
-    { name: "query-catalog", type: "string", description: "Configured query catalog key", valueLabel: "<name>" },
   ],
   output: {
     ok: "boolean",
     local: "object?",
     graphs: "array<object>",
-    queryCatalogs: "array<object>",
     next: "object?",
   },
   notes: [
-    "Always returns `graphs` and `queryCatalogs` arrays so targeted and overview modes share the same top-level shape.",
     "With no selector, also returns local .fide status.",
-    "Use `--graph <name>` or `--query-catalog <name>` to narrow the corresponding array to one item.",
+    "Use `--graph <name>` to narrow the graph status to one configured graph.",
   ],
 });
 
@@ -194,9 +190,12 @@ export const graphSaveCommand = defineCommand({
     { name: "recipe-file", type: "string", description: "JSON file containing graph recipe steps", valueLabel: "<recipe.json>" },
     { name: "file", type: "string", description: "Read the full hosted graph metadata object from a file", valueLabel: "<graph.json>" },
     { name: "stdin", type: "boolean", description: "Read the full hosted graph metadata object from stdin" },
+    { name: "dry-run", type: "boolean", description: "Validate the hosted graph write and show the intended change without saving it" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    dryRun: "boolean?",
+    wouldChange: "boolean?",
     baseUrl: "string",
     source: "string",
     workspaceId: "string",
@@ -212,6 +211,7 @@ export const graphSaveCommand = defineCommand({
     "This command updates hosted workspace graph metadata.",
     "If no explicit graph definition is provided, `--graph <name>` first looks for a local project graph with the same key in `.fide/settings.json`.",
     "Local connection details stay in project `.fide/settings.json` and are not saved to the workspace.",
+    "Use `--dry-run` to preview whether the hosted graph metadata would change before writing it.",
     "Pass `--file` or `--stdin` to provide the full hosted graph metadata object instead of individual flags.",
   ],
 });
@@ -284,7 +284,7 @@ export const graphQueryRunCommand = defineCommand({
 export const graphQueryListCommand = defineCommand({
   surface: "graph.query.list",
   command: "fide graph query list",
-  summary: "List project or hosted graph queries",
+  summary: "List project or hosted graph query summaries",
   usage: [
     "fide graph query list",
     "fide graph query list --graph <name>",
@@ -312,15 +312,17 @@ export const graphQueryListCommand = defineCommand({
     "fide graph query list --workspace <workspace-id>",
   ],
   notes: [
-    "Without `--workspace` or `FIDE_WORKSPACE_ID`, lists local project queries.",
-    "With `--workspace` or `FIDE_WORKSPACE_ID`, lists hosted workspace queries.",
+    "Without `--workspace` or `FIDE_WORKSPACE_ID`, lists local project query summaries.",
+    "With `--workspace` or `FIDE_WORKSPACE_ID`, lists hosted workspace query summaries.",
+    "List output is intentionally compact and returns the query identity fields needed to choose one query.",
+    "Use `fide graph query get --graph <name> --name <query-name>` to read the full query text for a selected result.",
   ],
 });
 
 export const graphQueryGetCommand = defineCommand({
   surface: "graph.query.get",
   command: "fide graph query get",
-  summary: "Read one project or hosted graph query",
+  summary: "Read one full project or hosted graph query",
   usage: [
     "fide graph query get --graph <name> --name <query-name>",
     "fide graph query get [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
@@ -348,8 +350,9 @@ export const graphQueryGetCommand = defineCommand({
     "fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
   ],
   notes: [
-    "Without `--workspace` or `FIDE_WORKSPACE_ID`, reads a local project query.",
-    "With `--workspace` or `FIDE_WORKSPACE_ID`, reads a hosted workspace query.",
+    "Without `--workspace` or `FIDE_WORKSPACE_ID`, reads one full local project query.",
+    "With `--workspace` or `FIDE_WORKSPACE_ID`, reads one full hosted workspace query.",
+    "Use `fide graph query list` first when you need to discover the available graph/name pairs.",
   ],
 });
 
@@ -371,10 +374,13 @@ export const graphQuerySaveCommand = defineCommand({
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
     { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
     { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
+    { name: "dry-run", type: "boolean", description: "Validate the hosted query write and show the intended change without saving it" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
     targetScope: "string",
+    dryRun: "boolean?",
+    wouldChange: "boolean?",
     ok: "boolean?",
     mode: "string?",
     graphKey: "string?",
@@ -395,21 +401,20 @@ export const graphQuerySaveCommand = defineCommand({
   notes: [
     "Without `--workspace` or `FIDE_WORKSPACE_ID`, saves into the current project's `.fide/queries/<graph>/` directory.",
     "With `--workspace` or `FIDE_WORKSPACE_ID`, saves into the hosted workspace query list.",
+    "Use `--dry-run` to preview whether a hosted workspace query write would change shared state before saving it.",
   ],
 });
 
 export const graphBuildCommand = defineCommand({
   surface: "graph.build",
   command: "fide graph build",
-  summary: "Build configured graphs or query catalogs from graph sources",
+  summary: "Build configured graphs from graph sources",
   usage: [
     "fide graph build --graph <name>",
-    "fide graph build --query-catalog <name>",
     "fide graph build --dry-run --graph <name>",
   ],
   params: [
     { name: "graph", type: "string", description: "Configured graph name with a recipe", valueLabel: "<name>" },
-    { name: "query-catalog", type: "string", description: "Configured query catalog key", valueLabel: "<name>" },
     { name: "dry-run", type: "boolean", description: "Resolve targets and inputs without mutating runtime state" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -421,11 +426,9 @@ export const graphBuildCommand = defineCommand({
     file: "string?",
     schema: "string?",
     statementCount: "number",
-    queryCount: "number?",
     steps: "array<{ from: string, statementCount: number }>",
     stepCount: "number?",
     target: "object?",
-    queries: "array?",
     lastRunAt: "string",
     warnings: "string[]?",
   },
@@ -433,12 +436,10 @@ export const graphBuildCommand = defineCommand({
     "fide graph build --graph sqlite",
     "fide graph build --graph combined",
     "fide graph build --dry-run --graph combined",
-    "fide graph build --query-catalog postgresQueries",
   ],
   notes: [
     "Recipe SQL may include $lastRunAt for incremental runs.",
     "On the first run, $lastRunAt resolves to 1970-01-01T00:00:00.000Z.",
-    "Query-catalog builds load local .fide/queries/<graph>/<name>.sql files.",
     "Use `--dry-run` to preview resolved build inputs and targets before mutating runtime state.",
   ],
 });

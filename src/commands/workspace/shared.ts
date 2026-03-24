@@ -1,3 +1,4 @@
+import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
 import { resolveAuthSettings } from "../../util/auth-settings.js";
 
@@ -10,4 +11,8 @@ export async function requireWorkspaceApiClient(flags: Map<string, string | bool
     auth,
     client: createAuthApiClient(auth),
   };
+}
+
+export async function requireHostedWorkspaceTarget(flags: Map<string, string | boolean> = new Map()) {
+  return resolveWorkspaceSelectionOrThrow(flags);
 }

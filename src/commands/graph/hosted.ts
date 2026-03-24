@@ -1,4 +1,5 @@
 import type { FideSettings } from "@chris-test/graph";
+import { isDeepStrictEqual } from "node:util";
 import { parseArgs, getStringFlag, hasFlag, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
@@ -183,11 +184,58 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
     return 0;
   }
   const useJson = shouldUseJsonOutput(flags);
+  const dryRun = hasFlag(flags, "dry-run");
   const graphKey = getStringFlag(flags, "graph");
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
+  if (dryRun) {
+    let wouldChange = true;
+    try {
+      const existing = await client.getWorkspaceGraph(selection.workspaceId, graphKey);
+      const nextGraph = {
+        type: graph.type,
+        ...(graph.recipe !== undefined ? { recipe: graph.recipe } : {}),
+        ...(graph.metadata !== undefined ? { metadata: graph.metadata } : {}),
+      };
+      const currentGraph = {
+        type: existing.type,
+        ...(existing.recipe !== undefined ? { recipe: existing.recipe } : {}),
+        ...(existing.metadata !== undefined ? { metadata: existing.metadata } : {}),
+      };
+      wouldChange = !isDeepStrictEqual(currentGraph, nextGraph);
+    } catch (error) {
+      const status = typeof error === "object" && error && "status" in error ? (error as { status?: unknown }).status : null;
+      if (status !== 404) {
+        throw error;
+      }
+    }
+
+    const payload = okResponse("graph-save-workspace.v1", {
+      dryRun: true,
+      wouldChange,
+      baseUrl: auth.baseUrl,
+      source: auth.source,
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      graphKey,
+      graph,
+    }, {
+      command: "fide graph save",
+      next: {
+        get: `fide graph get --workspace ${selection.workspaceId} --graph ${graphKey}`,
+      },
+    });
+
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(`Dry run: ${graphKey} ${wouldChange ? "would change" : "unchanged"}`);
+    }
+    return 0;
+  }
+
   const result = await client.saveWorkspaceGraph({
     workspaceId: selection.workspaceId,
     graphKey,

@@ -23,10 +23,10 @@ export function workspaceCommandHelp(): string {
         items: [
           "  fide workspace list",
           "  fide workspace list --profile work",
-          "  fide workspace get --workspace <workspace-id>",
-          "  fide workspace members list --workspace <workspace-id>",
-          "  fide workspace members add --workspace <workspace-id> --user-id <user-id> --role workspace.viewer",
-          "  fide workspace roles grant --workspace <workspace-id> --user-id <user-id> --role workspace.member",
+          "  fide workspace get --workspace workspace_<suffix>",
+          "  fide workspace members list --workspace workspace_<suffix>",
+          "  fide workspace members add --workspace workspace_<suffix> --user-id user_<suffix> --role workspace.viewer --dry-run",
+          "  fide workspace roles grant --workspace workspace_<suffix> --user-id user_<suffix> --role workspace.member --dry-run",
         ],
       },
       {
@@ -35,6 +35,8 @@ export function workspaceCommandHelp(): string {
           "  - Use `workspace` for shared hosted state: workspaces, members, and roles.",
           "  - `--workspace` is optional only when `FIDE_WORKSPACE_ID` is set.",
           "  - `--profile` selects auth context; hosted workspace selection comes from `--workspace` or `FIDE_WORKSPACE_ID`.",
+          "  - Hosted IDs are typed: use `workspace_*` for workspaces and `user_*` for members.",
+          "  - Hosted membership and role mutations accept `--dry-run` to preview whether the change would modify shared state.",
         ],
       },
     ],

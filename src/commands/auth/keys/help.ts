@@ -22,8 +22,8 @@ export function authKeysHelp(): string {
         items: [
           "  fide keys list",
           "  fide keys create --label 'local agent'",
-          "  fide keys create --label 'workspace bot' --user-id <agent-user-id>",
-          "  fide keys revoke <id>",
+          "  fide keys create --label 'workspace bot' --user-id user_<suffix>",
+          "  fide keys revoke api_key_<suffix>",
         ],
       },
     ],
