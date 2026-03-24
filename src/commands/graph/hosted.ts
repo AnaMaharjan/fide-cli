@@ -12,7 +12,6 @@ import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.
 type HostedGraphRecord = {
   type: "postgres" | "sqlite" | "fide-jsonl";
   connection?: string;
-  connectionRef?: string;
   recipe?: unknown;
   metadata?: unknown;
 };

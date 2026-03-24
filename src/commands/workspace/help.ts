@@ -25,8 +25,8 @@ export function workspaceCommandHelp(): string {
           "  fide workspace list --profile work",
           "  fide workspace get --workspace workspace_<suffix>",
           "  fide workspace members list --workspace workspace_<suffix>",
-          "  fide workspace members add --workspace workspace_<suffix> --user-id user_<suffix> --role workspace.viewer --dry-run",
-          "  fide workspace roles grant --workspace workspace_<suffix> --user-id user_<suffix> --role workspace.member --dry-run",
+          "  fide workspace members add --workspace workspace_<suffix> --user-id user_<suffix> --role member --dry-run",
+          "  fide workspace roles grant --workspace workspace_<suffix> --user-id user_<suffix> --role admin --dry-run",
         ],
       },
       {
