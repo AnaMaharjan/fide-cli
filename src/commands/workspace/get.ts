@@ -4,7 +4,7 @@ import { printJson } from "../../util/io.js";
 import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
 import { workspaceGetCommand } from "./metadata.js";
-import { requireHostedWorkspaceTarget, requireWorkspaceApiClient } from "./shared.js";
+import { requireHostedWorkspaceTarget, requireWorkspaceApiClient, runHostedOperation } from "./shared.js";
 
 export async function runWorkspaceGet(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
@@ -18,7 +18,16 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
   const id = selection.workspaceId;
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const workspace = await client.getWorkspace(id);
+  const workspace = await runHostedOperation(
+    () => client.getWorkspace(id),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: id,
+      workspaceSelectionSource: selection.source,
+    },
+  );
   const payload = okResponse("workspace-get.v1", {
     baseUrl: auth.baseUrl,
     source: auth.source,

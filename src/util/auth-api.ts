@@ -86,8 +86,12 @@ export type WorkspaceMember = {
 export type WorkspaceMemberMutation = {
   ok: boolean;
   workspaceId: string;
-  userId: string;
-  roleCode: string;
+  selectorType?: "user_id" | "human_email";
+  resultType?: "member_added" | "invitation_created";
+  userId: string | null;
+  email?: string | null;
+  addedExistingUser?: boolean;
+  roleKey: string;
 };
 
 type AuthClientOptions = {
@@ -358,7 +362,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
       workspaceId: string;
       userId?: string;
       email?: string;
-      roleCode: string;
+      roleKey: string;
     }): Promise<WorkspaceMemberMutation> {
       const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members`, {
         method: "POST",
@@ -366,7 +370,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
         body: JSON.stringify({
           ...(input.userId ? { userId: input.userId } : {}),
           ...(input.email ? { email: input.email } : {}),
-          roleCode: input.roleCode,
+          roleKey: input.roleKey,
         }),
       });
       return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-members-add.v1");
@@ -375,12 +379,12 @@ export function createAuthApiClient(options: AuthClientOptions) {
     async grantWorkspaceRole(input: {
       workspaceId: string;
       userId: string;
-      roleCode: string;
+      roleKey: string;
     }): Promise<WorkspaceMemberMutation> {
       const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.userId}/roles`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ roleCode: input.roleCode }),
+        body: JSON.stringify({ roleKey: input.roleKey }),
       });
       return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-roles-grant.v1");
     },
@@ -388,9 +392,9 @@ export function createAuthApiClient(options: AuthClientOptions) {
     async revokeWorkspaceRole(input: {
       workspaceId: string;
       userId: string;
-      roleCode: string;
+      roleKey: string;
     }): Promise<WorkspaceMemberMutation> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.userId}/roles/${encodeURIComponent(input.roleCode)}`, {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.userId}/roles/${encodeURIComponent(input.roleKey)}`, {
         method: "DELETE",
         headers,
       });

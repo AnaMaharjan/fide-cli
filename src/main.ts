@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderHelp } from "./util/help.js";
 import { printCliError } from "./util/error.js";
+import { ensureFideEnvLoaded } from "./util/fide-dir.js";
 
 function readCliVersion(): string {
   const srcDir = dirname(fileURLToPath(import.meta.url));
@@ -87,6 +88,8 @@ export async function runCli(argv: string[]): Promise<number> {
   const pretty = argv.includes("--pretty") || argv.includes("-p");
 
   try {
+    ensureFideEnvLoaded();
+
     if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
       console.log(helpText());
       return 0;

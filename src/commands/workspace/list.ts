@@ -4,7 +4,7 @@ import { printJson } from "../../util/io.js";
 import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
 import { workspaceListCommand } from "./metadata.js";
-import { requireWorkspaceApiClient } from "./shared.js";
+import { requireWorkspaceApiClient, runHostedOperation } from "./shared.js";
 
 export async function runWorkspaceList(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
@@ -15,7 +15,13 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
   }
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const result = await client.listWorkspaces();
+  const result = await runHostedOperation(
+    () => client.listWorkspaces(),
+    {
+      auth,
+      client,
+    },
+  );
   const payload = okResponse("workspace-list.v1", {
     baseUrl: auth.baseUrl,
     source: auth.source,

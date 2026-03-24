@@ -5,8 +5,9 @@ import { renderCommandHelp } from "../../util/command-metadata.js";
 import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
 import { printJson, readUtf8 } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
+import { assertGraphKey } from "../../util/selectors.js";
 import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
-import { requireWorkspaceApiClient } from "../workspace/shared.js";
+import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.js";
 
 type HostedGraphRecord = {
@@ -76,7 +77,8 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
     };
   }
 
-  const graphKey = getStringFlag(flags, "graph");
+  const graphKeyRaw = getStringFlag(flags, "graph");
+  const graphKey = graphKeyRaw ? assertGraphKey(graphKeyRaw) : null;
   if (graphKey) {
     const localGraph = readLocalProjectGraph(graphKey);
     if (localGraph) {
@@ -117,7 +119,16 @@ export async function runGraphList(args: string[]): Promise<number> {
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const records = await client.listWorkspaceGraphs(selection.workspaceId);
+  const records = await runHostedOperation(
+    () => client.listWorkspaceGraphs(selection.workspaceId),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+    },
+  );
 
   const payload = okResponse("graph-list.v1", {
     baseUrl: auth.baseUrl,
@@ -152,12 +163,23 @@ export async function runGraphGet(args: string[]): Promise<number> {
     return 0;
   }
 
-  const graphKey = getStringFlag(flags, "graph");
+  const graphKeyFlag = getStringFlag(flags, "graph");
+  const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const graph = await client.getWorkspaceGraph(selection.workspaceId, graphKey);
+  const graph = await runHostedOperation(
+    () => client.getWorkspaceGraph(selection.workspaceId, graphKey),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      graphKey,
+    },
+  );
 
   const payload = okResponse("graph-get.v1", {
     baseUrl: auth.baseUrl,
@@ -184,13 +206,23 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
   }
   const useJson = shouldUseJsonOutput(flags);
   const dryRun = hasFlag(flags, "dry-run");
-  const graphKey = getStringFlag(flags, "graph");
+  const graphKeyFlag = getStringFlag(flags, "graph");
+  const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
   if (dryRun) {
     let wouldChange = true;
+    let preview: {
+      targetState: "new-graph" | "existing-graph";
+      changeState: "would_change" | "unchanged";
+      reason: "graph_missing" | "graph_would_update" | "graph_unchanged";
+    } = {
+      targetState: "new-graph",
+      changeState: "would_change",
+      reason: "graph_missing",
+    };
     try {
       const existing = await client.getWorkspaceGraph(selection.workspaceId, graphKey);
       const nextGraph = {
@@ -204,16 +236,37 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
         ...(existing.metadata !== undefined ? { metadata: existing.metadata } : {}),
       };
       wouldChange = !isDeepStrictEqual(currentGraph, nextGraph);
+      preview = wouldChange
+        ? {
+          targetState: "existing-graph",
+          changeState: "would_change",
+          reason: "graph_would_update",
+        }
+        : {
+          targetState: "existing-graph",
+          changeState: "unchanged",
+          reason: "graph_unchanged",
+      };
     } catch (error) {
       const status = typeof error === "object" && error && "status" in error ? (error as { status?: unknown }).status : null;
       if (status !== 404) {
-        throw error;
+        throw await runHostedOperation(async () => {
+          throw error;
+        }, {
+          auth,
+          client,
+          targetScope: "workspace",
+          workspaceId: selection.workspaceId,
+          workspaceSelectionSource: selection.source,
+          graphKey,
+        });
       }
     }
 
     const payload = okResponse("graph-save-workspace.v1", {
       dryRun: true,
       wouldChange,
+      preview,
       baseUrl: auth.baseUrl,
       source: auth.source,
       workspaceId: selection.workspaceId,
@@ -230,16 +283,26 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: ${graphKey} ${wouldChange ? "would change" : "unchanged"}`);
+      console.log(`Dry run: ${graphKey} ${preview.reason}`);
     }
     return 0;
   }
 
-  const result = await client.saveWorkspaceGraph({
-    workspaceId: selection.workspaceId,
-    graphKey,
-    graph,
-  });
+  const result = await runHostedOperation(
+    () => client.saveWorkspaceGraph({
+      workspaceId: selection.workspaceId,
+      graphKey,
+      graph,
+    }),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      graphKey,
+    },
+  );
 
   const payload = okResponse("graph-save-workspace.v1", {
     baseUrl: auth.baseUrl,

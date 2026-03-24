@@ -196,6 +196,7 @@ export const graphSaveCommand = defineCommand({
   output: {
     dryRun: "boolean?",
     wouldChange: "boolean?",
+    preview: "object?",
     baseUrl: "string",
     source: "string",
     workspaceId: "string",
@@ -381,6 +382,7 @@ export const graphQuerySaveCommand = defineCommand({
     targetScope: "string",
     dryRun: "boolean?",
     wouldChange: "boolean?",
+    preview: "object?",
     ok: "boolean?",
     mode: "string?",
     graphKey: "string?",

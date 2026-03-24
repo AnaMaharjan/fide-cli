@@ -5,6 +5,7 @@ import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { formatPretty } from "../../util/pretty.js";
+import { assertGraphKey } from "../../util/selectors.js";
 import {
   getLocalFideWarnings,
   inspectFideJsonlStore,
@@ -108,7 +109,7 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     throw new Error("`graph status` does not accept positional arguments.");
   }
 
-  const graphKey = typeof flags.get("graph") === "string" ? String(flags.get("graph")) : null;
+  const graphKey = typeof flags.get("graph") === "string" ? assertGraphKey(String(flags.get("graph"))) : null;
   const hasFideDir = flags.has("fide-dir");
 
   if (graphKey && hasFideDir) {

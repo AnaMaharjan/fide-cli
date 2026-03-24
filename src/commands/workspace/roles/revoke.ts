@@ -1,9 +1,11 @@
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
+import { assertUserId } from "../../../util/public-ids.js";
 import { okResponse } from "../../../util/response.js";
+import { assertRoleKey } from "../../../util/selectors.js";
 import { workspaceRolesRevokeCommand } from "../metadata.js";
-import { requireHostedWorkspaceTarget, requireWorkspaceApiClient } from "../shared.js";
+import { requireHostedWorkspaceTarget, requireWorkspaceApiClient, runHostedOperation } from "../shared.js";
 
 export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
@@ -16,26 +18,57 @@ export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
 
   const selection = await requireHostedWorkspaceTarget(flags);
   const workspaceId = selection.workspaceId;
-  const userId = getStringFlag(flags, "user-id");
-  const roleCode = getStringFlag(flags, "role");
-  if (!userId) throw new Error("Missing required flag: --user-id");
-  if (!roleCode) throw new Error("Missing required flag: --role");
+  const userIdFlag = getStringFlag(flags, "user-id");
+  const roleFlag = getStringFlag(flags, "role");
+  if (!userIdFlag) throw new Error("Missing required flag: --user-id");
+  if (!roleFlag) throw new Error("Missing required flag: --role");
+  const userId = assertUserId(userIdFlag);
+  const roleKey = assertRoleKey(roleFlag);
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
   if (dryRun) {
-    const members = await client.listWorkspaceMembers(workspaceId);
+    const members = await runHostedOperation(
+      () => client.listWorkspaceMembers(workspaceId),
+      {
+        auth,
+        client,
+        targetScope: "workspace",
+        workspaceId,
+        workspaceSelectionSource: selection.source,
+        userId,
+        roleKey,
+      },
+    );
     const existing = members.members.find((member) => member.userId === userId);
-    const hasRole = Boolean(existing?.roles.includes(roleCode));
-    const wouldChange = hasRole;
+    const hasRole = Boolean(existing?.roles.includes(roleKey));
+    const preview = !existing
+      ? {
+        targetState: "missing-member",
+        changeState: "blocked",
+        reason: "member_missing",
+      }
+      : hasRole
+        ? {
+          targetState: "existing-member",
+          changeState: "would_change",
+          reason: "role_present",
+        }
+        : {
+          targetState: "existing-member",
+          changeState: "unchanged",
+          reason: "role_not_present",
+        };
+    const wouldChange = preview.changeState === "would_change";
     const payload = okResponse("workspace-roles-revoke.v1", {
       dryRun: true,
       wouldChange,
+      preview,
       baseUrl: auth.baseUrl,
       source: auth.source,
       ok: true,
       workspaceId,
       userId,
-      roleCode,
+      roleKey,
     }, {
       command: "fide workspace roles revoke",
       next: {
@@ -46,12 +79,23 @@ export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: revoke ${roleCode} from ${userId} in ${workspaceId} ${wouldChange ? "would change" : "unchanged"}`);
+      console.log(`Dry run: revoke ${roleKey} from ${userId} in ${workspaceId} ${preview.reason}`);
     }
     return 0;
   }
 
-  const result = await client.revokeWorkspaceRole({ workspaceId, userId, roleCode });
+  const result = await runHostedOperation(
+    () => client.revokeWorkspaceRole({ workspaceId, userId, roleKey }),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId,
+      workspaceSelectionSource: selection.source,
+      userId,
+      roleKey,
+    },
+  );
   const payload = okResponse("workspace-roles-revoke.v1", {
     baseUrl: auth.baseUrl,
     source: auth.source,
@@ -66,7 +110,7 @@ export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`Revoked ${roleCode} from ${userId} in ${workspaceId}`);
+    console.log(`Revoked ${roleKey} from ${userId} in ${workspaceId}`);
   }
   return 0;
 }

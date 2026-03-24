@@ -6,6 +6,7 @@ import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../ut
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { getLocalFideWarnings, LocalQueryDefinition, readLocalQueries, renderQueryFile, resolveGraphTarget, resolveQueriesDir, resolveStoreTarget } from "@chris-test/graph";
+import { resolveSettingsPath } from "../../util/fide-dir.js";
 import {
   graphQueryCommand,
   graphQueryGetCommand,
@@ -14,7 +15,8 @@ import {
   graphQuerySaveCommand,
 } from "./metadata.js";
 import { readStdinUtf8 } from "./shared.js";
-import { requireWorkspaceApiClient } from "../workspace/shared.js";
+import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
+import { assertGraphKey, assertQueryName } from "../../util/selectors.js";
 import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
 import { okResponse } from "../../util/response.js";
 
@@ -64,16 +66,71 @@ async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typ
   return { parsed, sql: "" };
 }
 
+function parseQueryFileDescription(content: string): { description: string | null; sql: string } {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  let index = 0;
+  let description: string | null = null;
+
+  while (index < lines.length) {
+    const line = lines[index] ?? "";
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
+      index += 1;
+      continue;
+    }
+    const descriptionMatch = /^--\s*description\s*:\s*(.+)$/i.exec(trimmed);
+    if (descriptionMatch) {
+      description = descriptionMatch[1]?.trim() || null;
+      index += 1;
+      continue;
+    }
+    break;
+  }
+
+  const sql = lines.slice(index).join("\n").trim();
+  if (!sql) {
+    throw new Error("Query file is missing SQL body.");
+  }
+  return { description, sql };
+}
+
+async function resolveQuerySaveInput(args: string[]): Promise<{
+  parsed: ReturnType<typeof parseArgs>;
+  sql: string;
+  fileDescription: string | null;
+}> {
+  const parsed = parseArgs(args);
+  const flags = parsed.flags;
+  const filePath = getStringFlag(flags, "file");
+
+  if (filePath) {
+    const content = await readUtf8(filePath);
+    const parsedFile = parseQueryFileDescription(content);
+    return {
+      parsed,
+      sql: parsedFile.sql,
+      fileDescription: parsedFile.description,
+    };
+  }
+
+  const resolved = await resolveQuerySql(args);
+  return {
+    parsed: resolved.parsed,
+    sql: resolved.sql,
+    fileDescription: null,
+  };
+}
+
 function requireSavedQueryName(flags: Map<string, string | boolean>): string {
   const name = getStringFlag(flags, "name");
   if (!name) throw new Error("Missing required flag: --name <query-name>.");
-  return name;
+  return assertQueryName(name);
 }
 
 function requireGraphKey(flags: Map<string, string | boolean>): string {
   const graphKey = getStringFlag(flags, "graph");
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
-  return graphKey;
+  return assertGraphKey(graphKey);
 }
 
 export async function resolveGraphQueryScope(flags: Map<string, string | boolean>): Promise<GraphQueryScope> {
@@ -94,6 +151,60 @@ function isWorkspaceScope(scope: GraphQueryScope): scope is Extract<GraphQuerySc
 
 function projectQueryMissingError(graphKey: string, name: string): Error {
   return new Error(`Local project query not found: ${graphKey}/${name}. Use \`fide graph query list\` to inspect local queries, or pass \`--workspace <workspace-id>\` / set \`FIDE_WORKSPACE_ID\` for hosted queries.`);
+}
+
+function createCliStructuredError(
+  message: string,
+  options: {
+    hint?: string;
+    details?: Record<string, unknown>;
+    next?: Record<string, unknown>;
+  } = {},
+): Error & {
+  hint?: string;
+  details?: Record<string, unknown>;
+  next?: Record<string, unknown>;
+} {
+  const error = new Error(message) as Error & {
+    hint?: string;
+    details?: Record<string, unknown>;
+    next?: Record<string, unknown>;
+  };
+  if (options.hint) error.hint = options.hint;
+  if (options.details) error.details = options.details;
+  if (options.next) error.next = options.next;
+  return error;
+}
+
+function assertLocalQueryableStore(
+  graphKey: string,
+  target: ReturnType<typeof resolveStoreTarget>,
+  flags: Map<string, string | boolean>,
+) {
+  if (target.type === "fide-jsonl") {
+    throw new Error("This command only supports sqlite and postgres graphs. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
+  }
+
+  if (target.type === "postgres" && !target.databaseUrl) {
+    const localTarget = resolveGraphTarget(flags);
+    throw createCliStructuredError(
+      `Missing postgres connection for store "${target.key ?? graphKey}". Configure the store in settings.json or set the referenced env var.`,
+      {
+        hint: "This graph uses a postgres runtime target, but the CLI could not resolve a database URL for the current process.",
+        details: {
+          graphKey,
+          graphStoreType: target.type,
+          connectionEnv: target.databaseUrlEnv,
+          fideDir: `${localTarget.root}/.fide`,
+          settingsPath: resolveSettingsPath(localTarget.root),
+          cwd: process.cwd(),
+        },
+        next: {
+          checkStatus: `fide graph status --graph ${graphKey}`,
+        },
+      },
+    );
+  }
 }
 
 async function readProjectQueryOrThrow(flags: Map<string, string | boolean>): Promise<{ root: string; query: LocalQueryDefinition }> {
@@ -119,11 +230,11 @@ async function runGraphQuerySaveProject(args: string[]): Promise<number> {
     return 0;
   }
 
-  const { parsed, sql } = await resolveQuerySql(args);
+  const { parsed, sql, fileDescription } = await resolveQuerySaveInput(args);
   const flags = parsed.flags;
   const graphKey = requireGraphKey(flags);
   const name = requireSavedQueryName(flags);
-  const description = getStringFlag(flags, "description");
+  const description = getStringFlag(flags, "description") ?? fileDescription;
   if (!sql.trim()) {
     console.error("Missing SQL for `graph query save`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
     console.error(renderCommandHelp(graphQuerySaveCommand));
@@ -166,13 +277,13 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
     return 0;
   }
 
-  const { parsed, sql } = await resolveQuerySql(args);
+  const { parsed, sql, fileDescription } = await resolveQuerySaveInput(args);
   const flags = parsed.flags;
   const useJson = shouldUseJsonOutput(flags);
   const dryRun = hasFlag(flags, "dry-run");
   const graphKey = requireGraphKey(flags);
   const name = requireSavedQueryName(flags);
-  const description = getStringFlag(flags, "description");
+  const description = getStringFlag(flags, "description") ?? fileDescription;
   if (!sql.trim()) {
     console.error("Missing SQL for `graph query save --workspace`. Use `--stdin`, `--file <path>`, or pass SQL inline.");
     console.error(renderCommandHelp(graphQuerySaveCommand));
@@ -183,6 +294,15 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
   const { auth, client } = await requireWorkspaceApiClient(flags);
   if (dryRun) {
     let wouldChange = true;
+    let preview: {
+      targetState: "new-query" | "existing-query";
+      changeState: "would_change" | "unchanged";
+      reason: "query_missing" | "query_would_update" | "query_unchanged";
+    } = {
+      targetState: "new-query",
+      changeState: "would_change",
+      reason: "query_missing",
+    };
     try {
       const existing = await client.getGraphQuery({
         workspaceId: selection.workspaceId,
@@ -202,10 +322,31 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
         sql,
       };
       wouldChange = !isDeepStrictEqual(currentQuery, nextQuery);
+      preview = wouldChange
+        ? {
+          targetState: "existing-query",
+          changeState: "would_change",
+          reason: "query_would_update",
+        }
+        : {
+          targetState: "existing-query",
+          changeState: "unchanged",
+          reason: "query_unchanged",
+        };
     } catch (error) {
       const status = typeof error === "object" && error && "status" in error ? (error as { status?: unknown }).status : null;
       if (status !== 404) {
-        throw error;
+        throw await runHostedOperation(async () => {
+          throw error;
+        }, {
+          auth,
+          client,
+          targetScope: "workspace",
+          workspaceId: selection.workspaceId,
+          workspaceSelectionSource: selection.source,
+          graphKey,
+          queryName: name,
+        });
       }
     }
 
@@ -213,6 +354,7 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
       targetScope: "workspace",
       dryRun: true,
       wouldChange,
+      preview,
       baseUrl: auth.baseUrl,
       source: auth.source,
       workspaceId: selection.workspaceId,
@@ -233,18 +375,29 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: ${graphKey}/${name} ${wouldChange ? "would change" : "unchanged"}`);
+      console.log(`Dry run: ${graphKey}/${name} ${preview.reason}`);
     }
     return 0;
   }
 
-  const result = await client.saveGraphQuery({
-    workspaceId: selection.workspaceId,
-    graphKey,
-    name,
-    sql,
-    ...(typeof description === "string" ? { description } : {}),
-  });
+  const result = await runHostedOperation(
+    () => client.saveGraphQuery({
+      workspaceId: selection.workspaceId,
+      graphKey,
+      name,
+      sql,
+      ...(typeof description === "string" ? { description } : {}),
+    }),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      graphKey,
+      queryName: name,
+    },
+  );
 
   const payload = okResponse("graph-query-save-workspace.v1", {
     targetScope: "workspace",
@@ -282,7 +435,8 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
     throw new Error("`fide graph query list` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` or set `FIDE_WORKSPACE_ID` to list hosted queries.");
   }
 
-  const graphKey = getStringFlag(flags, "graph");
+  const graphKeyRaw = getStringFlag(flags, "graph");
+  const graphKey = graphKeyRaw ? assertGraphKey(graphKeyRaw) : null;
   const queries = (await readLocalQueries(graphTarget.root))
     .filter((query) => !graphKey || query.graphKey === graphKey)
     .map(({ file, graphKey: currentGraphKey, name, description }) => ({ graphKey: currentGraphKey, name, description }));
@@ -311,10 +465,21 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
     return 0;
   }
 
-  const graphKey = getStringFlag(flags, "graph");
+  const graphKeyRaw = getStringFlag(flags, "graph");
+  const graphKey = graphKeyRaw ? assertGraphKey(graphKeyRaw) : null;
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const result = await client.listGraphQueries({ workspaceId: selection.workspaceId });
+  const result = await runHostedOperation(
+    () => client.listGraphQueries({ workspaceId: selection.workspaceId }),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      graphKey: graphKey ?? undefined,
+    },
+  );
   const queries = graphKey
     ? result.queries.filter((query) => query.graphKey === graphKey)
     : result.queries;
@@ -387,11 +552,22 @@ async function runGraphQueryGetWorkspace(args: string[]): Promise<number> {
   const name = requireSavedQueryName(flags);
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const query = await client.getGraphQuery({
-    workspaceId: selection.workspaceId,
-    graphKey,
-    name,
-  });
+  const query = await runHostedOperation(
+    () => client.getGraphQuery({
+      workspaceId: selection.workspaceId,
+      graphKey,
+      name,
+    }),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: selection.workspaceId,
+      workspaceSelectionSource: selection.source,
+      graphKey,
+      queryName: name,
+    },
+  );
 
   const payload = okResponse("graph-query-get-workspace.v1", {
     targetScope: "workspace",
@@ -435,9 +611,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
       return 1;
     }
     const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
-    if (target.type === "fide-jsonl") {
-      throw new Error("This command only supports sqlite and postgres graphs. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
-    }
+    assertLocalQueryableStore(graphKey, target, resolvedFlags);
     const result = await executeGraphQuery({
       target,
       sql,
@@ -468,12 +642,23 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     const useJson = shouldUseJsonOutput(flags);
     const selection = await resolveWorkspaceSelectionOrThrow(flags);
     const { auth, client } = await requireWorkspaceApiClient(flags);
-    const result = await client.runGraphQuery({
-      workspaceId: selection.workspaceId,
-      graphKey,
-      name,
-      ...(typeof limit === "number" ? { limit } : {}),
-    });
+    const result = await runHostedOperation(
+      () => client.runGraphQuery({
+        workspaceId: selection.workspaceId,
+        graphKey,
+        name,
+        ...(typeof limit === "number" ? { limit } : {}),
+      }),
+      {
+        auth,
+        client,
+        targetScope: "workspace",
+        workspaceId: selection.workspaceId,
+        workspaceSelectionSource: selection.source,
+        graphKey,
+        queryName: name,
+      },
+    );
     const payload = okResponse("graph-query-run-workspace.v1", {
       targetScope: "workspace",
       baseUrl: auth.baseUrl,
@@ -498,9 +683,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
 
   const { query } = await readProjectQueryOrThrow(flags);
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
-  if (target.type === "fide-jsonl") {
-    throw new Error("This command only supports sqlite and postgres graphs. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
-  }
+  assertLocalQueryableStore(graphKey, target, flags);
   const result = await executeGraphQuery({
     target,
     sql: query.sql,

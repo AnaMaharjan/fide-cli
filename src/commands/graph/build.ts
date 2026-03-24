@@ -22,6 +22,7 @@ import {
   validateGraphSettings,
 } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { assertGraphKey } from "../../util/selectors.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { formatPretty } from "../../util/pretty.js";
@@ -184,7 +185,8 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
   }
 
   const dryRun = hasFlag(flags, "dry-run");
-  const graphKey = getStringFlag(flags, "graph");
+  const graphKeyFlag = getStringFlag(flags, "graph");
+  const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
 
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));

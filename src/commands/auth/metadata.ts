@@ -98,20 +98,24 @@ export const authKeysCreateCommand = defineCommand({
   command: "fide keys create",
   summary: "Create an API key",
   usage: [
-    "fide keys create --label <label> [--profile <name>] [--user-id <user_id>] [--expires-at <iso8601>] [--pretty|-p]",
+    "fide keys create --label <label> [--profile <name>] [--user-id <user_id>] [--expires-at <iso8601>] [--dry-run] [--pretty|-p]",
   ],
   params: [
     { name: "label", type: "string", required: true, description: "Label for the new API key", valueLabel: "<label>" },
     { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", description: "Optional target agent public user id (`user_*`).", valueLabel: "<user_id>" },
     { name: "expires-at", type: "string", description: "Optional ISO-8601 expiration timestamp", valueLabel: "<iso8601>" },
+    { name: "dry-run", type: "boolean", description: "Validate the key creation request and show the intended effect without writing it" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    dryRun: "boolean?",
+    wouldChange: "boolean?",
+    preview: "object?",
     baseUrl: "string",
     source: "string",
-    apiKey: "object",
-    rawKey: "string",
+    apiKey: "object?",
+    rawKey: "string?",
   },
 });
 
@@ -120,13 +124,17 @@ export const authKeysRevokeCommand = defineCommand({
   command: "fide keys revoke",
   summary: "Revoke an API key by id",
   usage: [
-    "fide keys revoke <api_key_id> [--profile <name>] [--pretty|-p]",
+    "fide keys revoke <api_key_id> [--profile <name>] [--dry-run] [--pretty|-p]",
   ],
   params: [
     { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "dry-run", type: "boolean", description: "Validate the revoke request and show whether the target key is visible without writing it" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
+    dryRun: "boolean?",
+    wouldChange: "boolean?",
+    preview: "object?",
     baseUrl: "string",
     source: "string",
     id: "string",

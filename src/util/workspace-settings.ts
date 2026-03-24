@@ -2,6 +2,7 @@ import { getStringFlag } from "./args.js";
 import {
   writeStoredProfileSettings,
 } from "./profile-settings.js";
+import { assertWorkspaceId } from "./public-ids.js";
 
 export type WorkspaceSelectionSource = "flag" | "env";
 
@@ -27,7 +28,7 @@ export async function resolveWorkspaceSelection(
     return {
       path: "--workspace",
       source: "flag",
-      workspaceId: flagWorkspace,
+      workspaceId: assertWorkspaceId(flagWorkspace),
     };
   }
 
@@ -36,7 +37,7 @@ export async function resolveWorkspaceSelection(
     return {
       path: "env",
       source: "env",
-      workspaceId: envWorkspace,
+      workspaceId: assertWorkspaceId(envWorkspace),
     };
   }
 

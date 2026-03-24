@@ -4,7 +4,7 @@ import { printJson } from "../../../util/io.js";
 import { formatPretty } from "../../../util/pretty.js";
 import { okResponse } from "../../../util/response.js";
 import { workspaceMembersCommand } from "../metadata.js";
-import { requireHostedWorkspaceTarget, requireWorkspaceApiClient } from "../shared.js";
+import { requireHostedWorkspaceTarget, requireWorkspaceApiClient, runHostedOperation } from "../shared.js";
 
 export async function runWorkspaceMembers(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
@@ -18,7 +18,16 @@ export async function runWorkspaceMembers(args: string[]): Promise<number> {
   const id = selection.workspaceId;
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const result = await client.listWorkspaceMembers(id);
+  const result = await runHostedOperation(
+    () => client.listWorkspaceMembers(id),
+    {
+      auth,
+      client,
+      targetScope: "workspace",
+      workspaceId: id,
+      workspaceSelectionSource: selection.source,
+    },
+  );
   const payload = okResponse("workspace-members.v1", {
     baseUrl: auth.baseUrl,
     source: auth.source,
