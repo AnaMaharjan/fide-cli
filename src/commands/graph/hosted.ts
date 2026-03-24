@@ -1,5 +1,7 @@
+import type { FideSettings } from "@chris-test/graph";
 import { parseArgs, getStringFlag, hasFlag, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
+import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
 import { printJson, readUtf8 } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
@@ -20,6 +22,12 @@ function readGraphs(settings: Record<string, unknown>): Record<string, HostedGra
   const raw = settings.graphs;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as Record<string, HostedGraphRecord>;
+}
+
+function readLocalProjectGraph(graphKey: string, root: string = process.cwd()): HostedGraphRecord | null {
+  const settingsPath = resolveSettingsPath(root);
+  const settings = readJsonFile<FideSettings>(settingsPath);
+  return readGraphs((settings ?? {}) as Record<string, unknown>)[graphKey] ?? null;
 }
 
 async function readGraphInput(args: string[]): Promise<{ flags: Map<string, string | boolean>; graph: HostedGraphRecord }> {
@@ -52,8 +60,22 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
     };
   }
 
+  const graphKey = getStringFlag(flags, "graph");
+  if (graphKey) {
+    const localGraph = readLocalProjectGraph(graphKey);
+    if (localGraph) {
+      return {
+        flags,
+        graph: localGraph,
+      };
+    }
+  }
+
   const type = getStringFlag(flags, "type");
   if (!type || !["postgres", "sqlite", "fide-jsonl"].includes(type)) {
+    if (graphKey) {
+      throw new Error(`No local project graph found for "${graphKey}". Pass --type/--schema/--connection-ref, --file, or --stdin.`);
+    }
     throw new Error("Missing required flag: --type <postgres|sqlite|fide-jsonl>.");
   }
   const graphType = type as HostedGraphRecord["type"];
@@ -108,12 +130,7 @@ export async function runGraphList(args: string[]): Promise<number> {
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const settings = await client.getWorkspaceSettings(selection.workspaceId);
-  const graphs = readGraphs(settings.settings);
-  const records = Object.entries(graphs).map(([graphKey, graph]) => ({
-    graphKey,
-    ...graph,
-  }));
+  const records = await client.listWorkspaceGraphs(selection.workspaceId);
 
   const payload = okResponse("graph-list.v1", {
     baseUrl: auth.baseUrl,
@@ -153,21 +170,14 @@ export async function runGraphGet(args: string[]): Promise<number> {
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const settings = await client.getWorkspaceSettings(selection.workspaceId);
-  const graph = readGraphs(settings.settings)[graphKey];
-  if (!graph) {
-    throw new Error(`Hosted graph not found in workspace settings: ${graphKey}`);
-  }
+  const graph = await client.getWorkspaceGraph(selection.workspaceId, graphKey);
 
   const payload = okResponse("graph-get.v1", {
     baseUrl: auth.baseUrl,
     source: auth.source,
     workspaceId: selection.workspaceId,
     workspaceSelectionSource: selection.source,
-    graph: {
-      graphKey,
-      ...graph,
-    },
+    graph,
   }, {
     command: "fide graph get",
   });
@@ -191,17 +201,11 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
-  const current = await client.getWorkspaceSettings(selection.workspaceId);
-  const settings = current.settings;
-  const graphs = readGraphs(settings);
-  const nextSettings = {
-    ...settings,
-    graphs: {
-      ...graphs,
-      [graphKey]: graph,
-    },
-  };
-  const result = await client.setWorkspaceSettings(selection.workspaceId, nextSettings);
+  const result = await client.saveWorkspaceGraph({
+    workspaceId: selection.workspaceId,
+    graphKey,
+    graph,
+  });
 
   const payload = okResponse("graph-save-workspace.v1", {
     baseUrl: auth.baseUrl,
@@ -209,8 +213,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
     workspaceId: selection.workspaceId,
     workspaceSelectionSource: selection.source,
     graphKey,
-    graph,
-    settings: result.settings,
+    graph: result,
   }, {
     command: "fide graph save",
     next: {

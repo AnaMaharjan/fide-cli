@@ -30,6 +30,7 @@ export function graphCommandHelp(): string {
         items: [
           "  fide graph statements write '[{ ... statement inputs ... }]'",
           "  fide graph list --profile work",
+          "  fide graph save --workspace <workspace-id> --graph combined-graph-postgres",
           "  fide graph save --profile work --graph primary --type postgres --schema fide_graph --connection-ref primary-graph",
           "  fide graph status",
           "  fide graph query run --graph primary 'select * from statements limit 10'",
@@ -45,6 +46,7 @@ export function graphCommandHelp(): string {
         items: [
           "  - Local authoring commands under `statements` resolve `--fide-dir <path>`, `FIDE_DIR`, the nearest `.fide` directory, then the current working directory.",
           "  - `list`, `get`, and `save` operate on hosted workspace graphs.",
+          "  - `graph save --graph <name>` will reuse the local project graph definition with the same key when available.",
           "  - `query` covers ad hoc SQL, local saved queries, and hosted saved queries.",
           "  - Hosted graph/query commands accept `--profile` and can also resolve from project `.fide/settings.json`.",
         ],

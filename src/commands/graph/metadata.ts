@@ -216,6 +216,7 @@ export const graphSaveCommand = defineCommand({
   ],
   notes: [
     "This command updates `workspace.settings.graphs`.",
+    "If no explicit graph definition is provided, `--graph <name>` first looks for a local project graph with the same key in `.fide/settings.json`.",
     "Pass `--file` or `--stdin` to provide the full graph config object instead of individual flags.",
   ],
 });

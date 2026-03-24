@@ -48,6 +48,17 @@ export type WorkspaceSettingsResponse = {
   settings: Record<string, unknown>;
 };
 
+export type WorkspaceGraph = {
+  graphKey: string;
+  type: "postgres" | "sqlite" | "fide-jsonl";
+  schema?: string | null;
+  gitignore?: boolean;
+  recipe?: unknown;
+  metadata?: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type GraphQuery = {
   graphKey: string;
   name: string;
@@ -264,6 +275,35 @@ export function createAuthApiClient(options: AuthClientOptions) {
         body: JSON.stringify({ settings }),
       });
       return parseApiResponse<WorkspaceSettingsResponse>(response, "workspace-settings-set.v1");
+    },
+
+    async listWorkspaceGraphs(workspaceId: string): Promise<WorkspaceGraph[]> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${workspaceId}/graphs`, {
+        method: "GET",
+        headers,
+      });
+      return parseApiResponse<WorkspaceGraph[]>(response, "graph-list.v1");
+    },
+
+    async getWorkspaceGraph(workspaceId: string, graphKey: string): Promise<WorkspaceGraph> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${workspaceId}/graphs/${encodeURIComponent(graphKey)}`, {
+        method: "GET",
+        headers,
+      });
+      return parseApiResponse<WorkspaceGraph>(response, "graph-get.v1");
+    },
+
+    async saveWorkspaceGraph(input: {
+      workspaceId: string;
+      graphKey: string;
+      graph: Omit<WorkspaceGraph, "graphKey" | "createdAt" | "updatedAt">;
+    }): Promise<WorkspaceGraph> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/graphs/${encodeURIComponent(input.graphKey)}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(input.graph),
+      });
+      return parseApiResponse<WorkspaceGraph>(response, "graph-save-workspace.v1");
     },
 
     async listGraphQueries(input: {
