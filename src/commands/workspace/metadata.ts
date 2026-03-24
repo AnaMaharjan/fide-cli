@@ -8,7 +8,7 @@ export const workspaceListCommand = defineCommand({
     "fide workspace list [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -27,7 +27,7 @@ export const workspaceGetCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace public id (`workspace_*`). If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace_id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -46,7 +46,7 @@ export const workspaceMembersCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace public id (`workspace_*`). If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace_id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -62,13 +62,14 @@ export const workspaceMembersAddCommand = defineCommand({
   command: "fide workspace members add",
   summary: "Add a member to a workspace with an initial role",
   usage: [
-    "fide workspace members add [--workspace <workspace_id>] --user-id <user_id> --role <role-code> [--profile <name>] [--dry-run] [--pretty|-p]",
+    "fide workspace members add [--workspace <workspace_id>] (--user-id <user_id> | --human-email <address>) --role <role-code> [--profile <name>] [--dry-run] [--pretty|-p]",
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace public id (`workspace_*`). If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace_id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
-    { name: "user-id", type: "string", required: true, description: "User public id to add as a member (`user_*`).", valueLabel: "<user_id>" },
-    { name: "role", type: "string", required: true, description: "Explicit initial role code", valueLabel: "<role-code>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "user-id", type: "string", required: false, description: "User public id to add directly as a member (`user_*`). Mutually exclusive with `--human-email`.", valueLabel: "<user_id>" },
+    { name: "human-email", type: "string", required: false, description: "Invite or resolve a human member by email address. Mutually exclusive with `--user-id`.", valueLabel: "<address>" },
+    { name: "role", type: "string", required: true, description: "Initial role code for the member being added or invited", valueLabel: "<role-code>" },
     { name: "dry-run", type: "boolean", description: "Validate the membership change and show the intended effect without writing it" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -79,7 +80,8 @@ export const workspaceMembersAddCommand = defineCommand({
     source: "string",
     ok: "boolean",
     workspaceId: "string",
-    userId: "string",
+    userId: "string?",
+    email: "string?",
     roleCode: "string",
   },
 });
@@ -93,7 +95,7 @@ export const workspaceRolesGrantCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace public id (`workspace_*`). If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace_id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "Target workspace member public id (`user_*`).", valueLabel: "<user_id>" },
     { name: "role", type: "string", required: true, description: "Role code to grant", valueLabel: "<role-code>" },
     { name: "dry-run", type: "boolean", description: "Validate the role grant and show the intended effect without writing it" },
@@ -120,7 +122,7 @@ export const workspaceRolesRevokeCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace public id (`workspace_*`). If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace_id>" },
-    { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", required: true, description: "Target workspace member public id (`user_*`).", valueLabel: "<user_id>" },
     { name: "role", type: "string", required: true, description: "Role code to revoke", valueLabel: "<role-code>" },
     { name: "dry-run", type: "boolean", description: "Validate the role revoke and show the intended effect without writing it" },

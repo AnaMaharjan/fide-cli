@@ -133,7 +133,7 @@ export const graphListCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -157,7 +157,7 @@ export const graphGetCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -184,7 +184,7 @@ export const graphSaveCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", required: false, description: "Workspace to update. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "type", type: "string", enum: ["postgres", "sqlite", "fide-jsonl"], description: "Hosted graph type" },
     { name: "recipe-file", type: "string", description: "JSON file containing graph recipe steps", valueLabel: "<recipe.json>" },
@@ -245,7 +245,7 @@ export const graphQueryRunCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", description: "Workspace for hosted saved-query execution. If omitted, `--name` runs locally unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use for hosted saved-query execution. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted saved-query execution. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
     { name: "limit", type: "number", description: "Maximum row count for hosted saved-query execution", valueLabel: "<n>" },
@@ -292,7 +292,7 @@ export const graphQueryListCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", description: "Workspace for hosted query listing. If omitted, list local project queries unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use for hosted query listing. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted query listing. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", description: "Optional graph filter", valueLabel: "<name>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -329,7 +329,7 @@ export const graphQueryGetCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", description: "Workspace for hosted query reads. If omitted, read local project queries unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use for hosted query reads. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted query reads. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
@@ -367,7 +367,7 @@ export const graphQuerySaveCommand = defineCommand({
   ],
   params: [
     { name: "workspace", type: "string", description: "Workspace for hosted query writes. If omitted, save locally unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use for hosted query writes when targeting a hosted workspace. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted query writes when targeting a hosted workspace. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
     { name: "description", type: "string", description: "Optional query description", valueLabel: "<text>" },

@@ -356,14 +356,16 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async addWorkspaceMember(input: {
       workspaceId: string;
-      userId: string;
+      userId?: string;
+      email?: string;
       roleCode: string;
     }): Promise<WorkspaceMemberMutation> {
       const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members`, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          userId: input.userId,
+          ...(input.userId ? { userId: input.userId } : {}),
+          ...(input.email ? { email: input.email } : {}),
           roleCode: input.roleCode,
         }),
       });

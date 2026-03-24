@@ -12,7 +12,7 @@ export const authLoginCommand = defineCommand({
   ],
   params: [
     { name: "api-base-url", type: "string", description: `Fide API base URL. Defaults to ${DEFAULT_FIDE_API_BASE_URL}.`, valueLabel: "<url>" },
-    { name: "profile", type: "string", required: false, description: "Profile to create or update. If omitted, login uses `default`.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to create or update. Stores hosted credentials and base URL. If omitted, login uses `default`.", valueLabel: "<name>" },
     { name: "set-default", type: "boolean", required: false, description: "Also make this profile the machine default after login." },
     { name: "clear-default", type: "boolean", required: false, description: "Remove the saved default profile without changing any profile auth." },
     { name: "web", type: "boolean", required: false, description: "Start browser-based agent login. This is the default when --api-key is omitted." },
@@ -47,7 +47,7 @@ export const authLogoutCommand = defineCommand({
     "fide logout [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile to clear. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to clear. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -65,7 +65,7 @@ export const authWhoamiCommand = defineCommand({
     "fide whoami [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -83,7 +83,7 @@ export const authKeysListCommand = defineCommand({
     "fide keys list [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -102,7 +102,7 @@ export const authKeysCreateCommand = defineCommand({
   ],
   params: [
     { name: "label", type: "string", required: true, description: "Label for the new API key", valueLabel: "<label>" },
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "user-id", type: "string", description: "Optional target agent public user id (`user_*`).", valueLabel: "<user_id>" },
     { name: "expires-at", type: "string", description: "Optional ISO-8601 expiration timestamp", valueLabel: "<iso8601>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -123,7 +123,7 @@ export const authKeysRevokeCommand = defineCommand({
     "fide keys revoke <api_key_id> [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "profile", type: "string", required: false, description: "Named CLI auth/config profile to use for hosted requests. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
