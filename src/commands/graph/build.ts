@@ -100,6 +100,60 @@ function sameGraphLocation(a: ResolvedGraphStore, b: ResolvedGraphStore): boolea
   return false;
 }
 
+function createCliStructuredError(
+  message: string,
+  options: {
+    hint?: string;
+    details?: Record<string, unknown>;
+    next?: Record<string, unknown>;
+  } = {},
+): Error & {
+  hint?: string;
+  details?: Record<string, unknown>;
+  next?: Record<string, unknown>;
+} {
+  const error = new Error(message) as Error & {
+    hint?: string;
+    details?: Record<string, unknown>;
+    next?: Record<string, unknown>;
+  };
+  if (options.hint) error.hint = options.hint;
+  if (options.details) error.details = options.details;
+  if (options.next) error.next = options.next;
+  return error;
+}
+
+function missingPostgresConnectionError(input: {
+  graphKey: string;
+  targetKey: string | null;
+  connectionEnv: string | null;
+  flags: Map<string, string | boolean>;
+  scope: "store" | "recipe-source";
+}) {
+  const localTarget = resolveGraphTarget(input.flags);
+  const graphLabel = input.targetKey ?? input.graphKey;
+  const configuredConnection = input.connectionEnv ?? null;
+  const subject = input.scope === "recipe-source" ? "recipe source graph" : "graph";
+  return createCliStructuredError(
+    `Missing postgres connection for ${subject} "${graphLabel}". Configure graph.connection in settings.json or set the referenced env var.`,
+    {
+      hint: "For postgres graphs, graph.connection may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
+      details: {
+        graphKey: input.graphKey,
+        graphType: "postgres",
+        configuredConnection,
+        connectionResolution: configuredConnection ? "env-var-name" : "missing",
+        fideDir: `${localTarget.root}/.fide`,
+        settingsPath: resolveSettingsPath(process.cwd()),
+        cwd: process.cwd(),
+      },
+      next: {
+        checkStatus: `fide graph status --graph ${input.graphKey}`,
+      },
+    },
+  );
+}
+
 function assertRecipeTarget(target: ResolvedGraphStore): asserts target is Extract<ResolvedGraphStore, { type: "postgres" | "sqlite" }> {
   if (!target.recipe || target.recipe.length === 0) {
     throw new Error(`Store "${target.key ?? "unknown"}" has no recipe.`);
@@ -149,7 +203,11 @@ async function writeStoreRunState(key: string, lastRunAt: string, lastRunStateme
   await writeFile(settingsPath, `${JSON.stringify(current, null, 2)}\n`, "utf8");
 }
 
-async function queryRecipeStep(step: GraphRecipeStep, lastRunAt: string | null): Promise<{ source: ResolvedGraphStore; rows: ResolvedStatementRow[] }> {
+async function queryRecipeStep(
+  step: GraphRecipeStep,
+  lastRunAt: string | null,
+  flags: Map<string, string | boolean>,
+): Promise<{ source: ResolvedGraphStore; rows: ResolvedStatementRow[] }> {
   const source = resolveStoreTarget(new Map<string, string | boolean>([["graph", step.from]]));
   const sql = typeof step.sql === "string" ? renderRecipeSql(step.sql, lastRunAt) : null;
 
@@ -167,7 +225,15 @@ async function queryRecipeStep(step: GraphRecipeStep, lastRunAt: string | null):
 
   if (!sql) throw new Error(`Recipe source "${step.from}" requires sql.`);
   if (source.type === "postgres") {
-    if (!source.databaseUrl) throw new Error(`Missing postgres connection for recipe source "${step.from}".`);
+    if (!source.databaseUrl) {
+      throw missingPostgresConnectionError({
+        graphKey: step.from,
+        targetKey: source.key,
+        connectionEnv: source.databaseUrlEnv,
+        flags,
+        scope: "recipe-source",
+      });
+    }
     await ensurePostgresGraphSchema(source.databaseUrl, source.schema);
     return { source, rows: await queryPostgresResolvedStatements(source.databaseUrl, source.schema, sql) };
   }
@@ -207,7 +273,15 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
   }
 
   if (target.type === "postgres") {
-    if (!target.databaseUrl) throw new Error(`Missing postgres connection for store "${target.key ?? "unknown"}".`);
+    if (!target.databaseUrl) {
+      throw missingPostgresConnectionError({
+        graphKey,
+        targetKey: target.key,
+        connectionEnv: target.databaseUrlEnv,
+        flags,
+        scope: "store",
+      });
+    }
     printBuildProgress(flags, `Preparing postgres schema ${JSON.stringify(target.schema)}...`);
     await ensurePostgresGraphSchema(target.databaseUrl, target.schema);
     printBuildProgress(flags, "Clearing existing destination statements...");
@@ -220,10 +294,18 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
   let totalStatements = 0;
   for (const step of target.recipe ?? []) {
     printBuildProgress(flags, `Resolving recipe step from ${JSON.stringify(step.from)}...`);
-    const { rows } = await queryRecipeStep(step, previousLastRunAt);
+    const { rows } = await queryRecipeStep(step, previousLastRunAt, flags);
     totalStatements += rows.length;
     if (target.type === "postgres") {
-      if (!target.databaseUrl) throw new Error(`Missing postgres connection for store "${target.key ?? "unknown"}".`);
+      if (!target.databaseUrl) {
+        throw missingPostgresConnectionError({
+          graphKey,
+          targetKey: target.key,
+          connectionEnv: target.databaseUrlEnv,
+          flags,
+          scope: "store",
+        });
+      }
       await appendResolvedStatementsToPostgres(target.databaseUrl, target.schema, rows);
     } else {
       await appendSqliteGraphFromResolvedStatements(target.file, rows);

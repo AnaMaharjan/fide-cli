@@ -229,7 +229,8 @@ export const graphQueryCommand = defineCommand({
   notes: [
     "Use `run` for ad hoc SQL or saved-query execution.",
     "Mixed query commands default to local project queries.",
-    "Set `FIDE_WORKSPACE_ID` or pass `--workspace <workspace-id>` to target hosted workspace queries.",
+    "Graph query commands only target hosted state when `--workspace` is present.",
+    "Pass `--workspace <workspace-id>` explicitly, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set.",
   ],
 });
 
@@ -245,7 +246,7 @@ export const graphQueryRunCommand = defineCommand({
     "fide graph query run [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted saved-query execution. If omitted, `--name` runs locally unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Enable hosted saved-query execution. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted saved-query execution. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
@@ -275,10 +276,12 @@ export const graphQueryRunCommand = defineCommand({
     "fide graph query run --graph primary 'select * from statements limit 10'",
     "fide graph query run --graph primary --name recentStatements",
     "fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
+    "fide graph query run --workspace --graph primary --name recentStatements",
   ],
   notes: [
-    "Without `--workspace` or `FIDE_WORKSPACE_ID`, `--name <query-name>` runs a local project saved query.",
-    "With `--workspace` or `FIDE_WORKSPACE_ID`, `--name <query-name>` runs a hosted workspace saved query.",
+    "Without `--workspace`, `--name <query-name>` runs a local project saved query.",
+    "With `--workspace`, `--name <query-name>` runs a hosted workspace saved query.",
+    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
   ],
 });
 
@@ -292,7 +295,7 @@ export const graphQueryListCommand = defineCommand({
     "fide graph query list [--workspace <workspace-id>] [--profile <name>]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted query listing. If omitted, list local project queries unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Enable hosted query listing. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted query listing. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", description: "Optional graph filter", valueLabel: "<name>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
@@ -311,10 +314,12 @@ export const graphQueryListCommand = defineCommand({
   examples: [
     "fide graph query list",
     "fide graph query list --workspace <workspace-id>",
+    "fide graph query list --workspace",
   ],
   notes: [
-    "Without `--workspace` or `FIDE_WORKSPACE_ID`, lists local project query summaries.",
-    "With `--workspace` or `FIDE_WORKSPACE_ID`, lists hosted workspace query summaries.",
+    "Without `--workspace`, lists local project query summaries.",
+    "With `--workspace`, lists hosted workspace query summaries.",
+    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
     "List output is intentionally compact and returns the query identity fields needed to choose one query.",
     "Use `fide graph query get --graph <name> --name <query-name>` to read the full query text for a selected result.",
   ],
@@ -329,7 +334,7 @@ export const graphQueryGetCommand = defineCommand({
     "fide graph query get [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted query reads. If omitted, read local project queries unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Enable hosted query reads. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted query reads. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
@@ -349,10 +354,12 @@ export const graphQueryGetCommand = defineCommand({
   examples: [
     "fide graph query get --graph primary --name recentStatements",
     "fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
+    "fide graph query get --workspace --graph primary --name recentStatements",
   ],
   notes: [
-    "Without `--workspace` or `FIDE_WORKSPACE_ID`, reads one full local project query.",
-    "With `--workspace` or `FIDE_WORKSPACE_ID`, reads one full hosted workspace query.",
+    "Without `--workspace`, reads one full local project query.",
+    "With `--workspace`, reads one full hosted workspace query.",
+    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
     "Use `fide graph query list` first when you need to discover the available graph/name pairs.",
   ],
 });
@@ -367,7 +374,7 @@ export const graphQuerySaveCommand = defineCommand({
     "fide graph query save --workspace <workspace-id> [--profile <name>] --graph <name> --name <query-name> <query>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted query writes. If omitted, save locally unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Enable hosted query writes. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Named CLI auth/config profile to use for hosted query writes when targeting a hosted workspace. Controls credentials and base URL. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
@@ -399,10 +406,12 @@ export const graphQuerySaveCommand = defineCommand({
   examples: [
     "fide graph query save --graph primary --name recentStatements 'select * from statements limit 10'",
     "fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
+    "fide graph query save --workspace --graph primary --name recentStatements 'select * from statements limit 10'",
   ],
   notes: [
-    "Without `--workspace` or `FIDE_WORKSPACE_ID`, saves into the current project's `.fide/queries/<graph>/` directory.",
-    "With `--workspace` or `FIDE_WORKSPACE_ID`, saves into the hosted workspace query list.",
+    "Without `--workspace`, saves into the current project's `.fide/queries/<graph>/` directory.",
+    "With `--workspace`, saves into the hosted workspace query list.",
+    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
     "Use `--dry-run` to preview whether a hosted workspace query write would change shared state before saving it.",
   ],
 });

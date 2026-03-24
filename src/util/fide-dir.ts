@@ -9,13 +9,10 @@ export type FideDirResolution = {
   source: string;
 };
 
-export function ensureFideEnvLoaded(): void {
-  if (envLoaded) return;
-  envLoaded = true;
-
+function loadEnvFiles(root: string): void {
   const envPaths = [
-    resolve(process.cwd(), ".env"),
-    resolve(process.cwd(), ".env.local"),
+    resolve(root, ".env"),
+    resolve(root, ".env.local"),
   ];
 
   for (const envPath of envPaths) {
@@ -25,6 +22,43 @@ export function ensureFideEnvLoaded(): void {
     } catch {
       // Ignore malformed env files; explicit process.env still wins.
     }
+  }
+}
+
+function resolveEnvFideDirWithoutLoading(root: string): string | null {
+  const configured = process.env.FIDE_DIR;
+  if (!configured) return null;
+  return configured.startsWith("/")
+    ? configured
+    : resolve(root, configured);
+}
+
+function findNearestFideDir(root: string): string | null {
+  let current = resolve(root);
+  while (true) {
+    const candidate = resolve(current, ".fide");
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+    const parent = dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+export function ensureFideEnvLoaded(): void {
+  if (envLoaded) return;
+  envLoaded = true;
+
+  const cwd = process.cwd();
+  loadEnvFiles(cwd);
+
+  const resolvedFideDir = resolveEnvFideDirWithoutLoading(cwd)
+    ?? findNearestFideDir(cwd)
+    ?? resolve(cwd, ".fide");
+  const resolvedFideRoot = dirname(resolvedFideDir);
+  if (resolvedFideRoot !== resolve(cwd)) {
+    loadEnvFiles(resolvedFideRoot);
   }
 }
 
@@ -55,24 +89,7 @@ function resolveEnvSourcePath(root: string): string | null {
 
 function resolveEnvFideDir(root: string): string | null {
   ensureFideEnvLoaded();
-  const configured = process.env.FIDE_DIR;
-  if (!configured) return null;
-  return configured.startsWith("/")
-    ? configured
-    : resolve(root, configured);
-}
-
-function findNearestFideDir(root: string): string | null {
-  let current = resolve(root);
-  while (true) {
-    const candidate = resolve(current, ".fide");
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-    const parent = dirname(current);
-    if (parent === current) return null;
-    current = parent;
-  }
+  return resolveEnvFideDirWithoutLoading(root);
 }
 
 export function resolveFideDir(root: string = process.cwd()): string {

@@ -134,9 +134,12 @@ function requireGraphKey(flags: Map<string, string | boolean>): string {
 }
 
 export async function resolveGraphQueryScope(flags: Map<string, string | boolean>): Promise<GraphQueryScope> {
+  if (!flags.has("workspace")) {
+    return { targetScope: "local" };
+  }
   const selection = await resolveWorkspaceSelection(flags);
   if (!selection) {
-    return { targetScope: "local" };
+    throw new Error("Hosted graph query mode requires a workspace id. Pass --workspace <workspace_id>, or pass --workspace and set FIDE_WORKSPACE_ID.");
   }
   return {
     targetScope: "workspace",
@@ -150,7 +153,7 @@ function isWorkspaceScope(scope: GraphQueryScope): scope is Extract<GraphQuerySc
 }
 
 function projectQueryMissingError(graphKey: string, name: string): Error {
-  return new Error(`Local project query not found: ${graphKey}/${name}. Use \`fide graph query list\` to inspect local queries, or pass \`--workspace <workspace-id>\` / set \`FIDE_WORKSPACE_ID\` for hosted queries.`);
+  return new Error(`Local project query not found: ${graphKey}/${name}. Use \`fide graph query list\` to inspect local queries, or pass \`--workspace <workspace-id>\` for hosted queries. When FIDE_WORKSPACE_ID is set, add bare \`--workspace\` to use it.`);
 }
 
 function createCliStructuredError(
@@ -180,21 +183,23 @@ function assertLocalQueryableStore(
   graphKey: string,
   target: ReturnType<typeof resolveStoreTarget>,
   flags: Map<string, string | boolean>,
-) {
+): Exclude<ReturnType<typeof resolveStoreTarget>, { type: "fide-jsonl" }> {
   if (target.type === "fide-jsonl") {
     throw new Error("This command only supports sqlite and postgres graphs. Use `fide graph statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
   }
 
   if (target.type === "postgres" && !target.databaseUrl) {
     const localTarget = resolveGraphTarget(flags);
+    const configuredConnection = target.databaseUrlEnv ?? null;
     throw createCliStructuredError(
-      `Missing postgres connection for store "${target.key ?? graphKey}". Configure the store in settings.json or set the referenced env var.`,
+      `Missing postgres connection for graph "${target.key ?? graphKey}". Configure graph.connection in settings.json or set the referenced env var.`,
       {
-        hint: "This graph uses a postgres runtime target, but the CLI could not resolve a database URL for the current process.",
+        hint: "For postgres graphs, graph.connection may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
         details: {
           graphKey,
-          graphStoreType: target.type,
-          connectionEnv: target.databaseUrlEnv,
+          graphType: target.type,
+          configuredConnection,
+          connectionResolution: configuredConnection ? "env-var-name" : "missing",
           fideDir: `${localTarget.root}/.fide`,
           settingsPath: resolveSettingsPath(localTarget.root),
           cwd: process.cwd(),
@@ -205,6 +210,8 @@ function assertLocalQueryableStore(
       },
     );
   }
+
+  return target;
 }
 
 async function readProjectQueryOrThrow(flags: Map<string, string | boolean>): Promise<{ root: string; query: LocalQueryDefinition }> {
@@ -243,7 +250,7 @@ async function runGraphQuerySaveProject(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`fide graph query save` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` or set `FIDE_WORKSPACE_ID` to save a hosted query.");
+    throw new Error("`fide graph query save` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` for hosted saves, or pass `--workspace` when FIDE_WORKSPACE_ID is already set.");
   }
 
   const outPath = resolve(resolveQueriesDir(graphTarget.root), graphKey, `${name}.sql`);
@@ -432,7 +439,7 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
-    throw new Error("`fide graph query list` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` or set `FIDE_WORKSPACE_ID` to list hosted queries.");
+    throw new Error("`fide graph query list` is in local mode here and only supports project `.fide` directories. Pass `--workspace <workspace-id>` for hosted reads, or pass `--workspace` when FIDE_WORKSPACE_ID is already set.");
   }
 
   const graphKeyRaw = getStringFlag(flags, "graph");
@@ -610,8 +617,11 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
       console.error(renderCommandHelp(graphQueryRunCommand));
       return 1;
     }
-    const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
-    assertLocalQueryableStore(graphKey, target, resolvedFlags);
+    const target = assertLocalQueryableStore(
+      graphKey,
+      resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]])),
+      resolvedFlags,
+    );
     const result = await executeGraphQuery({
       target,
       sql,
@@ -682,8 +692,11 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
   }
 
   const { query } = await readProjectQueryOrThrow(flags);
-  const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
-  assertLocalQueryableStore(graphKey, target, flags);
+  const target = assertLocalQueryableStore(
+    graphKey,
+    resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]])),
+    flags,
+  );
   const result = await executeGraphQuery({
     target,
     sql: query.sql,
