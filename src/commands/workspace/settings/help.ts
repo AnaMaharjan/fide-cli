@@ -20,9 +20,9 @@ export function workspaceSettingsHelp(): string {
         title: "Notes",
         items: [
           "  - Use --workspace <workspace-id> to select a workspace explicitly.",
-          "  - FIDE_WORKSPACE overrides project and profile workspace defaults.",
-          "  - Project .fide/settings.json may provide `workspaceId` and `profile` pointer fields.",
-          "  - Profile workspace defaults live in ~/.fide/profiles/<name>/settings.json.",
+          "  - FIDE_WORKSPACE_ID provides the ambient hosted workspace when `--workspace` is omitted.",
+          "  - Workspace settings commands require a hosted workspace target; they do not fall back to local project state.",
+          "  - Project .fide/settings.json may still provide `profile` for auth selection.",
         ],
       },
       {

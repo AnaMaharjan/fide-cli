@@ -137,7 +137,7 @@ export const workspaceSettingsGetCommand = defineCommand({
     "fide workspace settings get [--workspace <workspace-id>] [--profile <name>] [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace to read. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace to read. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -158,7 +158,7 @@ export const workspaceSettingsSetCommand = defineCommand({
     "fide workspace settings set [--workspace <workspace-id>] [--profile <name>] (--stdin|--file <path>|'<json>') [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace to write. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace to write. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "stdin", type: "boolean", description: "Read a JSON object from stdin" },
     { name: "file", type: "string", description: "Read a JSON object from a file", valueLabel: "<path>" },

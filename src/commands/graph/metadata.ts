@@ -136,7 +136,7 @@ export const graphListCommand = defineCommand({
     "fide graph list [--workspace <workspace-id>] [--profile <name>]",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -160,7 +160,7 @@ export const graphGetCommand = defineCommand({
     "fide graph get [--workspace <workspace-id>] [--profile <name>] --graph <name>",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
@@ -187,7 +187,7 @@ export const graphSaveCommand = defineCommand({
     "fide graph save [--workspace <workspace-id>] [--profile <name>] --graph <name> --stdin",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace to update. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Workspace to update. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", required: false, description: "Profile to use. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "type", type: "string", enum: ["postgres", "sqlite", "fide-jsonl"], description: "Hosted graph type" },
@@ -227,7 +227,8 @@ export const graphQueryCommand = defineCommand({
   output: {},
   notes: [
     "Use `run` for ad hoc SQL or saved-query execution.",
-    "Hosted commands also accept `--profile <name>` and can inherit `profile` or `workspaceId` from project .fide/settings.json.",
+    "Mixed query commands default to local project queries.",
+    "Set `FIDE_WORKSPACE_ID` or pass `--workspace <workspace-id>` to target hosted workspace queries.",
   ],
 });
 
@@ -243,7 +244,7 @@ export const graphQueryRunCommand = defineCommand({
     "fide graph query run [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted saved-query execution. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace for hosted saved-query execution. If omitted, `--name` runs locally unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Profile to use for hosted saved-query execution. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
@@ -285,7 +286,7 @@ export const graphQueryListCommand = defineCommand({
     "fide graph query list [--workspace <workspace-id>] [--profile <name>]",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted query listing. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace for hosted query listing. If omitted, list local project queries unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Profile to use for hosted query listing. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", description: "Optional graph filter", valueLabel: "<name>" },
     { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
@@ -311,7 +312,7 @@ export const graphQueryGetCommand = defineCommand({
     "fide graph query get [--workspace <workspace-id>] [--profile <name>] --graph <name> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted query reads. If omitted, resolve from env, project settings, or the profile default.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", description: "Workspace for hosted query reads. If omitted, read local project queries unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
     { name: "profile", type: "string", description: "Profile to use for hosted query reads. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
@@ -339,8 +340,8 @@ export const graphQuerySaveCommand = defineCommand({
     "fide graph query save --workspace <workspace-id> [--profile <name>] --graph <name> --name <query-name> <query>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Workspace for hosted query writes. If omitted, save locally into the current project's `.fide/queries/<graph>/` directory.", valueLabel: "<workspace-id>" },
-    { name: "profile", type: "string", description: "Profile to use for hosted query writes when `--workspace` is set. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
+    { name: "workspace", type: "string", description: "Workspace for hosted query writes. If omitted, save locally unless FIDE_WORKSPACE_ID is set.", valueLabel: "<workspace-id>" },
+    { name: "profile", type: "string", description: "Profile to use for hosted query writes when targeting a hosted workspace. If omitted, resolve from env, project settings, or the default profile.", valueLabel: "<name>" },
     { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<name>" },
     { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
     { name: "description", type: "string", description: "Optional query description", valueLabel: "<text>" },
@@ -368,8 +369,8 @@ export const graphQuerySaveCommand = defineCommand({
     "fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
   ],
   notes: [
-    "Without `--workspace`, saves into the current project's `.fide/queries/<graph>/` directory.",
-    "With `--workspace`, saves into the hosted workspace query list.",
+    "Without `--workspace` or `FIDE_WORKSPACE_ID`, saves into the current project's `.fide/queries/<graph>/` directory.",
+    "With `--workspace` or `FIDE_WORKSPACE_ID`, saves into the hosted workspace query list.",
   ],
 });
 

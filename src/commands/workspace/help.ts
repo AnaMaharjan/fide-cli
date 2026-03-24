@@ -36,7 +36,8 @@ export function workspaceCommandHelp(): string {
         title: "Notes",
         items: [
           "  - Use `workspace` for shared hosted state: workspaces, members, roles, and workspace settings.",
-          "  - `--workspace` and `--profile` are optional. Commands can also resolve from env, project `.fide/settings.json`, and profile defaults.",
+          "  - `--workspace` is optional only when `FIDE_WORKSPACE_ID` is set.",
+          "  - `--profile` selects auth context; hosted workspace selection comes from `--workspace` or `FIDE_WORKSPACE_ID`.",
         ],
       },
     ],

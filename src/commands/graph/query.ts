@@ -14,7 +14,7 @@ import {
 } from "./metadata.js";
 import { readStdinUtf8 } from "./shared.js";
 import { requireWorkspaceApiClient } from "../workspace/shared.js";
-import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
+import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
 import { okResponse } from "../../util/response.js";
 
 function queryCommandHelp(): string {
@@ -29,9 +29,9 @@ function queryCommandHelp(): string {
     "",
     "Examples:",
     "  fide graph query run --graph primary 'select * from statements limit 10'",
-    "  fide graph query run --profile work --graph primary --name recentStatements",
+    "  fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
     "  fide graph query list --graph primary",
-    "  fide graph query get --profile work --graph primary --name recentStatements",
+    "  fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
     "  fide graph query save --graph primary --name recentStatements 'select * from statements limit 10'",
     "  fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
   ].join("\n");
@@ -62,6 +62,10 @@ function requireGraphKey(flags: Map<string, string | boolean>): string {
   const graphKey = getStringFlag(flags, "graph");
   if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
   return graphKey;
+}
+
+async function shouldUseHostedQueryMode(flags: Map<string, string | boolean>): Promise<boolean> {
+  return Boolean(await resolveWorkspaceSelection(flags));
 }
 
 async function readProjectQueryOrThrow(flags: Map<string, string | boolean>): Promise<{ root: string; query: LocalQueryDefinition }> {
@@ -358,14 +362,13 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
   }
 
   const graphKey = requireGraphKey(flags);
-  const workspaceId = getStringFlag(flags, "workspace");
   const limitFlag = getStringFlag(flags, "limit");
   const limit = limitFlag ? Number(limitFlag) : undefined;
   if (limitFlag && (!Number.isInteger(limit) || Number(limit) <= 0)) {
     throw new Error("Invalid --limit value. Expected a positive integer.");
   }
 
-  if (workspaceId) {
+  if (await shouldUseHostedQueryMode(flags)) {
     const useJson = shouldUseJsonOutput(flags);
     const selection = await resolveWorkspaceSelectionOrThrow(flags);
     const { auth, client } = await requireWorkspaceApiClient(flags);
@@ -424,7 +427,7 @@ async function runGraphQueryListCommand(args: string[]): Promise<number> {
     console.log(renderCommandHelp(graphQueryListCommand));
     return 0;
   }
-  if (getStringFlag(parsed.flags, "workspace")) {
+  if (await shouldUseHostedQueryMode(parsed.flags)) {
     return runGraphQueryListWorkspace(args);
   }
   return runGraphQueryListProject(args);
@@ -436,7 +439,7 @@ async function runGraphQueryGetCommand(args: string[]): Promise<number> {
     console.log(renderCommandHelp(graphQueryGetCommand));
     return 0;
   }
-  if (getStringFlag(parsed.flags, "workspace")) {
+  if (await shouldUseHostedQueryMode(parsed.flags)) {
     return runGraphQueryGetWorkspace(args);
   }
   return runGraphQueryGetProject(args);
@@ -448,7 +451,7 @@ async function runGraphQuerySaveCommand(args: string[]): Promise<number> {
     console.log(renderCommandHelp(graphQuerySaveCommand));
     return 0;
   }
-  if (getStringFlag(parsed.flags, "workspace")) {
+  if (await shouldUseHostedQueryMode(parsed.flags)) {
     return runGraphQuerySaveWorkspace(args);
   }
   return runGraphQuerySaveProject(args);
