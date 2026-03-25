@@ -10,7 +10,7 @@ import { okResponse } from "../util/response.js";
 import { statusCommand } from "./metadata.js";
 import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/fide-dir.js";
 import { resolveWorkspaceSelection } from "../util/workspace-settings.js";
-import { resolveProfileAuthPath, resolveProfileSelection, resolveProfileSettingsPath } from "../util/profile-settings.js";
+import { resolveProfileSelection, resolveProfileSettingsPath } from "../util/profile-settings.js";
 
 function omitNullFields<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -61,13 +61,13 @@ export async function runStatusCommand(args: string[]): Promise<number> {
 
   const payload = okResponse("status.v1", {
     machine: {
-      configPath: profileSelection ? resolveProfileAuthPath(profileSelection.profile) : null,
+      configPath: profileSelection ? resolveProfileSettingsPath(profileSelection.profile) : null,
       profile: profileSelection?.profile ?? null,
       authConfigured: Boolean(resolvedAuth),
       authSource: resolvedAuth?.source ?? null,
       baseUrl: resolvedAuth?.baseUrl ?? null,
       storedSettingsPresent: Boolean(storedAuth),
-      envAuthConfigured: Boolean(process.env.FIDE_API_BASE_URL?.trim() && process.env.FIDE_API_KEY?.trim()),
+      envAuthConfigured: Boolean(process.env.FIDE_API_BASE_URL?.trim() && process.env.FIDE_ACCESS_TOKEN?.trim()),
       authValid: remote.ok,
       authResolutionError,
       authResolutionHint: !resolvedAuth

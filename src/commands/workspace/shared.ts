@@ -3,13 +3,14 @@ import { createAuthApiClient } from "../../util/auth-api.js";
 import type { MeResponse } from "../../util/auth-api.js";
 import type { ResolvedAuthSettings } from "../../util/auth-settings.js";
 import { resolveAuthSettings } from "../../util/auth-settings.js";
+import type { WorkspaceSelectionSource } from "../../util/workspace-settings.js";
 
 type HostedCommandDebugInput = {
   auth: ResolvedAuthSettings;
   client: ReturnType<typeof createAuthApiClient>;
   targetScope?: "workspace";
   workspaceId?: string;
-  workspaceSelectionSource?: "flag" | "env";
+  workspaceSelectionSource?: WorkspaceSelectionSource;
   graphKey?: string;
   queryName?: string;
   userId?: string;
@@ -23,8 +24,8 @@ type CliAugmentedError = Error & {
   next?: Record<string, unknown>;
 };
 
-function getApiKeyPrefix(apiKey: string): string {
-  return apiKey.slice(0, 16);
+function getAccessTokenPreview(accessToken: string): string {
+  return accessToken.slice(0, 16);
 }
 
 function parseReportedUserId(message: string): string | null {
@@ -91,10 +92,10 @@ export async function enrichHostedCommandError(
   const me = await readAuthenticatedSubject(input.client);
   const authenticatedUserId = me?.user.id ?? null;
   const authenticatedWorkspaceId = me?.access.workspaceId ?? null;
-  const apiKeyPrefix = getApiKeyPrefix(input.auth.apiKey);
+  const accessTokenPreview = getAccessTokenPreview(input.auth.accessToken);
   const baseDetails: Record<string, unknown> = {
     source: input.auth.source,
-    apiKeyPrefix,
+    accessTokenPreview,
     authenticatedUserId,
     authenticatedUserType: me?.user.type ?? null,
     authenticatedManagementMode: me?.user.managementMode ?? null,
@@ -120,7 +121,7 @@ export async function enrichHostedCommandError(
     const enriched = new Error(
       `Workspace membership lookup failed for workspace ${input.workspaceId ?? "unknown"}. `
       + `Authenticated user ${authenticatedUserId ?? "unknown"} `
-      + `using API key prefix ${apiKeyPrefix} does not appear to map to a workspace member record.`,
+      + `using access token preview ${accessTokenPreview} does not appear to map to a workspace member record.`,
     ) as CliAugmentedError;
 
     enriched.hint =

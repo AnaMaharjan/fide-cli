@@ -17,10 +17,6 @@ export function assertUserId(value: string): string {
   return assertPattern("user id", value, "user");
 }
 
-export function assertApiKeyId(value: string): string {
-  return assertPattern("API key id", value, "api_key");
-}
-
 export function assertAuthRequestId(value: string): string {
   return assertPattern("agent auth request id", value, "auth_request");
 }

@@ -1,18 +1,19 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { rm } from "node:fs/promises";
 import { getStringFlag } from "./args.js";
 import {
-  ensureProfileAuthPathPermissions,
+  ensureProfileSettingsPathPermissions,
   getProfileNotFoundError,
-  resolveProfileAuthPath,
+  readStoredProfileSettings,
+  resolveProfileSettingsPath,
   resolveProfileSelection,
+  writeStoredProfileSettings,
 } from "./profile-settings.js";
 
 export const DEFAULT_FIDE_API_BASE_URL = "https://api.fide.work";
 
 export type StoredAuthSettings = {
   baseUrl: string;
-  apiKey: string;
+  accessToken: string;
 };
 
 export type ResolvedAuthSettings = StoredAuthSettings & {
@@ -22,39 +23,41 @@ export type ResolvedAuthSettings = StoredAuthSettings & {
 };
 
 export async function readStoredAuthSettings(profile: string): Promise<StoredAuthSettings | null> {
-  try {
-    const raw = await readFile(resolveProfileAuthPath(profile), "utf8");
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const apiBaseUrl = typeof parsed.apiBaseUrl === "string" && parsed.apiBaseUrl.trim().length > 0
-      ? parsed.apiBaseUrl.trim()
-      : DEFAULT_FIDE_API_BASE_URL;
-    const apiKey = typeof parsed.apiKey === "string" && parsed.apiKey.trim().length > 0
-      ? parsed.apiKey.trim()
-      : null;
-    if (!apiKey) {
-      return null;
-    }
-    return {
-      baseUrl: apiBaseUrl,
-      apiKey,
-    };
-  } catch {
+  const parsed = await readStoredProfileSettings(profile);
+  const accessToken = typeof parsed?.accessToken === "string" && parsed.accessToken.trim().length > 0
+    ? parsed.accessToken.trim()
+    : null;
+  if (!accessToken) {
     return null;
   }
+  return {
+    baseUrl: typeof parsed?.apiBaseUrl === "string" && parsed.apiBaseUrl.trim().length > 0
+      ? parsed.apiBaseUrl.trim()
+      : DEFAULT_FIDE_API_BASE_URL,
+    accessToken,
+  };
 }
 
 export async function writeStoredAuthSettings(profile: string, settings: StoredAuthSettings): Promise<void> {
-  const path = resolveProfileAuthPath(profile);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify({
+  const existing = await readStoredProfileSettings(profile);
+  await writeStoredProfileSettings(profile, {
+    ...existing,
     apiBaseUrl: settings.baseUrl,
-    apiKey: settings.apiKey,
-  }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  await ensureProfileAuthPathPermissions(profile);
+    accessToken: settings.accessToken,
+  });
+  await ensureProfileSettingsPathPermissions(profile);
 }
 
 export async function clearStoredAuthSettings(profile: string): Promise<void> {
-  await rm(resolveProfileAuthPath(profile), { force: true });
+  const existing = await readStoredProfileSettings(profile);
+  if (!existing) {
+    await rm(resolveProfileSettingsPath(profile), { force: true });
+    return;
+  }
+  const next = { ...existing };
+  delete next.apiBaseUrl;
+  delete next.accessToken;
+  await writeStoredProfileSettings(profile, next);
 }
 
 export async function resolveAuthSettings(
@@ -62,12 +65,12 @@ export async function resolveAuthSettings(
   root: string = process.cwd(),
 ): Promise<ResolvedAuthSettings | null> {
   const envBaseUrl = process.env.FIDE_API_BASE_URL?.trim();
-  const envApiKey = process.env.FIDE_API_KEY?.trim();
+  const envAccessToken = process.env.FIDE_ACCESS_TOKEN?.trim();
 
-  if (envApiKey) {
+  if (envAccessToken) {
     return {
       baseUrl: envBaseUrl ?? DEFAULT_FIDE_API_BASE_URL,
-      apiKey: envApiKey,
+      accessToken: envAccessToken,
       source: "env",
       path: "env",
       profile: null,
@@ -87,7 +90,7 @@ export async function resolveAuthSettings(
   return {
     ...stored,
     source: "profile",
-    path: resolveProfileAuthPath(profileSelection.profile),
+    path: resolveProfileSettingsPath(profileSelection.profile),
     profile: profileSelection.profile,
   };
 }

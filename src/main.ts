@@ -27,9 +27,9 @@ function helpText(): string {
             "  fide --version",
             "  fide <group> [command] [flags]",
             "  fide login [flags]",
+            "  fide start [flags]",
             "  fide logout [flags]",
             "  fide whoami [flags]",
-            "  fide keys <command> [flags]",
             "  fide docs <path>",
             "  fide schema [surface]",
           ],
@@ -38,8 +38,8 @@ function helpText(): string {
           title: "Commands",
           items: [
             "  login    Save auth for this machine",
-            "  keys     List, create, and revoke API keys",
             "  logout   Remove saved auth for a profile",
+            "  start    Start a workspace sync session",
             "  status   Inspect machine, project, and workspace context",
             "  whoami   Show the current authenticated user",
           ],
@@ -58,8 +58,8 @@ function helpText(): string {
           items: [
             "  fide status",
             "  fide login --profile work",
+            "  fide start",
             "  fide whoami",
-            "  fide keys list",
             "  fide graph statements write '<json>'",
             "  fide graph list --workspace workspace_<suffix>",
             "  fide graph save --workspace workspace_<suffix> --graph primary --type postgres",
@@ -116,6 +116,11 @@ export async function runCli(argv: string[]): Promise<number> {
       return await runAuthLogin([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
+    if (group === "start") {
+      const { runStartCommand } = await import("./commands/start.js");
+      return await runStartCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
     if (group === "logout") {
       const { runAuthLogout } = await import("./commands/auth/logout.js");
       return await runAuthLogout([command, ...rest].filter((value): value is string => Boolean(value)));
@@ -124,11 +129,6 @@ export async function runCli(argv: string[]): Promise<number> {
     if (group === "whoami") {
       const { runAuthWhoami } = await import("./commands/auth/whoami.js");
       return await runAuthWhoami([command, ...rest].filter((value): value is string => Boolean(value)));
-    }
-
-    if (group === "keys") {
-      const { runAuthKeysCommand } = await import("./commands/auth/keys/index.js");
-      return await runAuthKeysCommand([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
     if (group === "docs") {

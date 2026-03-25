@@ -12,6 +12,8 @@ export type StoredProfileConfig = {
 };
 
 export type StoredProfileSettings = {
+  apiBaseUrl?: string;
+  accessToken?: string;
   workspaceId?: string;
 };
 
@@ -51,10 +53,6 @@ export function resolveProfileDir(profile: string): string {
     throw new Error("Missing profile name.");
   }
   return join(resolveProfilesDir(), normalized);
-}
-
-export function resolveProfileAuthPath(profile: string): string {
-  return join(resolveProfileDir(profile), "auth.json");
 }
 
 export function resolveProfileSettingsPath(profile: string): string {
@@ -101,10 +99,20 @@ export async function readStoredProfileSettings(profile: string): Promise<Stored
   try {
     const raw = await readFile(resolveProfileSettingsPath(profile), "utf8");
     const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const apiBaseUrl = typeof parsed.apiBaseUrl === "string" && parsed.apiBaseUrl.trim().length > 0
+      ? parsed.apiBaseUrl.trim()
+      : null;
+    const accessToken = typeof parsed.accessToken === "string" && parsed.accessToken.trim().length > 0
+      ? parsed.accessToken.trim()
+      : null;
     const workspaceId = typeof parsed.workspaceId === "string" && parsed.workspaceId.trim().length > 0
       ? parsed.workspaceId.trim()
       : null;
-    return workspaceId ? { workspaceId } : {};
+    return {
+      ...(apiBaseUrl ? { apiBaseUrl } : {}),
+      ...(accessToken ? { accessToken } : {}),
+      ...(workspaceId ? { workspaceId } : {}),
+    };
   } catch {
     return null;
   }
@@ -116,6 +124,12 @@ export async function writeStoredProfileSettings(profile: string, settings: Stor
     throw new Error("Missing profile name.");
   }
   const next: StoredProfileSettings = {};
+  if (typeof settings.apiBaseUrl === "string" && settings.apiBaseUrl.trim().length > 0) {
+    next.apiBaseUrl = settings.apiBaseUrl.trim();
+  }
+  if (typeof settings.accessToken === "string" && settings.accessToken.trim().length > 0) {
+    next.accessToken = settings.accessToken.trim();
+  }
   if (typeof settings.workspaceId === "string" && settings.workspaceId.trim().length > 0) {
     next.workspaceId = settings.workspaceId.trim();
   }
@@ -141,7 +155,7 @@ export async function resolveProfileSelection(
     return {
       profile: flagProfile,
       source: "flag",
-      path: resolveProfileAuthPath(flagProfile),
+      path: resolveProfileSettingsPath(flagProfile),
     };
   }
 
@@ -150,7 +164,7 @@ export async function resolveProfileSelection(
     return {
       profile: envProfile,
       source: "env",
-      path: resolveProfileAuthPath(envProfile),
+      path: resolveProfileSettingsPath(envProfile),
     };
   }
 
@@ -184,8 +198,8 @@ export async function clearStoredProfileSettings(profile: string): Promise<void>
   await rm(resolveProfileSettingsPath(normalized), { force: true });
 }
 
-export async function ensureProfileAuthPathPermissions(profile: string): Promise<void> {
-  await chmod(resolveProfileAuthPath(profile), 0o600);
+export async function ensureProfileSettingsPathPermissions(profile: string): Promise<void> {
+  await chmod(resolveProfileSettingsPath(profile), 0o600);
 }
 
 export function getProfileNotFoundError(profile: string): Error {

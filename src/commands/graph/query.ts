@@ -17,7 +17,7 @@ import {
 import { readStdinUtf8 } from "./shared.js";
 import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { assertGraphKey, assertQueryName } from "../../util/selectors.js";
-import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
+import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow, type WorkspaceSelectionSource } from "../../util/workspace-settings.js";
 import { okResponse } from "../../util/response.js";
 
 type GraphQueryScope =
@@ -25,7 +25,7 @@ type GraphQueryScope =
   | {
       targetScope: "workspace";
       workspaceId: string;
-      workspaceSelectionSource: "flag" | "env";
+      workspaceSelectionSource: WorkspaceSelectionSource;
     };
 
 function queryCommandHelp(): string {

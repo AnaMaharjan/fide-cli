@@ -9,7 +9,7 @@ class ApiResponseError extends Error {
 
 export type MeResponse = {
   auth: {
-    type: "user" | "api_key" | "service";
+    type: "user" | "service";
   };
   user: {
     id: string | null;
@@ -23,17 +23,6 @@ export type MeResponse = {
     roles: string[];
     permissions: string[];
   };
-};
-
-export type ApiKeySummary = {
-  id: string;
-  userId: string;
-  label: string;
-  keyPrefix: string;
-  expiresAt: string | null;
-  lastUsedAt: string | null;
-  revokedAt: string | null;
-  createdAt: string;
 };
 
 export type WorkspaceSummary = {
@@ -96,7 +85,7 @@ export type WorkspaceMemberMutation = {
 
 type AuthClientOptions = {
   baseUrl: string;
-  apiKey?: string;
+  accessToken?: string;
 };
 
 export type AgentAuthRequestSummary = {
@@ -148,8 +137,8 @@ export function createAuthApiClient(options: AuthClientOptions) {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };
-  if (options.apiKey) {
-    headers["x-api-key"] = options.apiKey;
+  if (options.accessToken) {
+    headers.Authorization = `Bearer ${options.accessToken}`;
   }
 
   return {
@@ -159,35 +148,6 @@ export function createAuthApiClient(options: AuthClientOptions) {
         headers,
       });
       return parseApiResponse<MeResponse>(response, "auth-whoami.v1");
-    },
-
-    async listApiKeys(): Promise<{ apiKeys: ApiKeySummary[] }> {
-      const response = await fetch(`${baseUrl}/v1/api-keys`, {
-        method: "GET",
-        headers,
-      });
-      return parseApiResponse<{ apiKeys: ApiKeySummary[] }>(response, "auth-keys-list.v1");
-    },
-
-    async createApiKey(input: {
-      label: string;
-      userId?: string;
-      expiresAt?: string | null;
-    }): Promise<{ apiKey: ApiKeySummary; rawKey: string }> {
-      const response = await fetch(`${baseUrl}/v1/api-keys`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(input),
-      });
-      return parseApiResponse<{ apiKey: ApiKeySummary; rawKey: string }>(response, "auth-keys-create.v1");
-    },
-
-    async revokeApiKey(id: string): Promise<{ ok: boolean }> {
-      const response = await fetch(`${baseUrl}/v1/api-keys/${id}/revoke`, {
-        method: "POST",
-        headers,
-      });
-      return parseApiResponse<{ ok: boolean }>(response, "auth-keys-revoke.v1");
     },
 
     async createAgentAuthRequest(input: {
@@ -220,8 +180,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
       result: {
         workspaceId: string;
         agentUserId: string;
-        apiKey: string;
-        apiKeyPrefix: string;
+        accessToken: string;
       };
     }> {
       const response = await fetch(`${baseUrl}/v1/agent-auth/requests/${encodeURIComponent(input.requestId)}/exchange`, {
@@ -234,8 +193,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
         result: {
           workspaceId: string;
           agentUserId: string;
-          apiKey: string;
-          apiKeyPrefix: string;
+          accessToken: string;
         };
       }>(response, "auth-agent-request-exchange.v1");
     },

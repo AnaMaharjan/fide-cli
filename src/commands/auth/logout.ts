@@ -3,7 +3,7 @@ import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { clearStoredAuthSettings } from "../../util/auth-settings.js";
-import { resolveProfileAuthPath, resolveProfileSelection } from "../../util/profile-settings.js";
+import { resolveProfileSelection, resolveProfileSettingsPath } from "../../util/profile-settings.js";
 import { authLogoutCommand } from "./metadata.js";
 
 export async function runAuthLogout(args: string[]): Promise<number> {
@@ -23,7 +23,7 @@ export async function runAuthLogout(args: string[]): Promise<number> {
   const payload = okResponse("auth-logout.v1", {
     cleared: true,
     profile: profileSelection.profile,
-    userSettingsPath: resolveProfileAuthPath(profileSelection.profile),
+    userSettingsPath: resolveProfileSettingsPath(profileSelection.profile),
   }, {
     command: "fide logout",
   });

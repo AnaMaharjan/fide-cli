@@ -8,7 +8,8 @@ import { createAuthApiClient } from "../../util/auth-api.js";
 import { resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth-settings.js";
 import { startAgentAuthLoopbackServer } from "../../util/auth-loopback.js";
 import { openBrowser } from "../../util/browser.js";
-import { resolveWorkspaceSelection, writeStoredWorkspaceSelection } from "../../util/workspace-settings.js";
+import { getWorkspaceFlag, writeStoredWorkspaceSelection } from "../../util/workspace-settings.js";
+import { assertWorkspaceId } from "../../util/public-ids.js";
 import { clearDefaultProfile, setDefaultProfile } from "../../util/profile-settings.js";
 import { authLoginCommand } from "./metadata.js";
 
@@ -22,20 +23,16 @@ export async function runAuthLogin(args: string[]): Promise<number> {
 
   const profile = getStringFlag(flags, "profile") ?? "default";
   const baseUrl = await resolveApiBaseUrl(getStringFlag(flags, "api-base-url"), flags);
-  const apiKey = getStringFlag(flags, "api-key");
   const agentName = getStringFlag(flags, "agent-name") ?? "My Agent";
-  const useWeb = flags.has("web");
   const setDefault = flags.has("set-default");
   const clearDefault = flags.has("clear-default");
+  const requestedWorkspaceId = getWorkspaceFlag(flags);
 
-  if (useWeb && apiKey) {
-    throw new Error("Invalid auth login flags. Use either --web or --api-key <key>, not both.");
-  }
   if (setDefault && clearDefault) {
     throw new Error("Invalid auth login flags. Use either --set-default or --clear-default, not both.");
   }
   if (clearDefault) {
-    if (flags.has("profile") || apiKey || useWeb || flags.has("workspace") || flags.has("agent-name")) {
+    if (flags.has("profile") || flags.has("web") || flags.has("workspace") || flags.has("agent-name")) {
       throw new Error("Invalid auth login flags. --clear-default only clears the saved default profile and cannot be combined with login options.");
     }
     await clearDefaultProfile();
@@ -51,37 +48,11 @@ export async function runAuthLogin(args: string[]): Promise<number> {
     return 0;
   }
 
-  if (apiKey) {
-    const client = createAuthApiClient({ baseUrl, apiKey });
-    const me = await client.me();
-    await writeStoredAuthSettings(profile, { baseUrl, apiKey });
-    if (setDefault) {
-      await setDefaultProfile(profile);
-    }
-
-    const payload = okResponse("auth-login.v1", {
-      baseUrl,
-      profile,
-      source: "profile",
-      user: me,
-    }, {
-      command: "fide login",
-    });
-
-    if (useJson) {
-      printJson(payload);
-    } else {
-      console.log(`Saved auth for ${me.user.id ?? me.auth.type} at ${baseUrl}`);
-    }
-    return 0;
-  }
-
   const loopback = await startAgentAuthLoopbackServer();
   try {
-    const workspaceSelection = await resolveWorkspaceSelection(flags);
     const client = createAuthApiClient({ baseUrl });
     const created = await client.createAgentAuthRequest({
-      requestedWorkspaceId: workspaceSelection?.workspaceId ?? null,
+      requestedWorkspaceId: requestedWorkspaceId ? assertWorkspaceId(requestedWorkspaceId) : null,
       loopbackUrl: loopback.callbackUrl,
       agentName: agentName ?? null,
       expiresInSeconds: 60 * 15,
@@ -148,7 +119,7 @@ export async function runAuthLogin(args: string[]): Promise<number> {
       requestId: created.request.id,
       exchangeCode: callback.exchangeCode,
     });
-    await writeStoredAuthSettings(profile, { baseUrl, apiKey: exchanged.result.apiKey });
+    await writeStoredAuthSettings(profile, { baseUrl, accessToken: exchanged.result.accessToken });
     await writeStoredWorkspaceSelection(profile, exchanged.result.workspaceId);
     if (setDefault) {
       await setDefaultProfile(profile);
@@ -156,7 +127,7 @@ export async function runAuthLogin(args: string[]): Promise<number> {
 
     const me = await createAuthApiClient({
       baseUrl,
-      apiKey: exchanged.result.apiKey,
+      accessToken: exchanged.result.accessToken,
     }).me();
 
     const payload = okResponse("auth-login.v1", {
