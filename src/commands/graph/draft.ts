@@ -1,96 +1,44 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { getLocalFideWarnings, parseFideId, resolveGraphTarget, STANDARD_CURIE_PREFIXES, statementDoc, type StatementInput } from "@chris-test/graph";
+import {
+  getLocalFideWarnings,
+  resolveGraphTarget,
+  STANDARD_CURIE_PREFIXES,
+  statementDoc,
+  type StatementInput,
+  type FsdDraftFrontmatter,
+} from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { graphDraftCommand } from "./metadata.js";
 import { resolveStatementsBatch } from "./shared.js";
 
-type DraftFrontmatter = {
-  createdAtUTC: string;
-  updatedAtUTC: string;
-  writtenAtUTC: string;
-  writtenRoot: string;
-  updateCount: number;
-  description: string | null;
-};
-
-function titleFromDraftName(name: string): string {
-  return name
-    .split(/[-_]+/g)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function parseExistingDraftFrontmatter(content: string): Partial<DraftFrontmatter> {
-  const match = /^---\n([\s\S]*?)\n---\n/.exec(content);
-  if (!match) return {};
-  const values: Partial<DraftFrontmatter> = {};
-  for (const rawLine of match[1].split("\n")) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const separator = line.indexOf(":");
-    if (separator === -1) continue;
-    const key = line.slice(0, separator).trim();
-    const value = line.slice(separator + 1).trim();
-    if (key === "createdAtUTC" && value) values.createdAtUTC = value;
-    if (key === "updatedAtUTC" && value) values.updatedAtUTC = value;
-    if (key === "writtenAtUTC" && value) values.writtenAtUTC = value;
-    if (key === "writtenRoot" && value) values.writtenRoot = value;
-    if (key === "description") values.description = value || null;
-    if (key === "updateCount") {
-      const parsed = Number.parseInt(value, 10);
-      if (Number.isFinite(parsed)) values.updateCount = parsed;
-    }
-  }
-  return values;
-}
-
-function renderDraftFrontmatter(params: {
-  draftName: string;
-  description: string | null;
-  createdAtUTC: string;
-  updatedAtUTC: string;
-  writtenAtUTC: string | null;
-  writtenRoot: string | null;
-  updateCount: number;
-}): string {
-  const lines = [
-    "---",
-    "type: fide-statements",
-    `title: ${titleFromDraftName(params.draftName)}`,
-  ];
-  if (params.description) {
-    lines.push(`description: ${params.description}`);
-  }
-  lines.push("entityTypeHelp: fide graph defs");
-  lines.push(`createdAtUTC: ${params.createdAtUTC}`);
-  lines.push(`updatedAtUTC: ${params.updatedAtUTC}`);
-  if (params.writtenAtUTC) {
-    lines.push(`writtenAtUTC: ${params.writtenAtUTC}`);
-  }
-  if (params.writtenRoot) {
-    lines.push(`writtenRoot: ${params.writtenRoot}`);
-  }
-  lines.push(`updateCount: ${params.updateCount}`);
-  lines.push("defaults:");
-  lines.push("  subject:");
-  lines.push("    source: NetworkResource");
-  lines.push("  object:");
-  lines.push("    source: NetworkResource");
-  lines.push("  predicate:");
-  lines.push("    supported_curie_prefixes:");
-  for (const prefix of Object.keys(STANDARD_CURIE_PREFIXES)) {
-    lines.push(`      - ${prefix}`);
-  }
-  lines.push("---");
-  return `${lines.join("\n")}\n`;
-}
-
 function draftHelp(): string {
   return renderCommandHelp(graphDraftCommand);
+}
+
+const draftDefaults = {
+  predicate: {
+    supportedCuriePrefixes: Object.keys(STANDARD_CURIE_PREFIXES),
+    prefixes: STANDARD_CURIE_PREFIXES,
+  },
+};
+
+function inferUniformNodeDefaults(
+  inputs: StatementInput[],
+  role: "subject" | "object",
+): { entityType?: StatementInput["subject"]["entityType"]; referenceType?: StatementInput["subject"]["referenceType"] } {
+  const first = inputs[0]?.[role];
+  if (!first) return {};
+
+  const sameEntityType = inputs.every((input) => input[role].entityType === first.entityType);
+  const sameReferenceType = inputs.every((input) => input[role].referenceType === first.referenceType);
+
+  return {
+    ...(sameEntityType ? { entityType: first.entityType } : {}),
+    ...(sameReferenceType ? { referenceType: first.referenceType } : {}),
+  };
 }
 
 export async function runGraphDraft(args: string[]): Promise<number> {
@@ -120,41 +68,37 @@ export async function runGraphDraft(args: string[]): Promise<number> {
     throw new Error("`graph statements draft` is only supported for local .fide directories.");
   }
 
-  const normalizedInputs: StatementInput[] = batch.statements.map((statement) => ({
-    subject: {
-      referenceIdentifier: statement.subjectReferenceIdentifier,
-      entityType: parseFideId(statement.subjectFideId).entityType,
-      referenceType: parseFideId(statement.subjectFideId).referenceType,
-    },
-    predicate: {
-      referenceIdentifier: statement.predicateReferenceIdentifier,
-      entityType: "Concept",
-      referenceType: "NetworkResource",
-    },
-    object: {
-      referenceIdentifier: statement.objectReferenceIdentifier,
-      entityType: parseFideId(statement.objectFideId).entityType,
-      referenceType: parseFideId(statement.objectFideId).referenceType,
-    },
-  }));
+  const normalizedInputs: StatementInput[] = batch.statements.map((statement, index) => {
+    const original = statementInputs[index];
+    if (!original) {
+      throw new Error(`Missing original statement input for batch index ${index}.`);
+    }
 
-  const baseDoc = statementDoc.formatStatementInputsAsStatementDoc(normalizedInputs, {
-    defaults: {
-      subject: { referenceType: "NetworkResource" },
-      object: { referenceType: "NetworkResource" },
-      predicate: {
-        supportedCuriePrefixes: Object.keys(STANDARD_CURIE_PREFIXES),
-        prefixes: STANDARD_CURIE_PREFIXES,
+    return {
+      subject: {
+        referenceIdentifier: statement.subjectReferenceIdentifier,
+        entityType: original.subject.entityType,
+        referenceType: original.subject.referenceType,
       },
-    },
+      predicate: {
+        referenceIdentifier: statement.predicateReferenceIdentifier,
+        entityType: "Concept",
+        referenceType: "NetworkResource",
+      },
+      object: {
+        referenceIdentifier: statement.objectReferenceIdentifier,
+        entityType: original.object.entityType,
+        referenceType: original.object.referenceType,
+      },
+    };
   });
 
   const outPath = draftPath
     ? resolve(graphTarget.root, ".fide", "drafts", "statements", draftPath, `${draftName}.md`)
     : resolve(graphTarget.root, ".fide", "drafts", "statements", `${draftName}.md`);
-  let existingFrontmatter: Partial<DraftFrontmatter> = {};
+  let existingFrontmatter: Partial<FsdDraftFrontmatter> = {};
   try {
-    existingFrontmatter = parseExistingDraftFrontmatter(await readUtf8(outPath));
+    existingFrontmatter = statementDoc.parseStatementDraftFrontmatter(await readUtf8(outPath));
   } catch {
     existingFrontmatter = {};
   }
@@ -166,16 +110,24 @@ export async function runGraphDraft(args: string[]): Promise<number> {
       ? existingFrontmatter.updateCount + 1
       : 0;
   const description = descriptionFlag ?? existingFrontmatter.description ?? null;
-  const frontmatter = renderDraftFrontmatter({
-    draftName,
-    description,
-    createdAtUTC,
-    updatedAtUTC,
-    writtenAtUTC: existingFrontmatter.writtenAtUTC ?? null,
-    writtenRoot: existingFrontmatter.writtenRoot ?? null,
-    updateCount,
+  const inferredDefaults = {
+    subject: inferUniformNodeDefaults(normalizedInputs, "subject"),
+    object: inferUniformNodeDefaults(normalizedInputs, "object"),
+    predicate: draftDefaults.predicate,
+  };
+  const output = statementDoc.formatStatementInputsAsStatementDraft(normalizedInputs, {
+    frontmatter: {
+      draftName,
+      title: existingFrontmatter.title ?? statementDoc.titleFromDraftName(draftName),
+      description,
+      createdAtUTC,
+      updatedAtUTC,
+      writtenAtUTC: existingFrontmatter.writtenAtUTC ?? null,
+      writtenRoot: existingFrontmatter.writtenRoot ?? null,
+      updateCount,
+    },
+    defaults: inferredDefaults,
   });
-  const output = baseDoc.replace(/^---\n[\s\S]*?\n---\n/, frontmatter);
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
 
