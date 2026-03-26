@@ -6,6 +6,7 @@ import { errorResponse, okResponse } from "../../util/command/response.js";
 import { COMMAND_SCHEMAS, EXTENDED_SCHEMAS } from "../../util/command/schemas.js";
 
 const SCHEMAS = COMMAND_SCHEMAS;
+const ALL_SURFACES = Array.from(new Set([...Object.keys(COMMAND_SCHEMAS), ...Object.keys(EXTENDED_SCHEMAS)])).sort();
 
 function schemaHelp(): string {
   return renderHelp({
@@ -34,7 +35,7 @@ function schemaHelp(): string {
       },
       {
         title: "Surfaces",
-        items: Object.keys(SCHEMAS).map((k) => `  ${k}`),
+        items: ALL_SURFACES.map((k) => `  ${k}`),
       },
     ],
   });
@@ -61,6 +62,7 @@ export async function runSchemaCommand(surface: string | undefined, args: string
     } else if (useJson) {
       printJson(okResponse("schema-index.v1", {
         surfaces: Object.keys(SCHEMAS),
+        extendedSurfaces: Object.keys(EXTENDED_SCHEMAS),
         schemas: SCHEMAS,
       }, {
         command: "fide schema",
@@ -74,8 +76,8 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   const schema = SCHEMAS[resolvedSurface];
   const extendedSchema = (EXTENDED_SCHEMAS as Record<string, unknown>)[resolvedSurface];
   if (!schema && !extendedSchema) {
-    const payload = errorResponse("schema-index.v1", `Unknown surface: ${resolvedSurface}`, {
-      surfaces: Object.keys(SCHEMAS),
+      const payload = errorResponse("schema-index.v1", `Unknown surface: ${resolvedSurface}`, {
+      surfaces: ALL_SURFACES,
     }, {
       command: "fide schema",
     });
@@ -83,7 +85,7 @@ export async function runSchemaCommand(surface: string | undefined, args: string
       printJson(payload);
     } else {
       console.error(payload.error);
-      console.error("Available surfaces:", Object.keys(SCHEMAS).join(", "));
+      console.error("Available surfaces:", ALL_SURFACES.join(", "));
     }
     return 1;
   }
@@ -104,8 +106,8 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   }
 
   if (!schema) {
-    const payload = errorResponse("schema-index.v1", `Unknown surface: ${resolvedSurface}`, {
-      surfaces: Object.keys(SCHEMAS),
+      const payload = errorResponse("schema-index.v1", `Unknown surface: ${resolvedSurface}`, {
+      surfaces: ALL_SURFACES,
     }, {
       command: "fide schema",
     });
@@ -113,7 +115,7 @@ export async function runSchemaCommand(surface: string | undefined, args: string
       printJson(payload);
     } else {
       console.error(payload.error);
-      console.error("Available surfaces:", Object.keys(SCHEMAS).join(", "));
+      console.error("Available surfaces:", ALL_SURFACES.join(", "));
     }
     return 1;
   }

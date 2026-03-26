@@ -1,4 +1,5 @@
 import { commandSchemas, defineCommand } from "../../util/command/command-metadata.js";
+import { querySaveCommand } from "./save.js";
 
 export const queryRunCommand = defineCommand({
   surface: "query.run",
@@ -97,52 +98,6 @@ export const queryGetCommand = defineCommand({
   notes: [
     "Reads the local project query definition from `.fide/queries/`.",
     "Use `fide query list` first when you need to discover the available graph/name pairs.",
-  ],
-});
-
-export const querySaveCommand = defineCommand({
-  surface: "query.save",
-  command: "fide query save",
-  summary: "Save a local project query",
-  usage: [
-    "fide query save --graph <key> --name <query-name> <query>",
-    "fide query save --graph <key> --name <query-name> --file <query.sql>",
-  ],
-  params: [
-    { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<key>" },
-    { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
-    { name: "description", type: "string", description: "Optional query description", valueLabel: "<text>" },
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
-    { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    targetScope: "string",
-    dryRun: "boolean?",
-    wouldChange: "boolean?",
-    preview: "object?",
-    ok: "boolean?",
-    mode: "string?",
-    graphKey: "string?",
-    name: "string?",
-    outPath: "string?",
-    warnings: "string[]?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
-    query: "object?",
-    next: "object?",
-  },
-  examples: [
-    "fide query save --graph primary --name recentStatements 'select * from statements limit 10'",
-    "fide query save --graph primary --name recentStatements --description 'Recent statement sample'",
-  ],
-  notes: [
-    "Saves into the current project's `.fide/queries/<graph>/` directory.",
-    "If SQL is omitted and the query already exists, the existing SQL body is preserved so you can update metadata like `--description` only.",
-    "Use `fide start` to sync the local query definition into the selected workspace.",
   ],
 });
 

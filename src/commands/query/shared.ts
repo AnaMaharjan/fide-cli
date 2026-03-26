@@ -96,32 +96,6 @@ export function requireGraphKey(flags: Map<string, string | boolean>): string {
   return assertGraphKey(graphKey);
 }
 
-export function resolveDescriptionUpdate(
-  flags: Map<string, string | boolean>,
-  fileDescription: string | null,
-): { mode: "preserve" } | { mode: "set"; value: string | null } {
-  const descriptionFlag = getStringFlag(flags, "description");
-  if (typeof descriptionFlag === "string") {
-    return {
-      mode: "set",
-      value: descriptionFlag,
-    };
-  }
-  if (hasFlag(flags, "description")) {
-    return {
-      mode: "set",
-      value: null,
-    };
-  }
-  if (fileDescription !== null) {
-    return {
-      mode: "set",
-      value: fileDescription,
-    };
-  }
-  return { mode: "preserve" };
-}
-
 export function assertLocalQueryCommand(flags: Map<string, string | boolean>, command: string): void {
   if (!flags.has("workspace")) {
     return;

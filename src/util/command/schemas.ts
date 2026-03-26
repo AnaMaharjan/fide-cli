@@ -5,6 +5,7 @@ import { GRAPH_COMMAND_SCHEMAS } from "../../commands/graph/metadata.js";
 import { QUERY_COMMAND_SCHEMAS } from "../../commands/query/metadata.js";
 import { STATEMENTS_COMMAND_SCHEMAS } from "../../commands/statements/metadata.js";
 import { WORKSPACE_COMMAND_SCHEMAS } from "../../commands/workspace/metadata.js";
+import { GENERATED_TYPE_SCHEMAS } from "../../schema/generated.js";
 
 /**
  * Machine-readable command schemas for agent introspection.
@@ -38,6 +39,7 @@ export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ 
 };
 
 export const EXTENDED_SCHEMAS = {
+  ...GENERATED_TYPE_SCHEMAS,
   "graph.statement-input": {
     command: "fide schema graph.statement-input",
     format: "fcp.statement-input.v0",

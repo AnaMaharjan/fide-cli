@@ -1,4 +1,5 @@
 import { renderHelp } from "./help.js";
+import { getStringFlag, hasFlag, type ParsedArgs } from "./args.js";
 
 export type CommandParamSpec = {
   name: string;
@@ -16,7 +17,7 @@ export type CommandMetadata = {
   summary: string;
   usage: string[];
   params: CommandParamSpec[];
-  output: Record<string, string>;
+  output?: Record<string, string>;
   notes?: string[];
   examples?: string[];
 };
@@ -81,10 +82,55 @@ export function commandSchema(command: CommandMetadata) {
       description,
       ...(values ? { enum: values } : {}),
     })),
-    output: command.output,
+    output: command.output ?? {},
   };
 }
 
 export function commandSchemas(commands: readonly CommandMetadata[]) {
   return Object.fromEntries(commands.map((command) => [command.surface, commandSchema(command)]));
+}
+
+function getCommandParam(command: CommandMetadata, name: string): CommandParamSpec {
+  const param = command.params.find((entry) => entry.name === name);
+  if (!param) {
+    throw new Error(`Command metadata for ${command.command} is missing param: ${name}`);
+  }
+  return param;
+}
+
+export function readCommandStringFlag(
+  command: CommandMetadata,
+  parsed: ParsedArgs,
+  name: string,
+): string | null {
+  const param = getCommandParam(command, name);
+  if (param.type === "boolean") {
+    throw new Error(`Param ${name} on ${command.command} is boolean, not string.`);
+  }
+
+  const value = getStringFlag(parsed.flags, name);
+  if (value === null) {
+    if (param.required) {
+      throw new Error(`Missing required flag: --${param.name}${formatValueLabel(param)}.`);
+    }
+    return null;
+  }
+
+  if (param.enum?.length && !param.enum.includes(value)) {
+    throw new Error(`Invalid value for --${param.name}. Expected one of: ${param.enum.join(", ")}.`);
+  }
+
+  return value;
+}
+
+export function readCommandBooleanFlag(
+  command: CommandMetadata,
+  parsed: ParsedArgs,
+  name: string,
+): boolean {
+  const param = getCommandParam(command, name);
+  if (param.type !== "boolean") {
+    throw new Error(`Param ${name} on ${command.command} is not boolean.`);
+  }
+  return hasFlag(parsed.flags, name);
 }

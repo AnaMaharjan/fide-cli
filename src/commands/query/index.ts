@@ -1,11 +1,11 @@
 import { hasFlag, parseArgs } from "../../util/command/args.js";
 import { renderCommandHelp } from "../../util/command/command-metadata.js";
 import { queryCommandHelp } from "./help.js";
-import { queryGetCommand, queryListCommand, queryRunCommand, querySaveCommand } from "./metadata.js";
+import { queryGetCommand, queryListCommand, queryRunCommand } from "./metadata.js";
 import { runQueryGet } from "./get.js";
 import { runQueryList } from "./list.js";
 import { runQueryRun } from "./run.js";
-import { runQuerySave } from "./save.js";
+import { querySaveCommand, runQuerySave } from "./save.js";
 
 function commandHelp(command: string): string {
   switch (command) {

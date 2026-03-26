@@ -23,6 +23,7 @@
     "build:link": "node ./scripts/build.mjs --link",
     "check-types": "tsc --noEmit",
     "check:scope-model": "pnpm run build && node ./scripts/check-scope-model.mjs",
+    "generate:schema": "node ./scripts/generate-schema/command-type-schemas.mjs",
     "generate:docs": "node ./scripts/generate-docs/cli-reference.mjs",
     "check:generated:docs": "node ./scripts/generate-docs/cli-reference.mjs --check"
   },
