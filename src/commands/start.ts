@@ -139,9 +139,6 @@ function renderStartHelp(): string {
   if (process.env.FIDE_API_BASE_URL?.trim()) {
     activeEnv.push(`  FIDE_API_BASE_URL=${process.env.FIDE_API_BASE_URL.trim()}`);
   }
-  if (process.env.FIDE_WORKSPACE_ID?.trim()) {
-    activeEnv.push(`  FIDE_WORKSPACE_ID=${process.env.FIDE_WORKSPACE_ID.trim()}`);
-  }
   if (process.env.FIDE_WORKSPACE_URL?.trim()) {
     activeEnv.push(`  FIDE_WORKSPACE_URL=${process.env.FIDE_WORKSPACE_URL.trim()}`);
   }
@@ -197,7 +194,7 @@ async function runDetachedStart(flags: Map<string, string | boolean>, useJson: b
     throw new Error("Missing auth. Run `fide login` first or set FIDE_API_BASE_URL and FIDE_ACCESS_TOKEN.");
   }
 
-  const workspace = await resolveWorkspaceSelectionOrThrow(flags);
+  const workspace = await resolveWorkspaceSelectionOrThrow();
   const syncUrl = resolveSyncUrl(flags, auth.baseUrl);
   const { syncBaseUrl, syncEndpoint } = resolveSyncRuntimeParts(syncUrl);
 
@@ -232,8 +229,6 @@ async function runDetachedStart(flags: Map<string, string | boolean>, useJson: b
       "__sync-runner",
       "--sync-url",
       syncUrl,
-      "--workspace",
-      workspace.workspaceId,
     ],
     {
       cwd: process.cwd(),
@@ -242,7 +237,6 @@ async function runDetachedStart(flags: Map<string, string | boolean>, useJson: b
       env: {
         ...process.env,
         ...(auth.accountId ? { FIDE_ACCOUNT_ID: auth.accountId } : {}),
-        FIDE_WORKSPACE_ID: workspace.workspaceId,
       },
     },
   );
@@ -275,7 +269,7 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
     throw new Error("Missing auth for sync runner.");
   }
 
-  const workspace = await resolveWorkspaceSelectionOrThrow(flags);
+  const workspace = await resolveWorkspaceSelectionOrThrow();
   const syncUrl = resolveSyncUrl(flags, auth.baseUrl);
   const { syncEndpoint } = resolveSyncRuntimeParts(syncUrl);
   const websocket = new WebSocket(syncUrl);

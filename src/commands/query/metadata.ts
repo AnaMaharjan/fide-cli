@@ -9,10 +9,8 @@ export const queryRunCommand = defineCommand({
     "fide query run --graph <key> --file <query.sql>",
     "fide query run --graph <key> --stdin",
     "fide query run --graph <key> --name <query-name>",
-    "fide query run [--workspace <workspace-id>] --graph <key> --name <query-name>",
   ],
   params: [
-    { name: "workspace", type: "string", description: "Enable hosted saved-query execution. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<key>" },
     { name: "name", type: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
     { name: "limit", type: "number", description: "Maximum row count for hosted saved-query execution", valueLabel: "<n>" },
@@ -31,21 +29,13 @@ export const queryRunCommand = defineCommand({
     rowCount: "number",
     rows: "array",
     warnings: "string[]?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
-    result: "object?",
   },
   examples: [
     "fide query run --graph primary 'select * from statements limit 10'",
     "fide query run --graph primary --name recentStatements",
-    "fide query run --workspace <workspace-id> --graph primary --name recentStatements",
-    "fide query run --workspace --graph primary --name recentStatements",
   ],
   notes: [
-    "Saved-query execution only targets hosted state when `--workspace` is present; otherwise it resolves against local project queries.",
-    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
+    "Saved-query execution resolves against local project queries.",
   ],
 });
 

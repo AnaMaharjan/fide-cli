@@ -6,11 +6,10 @@ export const authLoginCommand = defineCommand({
   command: "fide login",
   summary: "Save auth for this machine via browser handoff",
   usage: [
-    "fide login [--api-base-url <url>] [--workspace <workspace_id>] [--agent-name <name>] [--pretty|-p]",
+    "fide login [--api-base-url <url>] [--agent-name <name>] [--pretty|-p]",
   ],
   params: [
     { name: "api-base-url", type: "string", description: `Fide API base URL. Defaults to ${DEFAULT_FIDE_API_BASE_URL}.`, valueLabel: "<url>" },
-    { name: "workspace", type: "string", required: false, description: "Preferred workspace public id for browser-based agent login (`workspace_*`).", valueLabel: "<workspace_id>" },
     { name: "agent-name", type: "string", required: false, description: "Suggested agent name for browser-based agent login.", valueLabel: "<name>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
@@ -29,7 +28,7 @@ export const authLoginCommand = defineCommand({
     "Login writes machine auth into ~/.fide/accounts/<account_id>/settings.json and binds the current project in .fide/settings.json.",
     "API base URL resolution uses --api-base-url, then FIDE_API_BASE_URL, then the default API base URL.",
     "Other commands resolve auth from FIDE_ACCOUNT_ID or project .fide/settings.json.",
-    "Workspace selection comes from --workspace, FIDE_WORKSPACE_ID, or project .fide/settings.json.",
+    "Workspace selection comes from project .fide/settings.json after login binds the project.",
   ],
 });
 

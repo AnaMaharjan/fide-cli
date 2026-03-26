@@ -51,10 +51,10 @@ function helpText(): string {
         {
           title: "Groups",
           items: [
-            "  graph    Local graph work and hosted graph/query projection",
+            "  graph    Local graph work and hosted graph projection",
             "  query    Local query authoring and execution",
             "  statements Local statement batch and draft authoring",
-            "  workspace Workspace info, members, and roles",
+            "  workspace Workspace info",
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
           ],
@@ -69,8 +69,8 @@ function helpText(): string {
             "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
             "  fide statements write '<json>'",
-            "  fide graph list --workspace workspace_<suffix>",
-            "  fide graph save --workspace workspace_<suffix> --graph primary --type postgres",
+            "  fide graph list",
+            "  fide graph save --graph primary --type postgres",
             "  fide query run --graph primary 'select * from statements limit 10'",
             "  fide graph build --graph combined",
             "  fide workspace list",
@@ -82,7 +82,7 @@ function helpText(): string {
             "  - `fide start` runs a detached background agent and returns immediately.",
             "  - The current project `.fide/settings.json` is the source of truth for hosted graph sync.",
             "  - Hosted graph sync currently projects shared graph metadata only; local connection settings stay local.",
-            "  - Query files are authored locally and synced by `fide start` into the selected workspace.",
+            "  - Query files are authored locally and synced by `fide start` into the bound workspace.",
           ],
         },
         {

@@ -28,14 +28,13 @@ export function queryCommandHelp(): string {
             "  fide query save --graph primary --name recentStatements 'select * from statements limit 10'",
             "  fide query run --graph primary 'select * from statements limit 10'",
             "  fide query run --graph primary --name recentStatements",
-            "  fide query run --workspace <workspace-id> --graph primary --name recentStatements",
           ],
         },
         {
           title: "Notes",
           items: [
             "  - `query list|get|save` are local-first source-of-truth commands for `.fide/queries/`.",
-            "  - `query run` stays local by default; pass `--workspace` only when you explicitly want hosted saved-query execution.",
+            "  - `query run` executes against local graph/query state.",
             "  - Query files are watched by `fide start` and synced into the workspace.",
           ],
         },

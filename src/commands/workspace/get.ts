@@ -14,7 +14,7 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
     return 0;
   }
 
-  const selection = await requireHostedWorkspaceTarget(flags);
+  const selection = await requireHostedWorkspaceTarget();
   const id = selection.workspaceId;
 
   const { auth, client } = await requireWorkspaceApiClient(flags);

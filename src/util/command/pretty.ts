@@ -89,7 +89,6 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
       FIDE_ACCOUNT_ID?: string;
       FIDE_API_BASE_URL?: string;
       FIDE_SYNC_BASE_URL?: string;
-      FIDE_WORKSPACE_ID?: string;
       FIDE_WORKSPACE_URL?: string;
     };
   };
@@ -130,7 +129,6 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     ...(machine.env_defaults?.FIDE_ACCOUNT_ID ? [`  FIDE_ACCOUNT_ID: ${machine.env_defaults.FIDE_ACCOUNT_ID}`] : []),
     ...(machine.env_defaults?.FIDE_API_BASE_URL ? [`  FIDE_API_BASE_URL: ${machine.env_defaults.FIDE_API_BASE_URL}`] : []),
     ...(machine.env_defaults?.FIDE_SYNC_BASE_URL ? [`  FIDE_SYNC_BASE_URL: ${machine.env_defaults.FIDE_SYNC_BASE_URL}`] : []),
-    ...(machine.env_defaults?.FIDE_WORKSPACE_ID ? [`  FIDE_WORKSPACE_ID: ${machine.env_defaults.FIDE_WORKSPACE_ID}`] : []),
     ...(machine.env_defaults?.FIDE_WORKSPACE_URL ? [`  FIDE_WORKSPACE_URL: ${machine.env_defaults.FIDE_WORKSPACE_URL}`] : []),
     ...(machine.authError ? [`  error: ${machine.authError}`] : []),
     ...(!machine.authConfigured && machine.authResolutionHint ? [`  hint: ${machine.authResolutionHint}`] : []),

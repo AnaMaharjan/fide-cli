@@ -22,11 +22,10 @@ export const startCommand = defineCommand({
   command: "fide start",
   summary: "Start the background sync agent for the current project",
   usage: [
-    "fide start [--sync-url <url>] [--workspace <workspace_id>] [--pretty|-p]",
+    "fide start [--sync-url <url>] [--pretty|-p]",
   ],
   params: [
     { name: "sync-url", type: "string", description: "Explicit sync URL override. Accepts ws(s)://.../ws or http(s):// base URLs.", valueLabel: "<url>" },
-    { name: "workspace", type: "string", description: "Workspace to attach after connecting", valueLabel: "<workspace_id>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
@@ -39,7 +38,7 @@ export const startCommand = defineCommand({
   notes: [
     "Sync URL resolution order: --sync-url, FIDE_SYNC_BASE_URL, then derived from the resolved API base URL.",
     "API base URL resolution uses --api-base-url where supported, then FIDE_API_BASE_URL, then the default API base URL.",
-    "Workspace targeting resolves from --workspace, FIDE_WORKSPACE_ID, or project .fide/settings.json.",
+    "Workspace targeting resolves from the current project's .fide/settings.json.",
     "Project targeting resolves from the current project's .fide/settings.json.",
     "Starts a detached local sync agent and returns immediately.",
     "Current sync behavior is one-way: project .fide/settings.json is the source of truth for hosted graph metadata.",

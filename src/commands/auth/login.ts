@@ -9,8 +9,7 @@ import { createAuthApiClient } from "../../util/auth/auth-api.js";
 import { resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth/auth-settings.js";
 import { startAgentAuthLoopbackServer } from "../../util/auth/auth-loopback.js";
 import { openBrowser } from "../../util/auth/browser.js";
-import { getWorkspaceFlag } from "../../util/workspace/workspace-settings.js";
-import { assertAccountId, assertWorkspaceId } from "../../util/ids/public-ids.js";
+import { assertAccountId } from "../../util/ids/public-ids.js";
 import { writeProjectPointerSettings } from "../../util/project/project-pointer.js";
 import { authLoginCommand } from "./metadata.js";
 
@@ -18,9 +17,6 @@ function renderLoginHelp(): string {
   const activeEnv: string[] = [];
   if (process.env.FIDE_API_BASE_URL?.trim()) {
     activeEnv.push(`  FIDE_API_BASE_URL=${process.env.FIDE_API_BASE_URL.trim()}`);
-  }
-  if (process.env.FIDE_WORKSPACE_ID?.trim()) {
-    activeEnv.push(`  FIDE_WORKSPACE_ID=${process.env.FIDE_WORKSPACE_ID.trim()}`);
   }
   if (process.env.FIDE_WORKSPACE_URL?.trim()) {
     activeEnv.push(`  FIDE_WORKSPACE_URL=${process.env.FIDE_WORKSPACE_URL.trim()}`);
@@ -43,13 +39,11 @@ export async function runAuthLogin(args: string[]): Promise<number> {
 
   const baseUrl = await resolveApiBaseUrl(getStringFlag(flags, "api-base-url"), flags);
   const agentName = getStringFlag(flags, "agent-name") ?? "My Agent";
-  const requestedWorkspaceId = getWorkspaceFlag(flags);
 
   const loopback = await startAgentAuthLoopbackServer();
   try {
     const client = createAuthApiClient({ baseUrl });
     const created = await client.createAgentAuthRequest({
-      requestedWorkspaceId: requestedWorkspaceId ? assertWorkspaceId(requestedWorkspaceId) : null,
       loopbackUrl: loopback.callbackUrl,
       agentName: agentName ?? null,
       expiresInSeconds: 60 * 15,

@@ -12,7 +12,7 @@ import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../../uti
 import { printJson, readUtf8 } from "../../util/command/io.js";
 import { okResponse } from "../../util/command/response.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
-import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
+import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
 import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.js";
 
@@ -20,10 +20,6 @@ function readGraphs(settings: Record<string, unknown>): Record<string, LocalProj
   const raw = settings.graphs;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as Record<string, LocalProjectGraphRecord>;
-}
-
-function shouldUseHostedGraphScope(flags: Map<string, string | boolean>): boolean {
-  return flags.has("workspace");
 }
 
 function listLocalProjectGraphs(root: string = process.cwd()): {
@@ -138,52 +134,15 @@ export async function runGraphList(args: string[]): Promise<number> {
     return 0;
   }
 
-  if (!shouldUseHostedGraphScope(flags)) {
-    const local = listLocalProjectGraphs();
-    const payload = {
-      targetScope: "local" as const,
-      root: local.root,
-      graphs: local.graphs.map(({ graphKey, graph }) => ({
-        graphKey,
-        ...graph,
-      })),
-    };
-
-    if (useJson) {
-      printJson(payload);
-    } else {
-      console.log(formatPretty("graph-list-local.v1", payload));
-    }
-    return 0;
-  }
-
-  const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient(flags);
-  const records = await runHostedOperation(
-    () => client.listWorkspaceGraphs(selection.workspaceId),
-    {
-      auth,
-      client,
-      targetScope: "workspace",
-      workspaceId: selection.workspaceId,
-      workspaceSelectionSource: selection.source,
-    },
-  );
-
-  const payload = okResponse("graph-list.v1", {
-    baseUrl: auth.baseUrl,
-    source: auth.source,
-    workspaceId: selection.workspaceId,
-    workspaceSelectionSource: selection.source,
-    graphs: records,
-  }, {
-    command: "fide graph list",
-    next: records[0]
-      ? {
-          get: `fide graph get --workspace ${selection.workspaceId} --graph ${records[0].graphKey}`,
-        }
-      : undefined,
-  });
+  const local = listLocalProjectGraphs();
+  const payload = {
+    targetScope: "local" as const,
+    root: local.root,
+    graphs: local.graphs.map(({ graphKey, graph }) => ({
+      graphKey,
+      ...graph,
+    })),
+  };
 
   if (useJson) {
     printJson(payload);
@@ -205,49 +164,17 @@ export async function runGraphGet(args: string[]): Promise<number> {
   const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
   if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
 
-  if (!shouldUseHostedGraphScope(flags)) {
-    const fide = resolveFideContext(process.cwd());
-    const graph = readLocalProjectGraph(graphKey);
-    if (!graph) {
-      throw new Error(`Local project graph not found: ${graphKey}. Use \`fide graph list\` to inspect local graphs, or pass \`--workspace <workspace-id>\` for hosted graphs.`);
-    }
-    const payload = {
-      targetScope: "local" as const,
-      root: fide.root,
-      graphKey,
-      graph,
-    };
-    if (useJson) {
-      printJson(payload);
-    } else {
-      console.log(formatPretty("graph-get-local.v1", payload));
-    }
-    return 0;
+  const fide = resolveFideContext(process.cwd());
+  const graph = readLocalProjectGraph(graphKey);
+  if (!graph) {
+    throw new Error(`Local project graph not found: ${graphKey}. Use \`fide graph list\` to inspect local graphs.`);
   }
-
-  const selection = await resolveWorkspaceSelectionOrThrow(flags);
-  const { auth, client } = await requireWorkspaceApiClient(flags);
-  const graph = await runHostedOperation(
-    () => client.getWorkspaceGraph(selection.workspaceId, graphKey),
-    {
-      auth,
-      client,
-      targetScope: "workspace",
-      workspaceId: selection.workspaceId,
-      workspaceSelectionSource: selection.source,
-      graphKey,
-    },
-  );
-
-  const payload = okResponse("graph-get.v1", {
-    baseUrl: auth.baseUrl,
-    source: auth.source,
-    workspaceId: selection.workspaceId,
-    workspaceSelectionSource: selection.source,
+  const payload = {
+    targetScope: "local" as const,
+    root: fide.root,
+    graphKey,
     graph,
-  }, {
-    command: "fide graph get",
-  });
+  };
 
   if (useJson) {
     printJson(payload);
@@ -268,7 +195,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
   const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
   if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
 
-  const selection = await resolveWorkspaceSelectionOrThrow(flags);
+  const selection = await resolveWorkspaceSelectionOrThrow();
   const { auth, client } = await requireWorkspaceApiClient(flags);
   if (dryRun) {
     let wouldChange = true;
@@ -328,7 +255,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
     }, {
       command: "fide graph save",
       next: {
-        get: `fide graph get --workspace ${selection.workspaceId} --graph ${graphKey}`,
+        get: `fide graph get --graph ${graphKey}`,
       },
     });
 
@@ -366,8 +293,8 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
   }, {
     command: "fide graph save",
     next: {
-      get: `fide graph get --workspace ${selection.workspaceId} --graph ${graphKey}`,
-      list: `fide graph list --workspace ${selection.workspaceId}`,
+      get: `fide graph get --graph ${graphKey}`,
+      list: "fide graph list",
     },
   });
 

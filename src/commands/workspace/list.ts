@@ -30,7 +30,7 @@ export async function runWorkspaceList(args: string[]): Promise<number> {
     command: "fide workspace list",
     next: result.workspaces[0]
       ? {
-          get: `fide workspace get --workspace ${result.workspaces[0].id}`,
+          get: "fide workspace get",
         }
       : undefined,
   });

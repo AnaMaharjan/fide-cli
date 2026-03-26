@@ -36,7 +36,7 @@ export function authCommandHelp(): string {
           "  - Machine auth lives under ~/.fide/accounts/<account_id>/settings.json.",
           "  - Commands resolve auth from FIDE_ACCOUNT_ID or project .fide/settings.json.",
           "  - Project .fide/settings.json stores account and workspace context, but never stores secrets.",
-          "  - Workspace targeting resolves from --workspace, FIDE_WORKSPACE_ID, or project .fide/settings.json.",
+          "  - Login binds the current project to the returned workspace in `.fide/settings.json`.",
           "  - Use `fide status` for full auth, project, and workspace status.",
         ],
       },

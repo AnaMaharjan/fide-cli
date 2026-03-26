@@ -59,7 +59,8 @@ export async function requireWorkspaceApiClient(flags: Map<string, string | bool
 }
 
 export async function requireHostedWorkspaceTarget(flags: Map<string, string | boolean> = new Map()) {
-  return resolveWorkspaceSelectionOrThrow(flags);
+  void flags;
+  return resolveWorkspaceSelectionOrThrow();
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

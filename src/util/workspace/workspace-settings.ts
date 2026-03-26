@@ -1,8 +1,7 @@
-import { getStringFlag } from "../command/args.js";
 import { resolveProjectPointerSettings } from "../project/project-pointer.js";
 import { assertWorkspaceId } from "../ids/public-ids.js";
 
-export type WorkspaceSelectionSource = "flag" | "env" | "project";
+export type WorkspaceSelectionSource = "project";
 
 export type ResolvedWorkspaceSelection = {
   path: string;
@@ -10,32 +9,9 @@ export type ResolvedWorkspaceSelection = {
   workspaceId: string;
 };
 
-export function getWorkspaceFlag(flags: Map<string, string | boolean>): string | null {
-  return getStringFlag(flags, "workspace");
-}
-
 export async function resolveWorkspaceSelection(
-  flags: Map<string, string | boolean>,
   root: string = process.cwd(),
 ): Promise<ResolvedWorkspaceSelection | null> {
-  const flagWorkspace = getWorkspaceFlag(flags);
-  if (flagWorkspace) {
-    return {
-      path: "--workspace",
-      source: "flag",
-      workspaceId: assertWorkspaceId(flagWorkspace),
-    };
-  }
-
-  const envWorkspace = process.env.FIDE_WORKSPACE_ID?.trim();
-  if (envWorkspace) {
-    return {
-      path: "env",
-      source: "env",
-      workspaceId: assertWorkspaceId(envWorkspace),
-    };
-  }
-
   const projectPointer = resolveProjectPointerSettings(root);
   if (projectPointer?.workspaceId) {
     return {
@@ -49,11 +25,11 @@ export async function resolveWorkspaceSelection(
 }
 
 export async function resolveWorkspaceSelectionOrThrow(
-  flags: Map<string, string | boolean>,
+  root: string = process.cwd(),
 ): Promise<ResolvedWorkspaceSelection> {
-  const selection = await resolveWorkspaceSelection(flags);
+  const selection = await resolveWorkspaceSelection(root);
   if (!selection) {
-    throw new Error("Missing workspace selection. Pass --workspace <workspace_id>, set FIDE_WORKSPACE_ID, or set project .fide/settings.json.");
+    throw new Error("Missing workspace selection. Set project .fide/settings.json with workspace.id or run `fide login`.");
   }
   return selection;
 }

@@ -11,18 +11,8 @@ import {
 } from "@chris-test/graph";
 import { resolveSettingsPath } from "../../util/project/fide-dir.js";
 import { assertGraphKey, assertQueryName } from "../../util/ids/selectors.js";
-import {
-  resolveWorkspaceSelection,
-  type WorkspaceSelectionSource,
-} from "../../util/workspace/workspace-settings.js";
 
-export type GraphQueryScope =
-  | { targetScope: "local" }
-  | {
-      targetScope: "workspace";
-      workspaceId: string;
-      workspaceSelectionSource: WorkspaceSelectionSource;
-    };
+export type GraphQueryScope = { targetScope: "local" };
 
 export async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typeof parseArgs>; sql: string }> {
   const parsed = parseArgs(args);
@@ -142,22 +132,14 @@ export function assertLocalQueryCommand(flags: Map<string, string | boolean>, co
 }
 
 export async function resolveGraphQueryScope(flags: Map<string, string | boolean>): Promise<GraphQueryScope> {
-  if (!flags.has("workspace")) {
-    return { targetScope: "local" };
+  if (flags.has("workspace")) {
+    throw new Error("`fide query run` no longer supports hosted query execution. Run against the local project graph/query state.");
   }
-  const selection = await resolveWorkspaceSelection(flags);
-  if (!selection) {
-    throw new Error("Hosted graph query mode requires a workspace id. Pass --workspace <workspace_id>, or pass --workspace and set FIDE_WORKSPACE_ID.");
-  }
-  return {
-    targetScope: "workspace",
-    workspaceId: selection.workspaceId,
-    workspaceSelectionSource: selection.source,
-  };
+  return { targetScope: "local" };
 }
 
-export function isWorkspaceScope(scope: GraphQueryScope): scope is Extract<GraphQueryScope, { targetScope: "workspace" }> {
-  return scope.targetScope === "workspace";
+export function isWorkspaceScope(_scope: GraphQueryScope): false {
+  return false;
 }
 
 export function projectQueryMissingError(graphKey: string, name: string): Error {

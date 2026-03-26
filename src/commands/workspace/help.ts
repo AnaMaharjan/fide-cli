@@ -20,14 +20,14 @@ export function workspaceCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide workspace list",
-          "  fide workspace get --workspace workspace_<suffix>",
+          "  fide workspace get",
         ],
       },
       {
         title: "Notes",
         items: [
           "  - Use `workspace` for shared hosted workspace inspection.",
-          "  - `--workspace` is optional only when `FIDE_WORKSPACE_ID` is set.",
+          "  - `workspace get` resolves the workspace bound in the current project's `.fide/settings.json`.",
           "  - Hosted auth resolves from the current project account or `FIDE_ACCOUNT_ID`.",
           "  - Hosted IDs are typed: use `workspace_*` for workspaces.",
         ],

@@ -58,12 +58,11 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   const fide = resolveFideContext(process.cwd());
   const settingsPath = resolveSettingsPath(process.cwd());
   const projectSettings = readJsonFile<FideSettings>(settingsPath);
-  const workspaceSelection = await resolveWorkspaceSelection(flags);
+  const workspaceSelection = await resolveWorkspaceSelection();
   const syncSession = await readLiveSyncSession();
   const projectSettingsRecord = projectSettings as Record<string, unknown> | null;
   const envApiBaseUrl = process.env.FIDE_API_BASE_URL?.trim() || null;
   const envSyncBaseUrl = process.env.FIDE_SYNC_BASE_URL?.trim() || null;
-  const envWorkspaceId = process.env.FIDE_WORKSPACE_ID?.trim() || null;
   const envWorkspaceUrl = process.env.FIDE_WORKSPACE_URL?.trim() || null;
   const envAccountId = process.env.FIDE_ACCOUNT_ID?.trim() || null;
   const projectAccount = projectSettingsRecord?.account && typeof projectSettingsRecord.account === "object"
@@ -92,7 +91,6 @@ export async function runStatusCommand(args: string[]): Promise<number> {
         FIDE_ACCOUNT_ID: envAccountId,
         FIDE_API_BASE_URL: envApiBaseUrl,
         FIDE_SYNC_BASE_URL: envSyncBaseUrl,
-        FIDE_WORKSPACE_ID: envWorkspaceId,
         FIDE_WORKSPACE_URL: envWorkspaceUrl,
       }),
       authValid: remote.ok,

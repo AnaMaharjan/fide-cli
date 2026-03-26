@@ -2,13 +2,10 @@ import { executeGraphQuery } from "@chris-test/graph-db";
 import { renderCommandHelp } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { okResponse } from "../../util/command/response.js";
-import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { queryRunCommand } from "./metadata.js";
 import {
   assertLocalQueryableStore,
   getLocalFideWarnings,
-  isWorkspaceScope,
   parseArgs,
   readProjectQueryOrThrow,
   requireGraphKey,
@@ -18,7 +15,6 @@ import {
   resolveStoreTarget,
   shouldUseJsonOutput,
 } from "./shared.js";
-import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
 
 export async function runQueryRun(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args);
@@ -69,49 +65,8 @@ export async function runQueryRun(args: string[]): Promise<number> {
     throw new Error("Invalid --limit value. Expected a positive integer.");
   }
 
-  const queryScope = await resolveGraphQueryScope(flags);
-  if (isWorkspaceScope(queryScope)) {
-    const useJson = shouldUseJsonOutput(flags);
-    const selection = await resolveWorkspaceSelectionOrThrow(flags);
-    const { auth, client } = await requireWorkspaceApiClient(flags);
-    const result = await runHostedOperation(
-      () => client.runGraphQuery({
-        workspaceId: selection.workspaceId,
-        graphKey,
-        name,
-        ...(typeof limit === "number" ? { limit } : {}),
-      }),
-      {
-        auth,
-        client,
-        targetScope: "workspace",
-        workspaceId: selection.workspaceId,
-        workspaceSelectionSource: selection.source,
-        graphKey,
-        queryName: name,
-      },
-    );
-    const payload = okResponse("graph-query-run-workspace.v1", {
-      targetScope: "workspace",
-      baseUrl: auth.baseUrl,
-      source: auth.source,
-      workspaceId: selection.workspaceId,
-      workspaceSelectionSource: selection.source,
-      result,
-    }, {
-      command: "fide query run",
-      next: {
-        get: `fide query get --graph ${graphKey} --name ${name}`,
-      },
-    });
-
-    if (useJson) {
-      printJson(payload);
-    } else {
-      console.log(formatPretty("graph-query-run-workspace.v1", payload));
-    }
-    return 0;
-  }
+  await resolveGraphQueryScope(flags);
+  void limit;
 
   const { query } = await readProjectQueryOrThrow(flags);
   const target = assertLocalQueryableStore(

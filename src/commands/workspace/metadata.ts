@@ -22,10 +22,9 @@ export const workspaceGetCommand = defineCommand({
   command: "fide workspace get",
   summary: "Inspect a workspace by id",
   usage: [
-    "fide workspace get [--workspace <workspace_id>] [--pretty|-p]",
+    "fide workspace get [--pretty|-p]",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace public id (`workspace_*`). If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace_id>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {

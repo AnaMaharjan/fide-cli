@@ -37,7 +37,6 @@ export const statementsWriteCommand = defineCommand({
   },
   notes: [
     "Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
-    "Use `fide statements draft` to create a markdown draft from the same statement batch.",
   ],
 });
 
@@ -74,12 +73,9 @@ export const statementsDraftCommand = defineCommand({
     warnings: "string[]",
   },
   notes: [
-    "Creates or updates a markdown statement draft for local editing.",
     "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
-    "Reusing the same --name and --path updates the existing draft metadata and content.",
-    "Use --path to organize drafts by feature, workflow, or topic.",
-    "Draft statement lines are labeled @1, @2, ... for local references.",
-    "Use `fide statements write` for canonical JSONL statement batches.",
+    "Reusing the same --name and --path updates the existing draft.",
+    "Use `fide statements write` for canonical JSONL batches.",
   ],
 });
 

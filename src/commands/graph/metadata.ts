@@ -55,62 +55,48 @@ export const graphStatusCommand = defineCommand({
 export const graphListCommand = defineCommand({
   surface: "graph.list",
   command: "fide graph list",
-  summary: "List local project graphs or hosted workspace graphs",
+  summary: "List local project graphs",
   usage: [
-    "fide graph list [--workspace <workspace-id>]",
+    "fide graph list",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Enable hosted graph listing. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
     targetScope: "string",
     root: "string?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
     graphs: "array",
   },
   examples: [
     "fide graph list",
-    "fide graph list --workspace <workspace-id>",
   ],
   notes: [
-    "Without `--workspace`, this lists graph definitions from the current project's `.fide/settings.json`.",
-    "Pass `--workspace <workspace-id>`, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set, to list hosted graphs.",
+    "Lists graph definitions from the current project's `.fide/settings.json`.",
   ],
 });
 
 export const graphGetCommand = defineCommand({
   surface: "graph.get",
   command: "fide graph get",
-  summary: "Inspect one local project graph or hosted workspace graph",
+  summary: "Inspect one local project graph",
   usage: [
-    "fide graph get [--workspace <workspace-id>] --graph <key>",
+    "fide graph get --graph <key>",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Enable hosted graph reads. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<key>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
     targetScope: "string",
     root: "string?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
     graphKey: "string",
     graph: "object",
   },
   examples: [
     "fide graph get --graph primary",
-    "fide graph get --workspace <workspace-id> --graph primary",
   ],
   notes: [
-    "Without `--workspace`, this reads the graph definition from the current project's `.fide/settings.json`.",
-    "Pass `--workspace <workspace-id>`, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set, to read hosted graph metadata.",
+    "Reads the graph definition from the current project's `.fide/settings.json`.",
   ],
 });
 
@@ -119,12 +105,11 @@ export const graphSaveCommand = defineCommand({
   command: "fide graph save",
   summary: "Project local graph metadata into a hosted workspace graph",
   usage: [
-    "fide graph save [--workspace <workspace-id>] --graph <key> --type postgres",
-    "fide graph save [--workspace <workspace-id>] --graph <key> --type sqlite",
-    "fide graph save [--workspace <workspace-id>] --graph <key> --stdin",
+    "fide graph save --graph <key> --type postgres",
+    "fide graph save --graph <key> --type sqlite",
+    "fide graph save --graph <key> --stdin",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace to update. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<key>" },
     { name: "type", type: "string", enum: ["postgres", "sqlite", "fide-jsonl"], description: "Hosted graph type" },
     { name: "recipe-file", type: "string", description: "JSON file containing graph recipe steps", valueLabel: "<recipe.json>" },
@@ -145,12 +130,12 @@ export const graphSaveCommand = defineCommand({
     graph: "object",
   },
   examples: [
-    "fide graph save --workspace <workspace-id> --graph primary",
-    "fide graph save --workspace <workspace-id> --graph combined-graph-postgres --type postgres",
+    "fide graph save --graph primary",
+    "fide graph save --graph combined-graph-postgres --type postgres",
   ],
   notes: [
     "If no explicit graph definition is provided, `--graph <key>` first looks for a local project graph with the same key in `.fide/settings.json`.",
-    "Hosted graph writes are one-way projections of shared graph fields from the local project into the selected workspace.",
+    "Hosted graph writes are one-way projections of shared graph fields from the local project into the workspace bound in project `.fide/settings.json`.",
     "Local connection details stay in project `.fide/settings.json` and are not saved to the workspace.",
     "Use `--dry-run` to preview whether the hosted graph metadata would change before writing it.",
     "Pass `--file` or `--stdin` to provide the full hosted graph metadata object instead of individual flags.",
