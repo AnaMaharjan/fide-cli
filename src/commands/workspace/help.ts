@@ -14,8 +14,6 @@ export function workspaceCommandHelp(): string {
         items: [
           "  list                  List accessible workspaces",
           "  get                   Inspect a workspace by id",
-          "  members               List and add workspace members",
-          "  roles                 Grant and revoke workspace roles",
         ],
       },
       {
@@ -23,20 +21,15 @@ export function workspaceCommandHelp(): string {
         items: [
           "  fide workspace list",
           "  fide workspace get --workspace workspace_<suffix>",
-          "  fide workspace members list --workspace workspace_<suffix>",
-          "  fide workspace members add --workspace workspace_<suffix> --account-id account_<suffix> --role member --dry-run",
-          "  fide workspace members add --workspace workspace_<suffix> --human-email user@example.com --role member",
-          "  fide workspace roles grant --workspace workspace_<suffix> --account-id account_<suffix> --role admin --dry-run",
         ],
       },
       {
         title: "Notes",
         items: [
-          "  - Use `workspace` for shared hosted state: workspaces, members, and roles.",
+          "  - Use `workspace` for shared hosted workspace inspection.",
           "  - `--workspace` is optional only when `FIDE_WORKSPACE_ID` is set.",
           "  - Hosted auth resolves from the current project account or `FIDE_ACCOUNT_ID`.",
-          "  - Hosted IDs are typed: use `workspace_*` for workspaces and `account_*` for members.",
-          "  - Hosted membership and role mutations accept `--dry-run` to preview whether the change would modify shared state.",
+          "  - Hosted IDs are typed: use `workspace_*` for workspaces.",
         ],
       },
     ],

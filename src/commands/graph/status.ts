@@ -13,7 +13,6 @@ import {
   resolveGraphTarget,
   resolveStoreTarget,
 } from "@chris-test/graph";
-import { getSqliteWarnings } from "../../util/graph/local-disk-warning.js";
 import { graphStatusCommand } from "./metadata.js";
 
 function nextCommands(key: string | null, recipe: unknown, graphStoreType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
@@ -58,7 +57,6 @@ async function getGraphStatus(target: ReturnType<typeof resolveStoreTarget>) {
   return {
     ...inspection,
     next: nextCommands(target.key, target.recipe, target.type),
-    warnings: target.type === "sqlite" ? getSqliteWarnings(target.file, { gitignore: target.gitignore }) : undefined,
   };
 }
 

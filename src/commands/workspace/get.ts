@@ -32,11 +32,6 @@ export async function runWorkspaceGet(args: string[]): Promise<number> {
     baseUrl: auth.baseUrl,
     source: auth.source,
     workspace,
-  }, {
-    command: "fide workspace get",
-    next: {
-      members: `fide workspace members list --workspace ${workspace.id}`,
-    },
   });
 
   if (useJson) {
