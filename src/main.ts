@@ -32,6 +32,7 @@ function helpText(): string {
             "  fide logout [flags]",
             "  fide whoami [flags]",
             "  fide docs <path>",
+            "  fide plugin install <source>",
             "  fide schema [--surface <surface>]",
             "  fide query <command> [flags]",
             "  fide statements <command> [flags]",
@@ -57,6 +58,7 @@ function helpText(): string {
             "  workspace Workspace info",
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
+            "  plugin   Install optional Fide plugins",
           ],
         },
         {
@@ -68,6 +70,7 @@ function helpText(): string {
             "  fide stop",
             "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
+            "  fide plugin install owner/repo",
             "  fide statements write '<json>'",
             "  fide graph list",
             "  fide graph save --graph primary --type postgres",
@@ -179,6 +182,10 @@ export async function runCli(argv: string[]): Promise<number> {
       case "workspace": {
         const { runWorkspaceCommand } = await import("./commands/workspace/index.js");
         return await runWorkspaceCommand(command, rest);
+      }
+      case "plugin": {
+        const { runPluginCommand } = await import("./commands/plugin/index.js");
+        return await runPluginCommand(command, rest);
       }
       default:
         throw new Error(`Unknown group: ${group}. Run \`fide --help\` to see available commands.`);

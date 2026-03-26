@@ -181,7 +181,7 @@ export const GENERATED_TYPE_SCHEMAS = {
         "scope": {
           "type": "string",
           "enum": [
-            "graph-save-workspace.v1"
+            "graph-save-local.v1"
           ]
         },
         "command": {
@@ -358,6 +358,59 @@ export const GENERATED_TYPE_SCHEMAS = {
         },
         "userSettingsPath": {
           "type": "string"
+        }
+      }
+    }
+  },
+  "plugin.install.output": {
+    "command": "fide schema --surface plugin.install.output",
+    "format": "ts-type.v0",
+    "typeName": "PluginInstallOutput",
+    "source": "src/commands/plugin/install.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command",
+        "error"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "plugin-install.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide plugin install"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "next": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {}
+            }
+          ]
         }
       }
     }

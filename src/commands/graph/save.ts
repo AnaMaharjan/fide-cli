@@ -1,10 +1,8 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import type { FideSettings } from "@chris-test/graph";
-import {
-  planHostedWorkspaceGraphSync,
-  projectLocalGraphToHostedGraph,
-  type HostedWorkspaceGraphInput,
-  type LocalProjectGraphRecord,
-} from "@chris-test/workspace";
+import { validateGraphSettings } from "@chris-test/graph";
+import type { WorkspaceGraphType } from "@chris-test/workspace";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -16,40 +14,42 @@ import { printJson, readUtf8 } from "../../util/command/io.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { okResponse } from "../../util/command/response.js";
-import { readJsonFile, resolveSettingsPath } from "../../util/project/fide-dir.js";
-import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
-import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
+import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../../util/project/fide-dir.js";
 
 export const graphSaveCommand = defineCommand({
   surface: "graph.save",
   command: "fide graph save",
   outputType: "GraphSaveOutput",
-  summary: "Project local graph metadata into a hosted workspace graph",
+  summary: "Create or update a graph in this project",
   usage: [
-    "fide graph save --graph <key> --type postgres",
-    "fide graph save --graph <key> --type sqlite",
-    "fide graph save --graph <key> --stdin",
+    "fide graph save --graph <key> --type postgres --connection '<json>'",
+    "fide graph save --graph <key> --type sqlite --connection '<json>'",
+    "fide graph save --graph <key> --recipe-file <recipe.json>",
   ],
-  paramOrder: ["graph", "type", "recipe-file", "file", "stdin", "dry-run", "pretty"],
+  paramOrder: [
+    "graph",
+    "type",
+    "connection",
+    "recipe-file",
+    "dry-run",
+    "pretty",
+  ],
   params: {
     graph: { kind: "string", required: true, description: "Graph key", valueLabel: "<key>" },
-    type: { kind: "string", enum: ["postgres", "sqlite", "fide-jsonl"], description: "Hosted graph type" },
+    type: { kind: "string", enum: ["postgres", "sqlite", "fide-jsonl"], description: "Local graph type" },
+    connection: { kind: "string", description: "Connection JSON for this graph type", valueLabel: "'<json>'" },
     "recipe-file": { kind: "string", description: "JSON file containing graph recipe steps", valueLabel: "<recipe.json>" },
-    file: { kind: "string", description: "Read the full hosted graph metadata object from a file", valueLabel: "<graph.json>" },
-    stdin: { kind: "boolean", description: "Read the full hosted graph metadata object from stdin" },
-    "dry-run": { kind: "boolean", description: "Validate the hosted graph write and show the intended change without saving it" },
+    "dry-run": { kind: "boolean", description: "Show the local create or update without writing settings.json" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
-    "fide graph save --graph primary",
-    "fide graph save --graph combined-graph-postgres --type postgres",
+    "fide graph save --graph primary --type postgres --connection '{\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
+    "fide graph save --graph local --type sqlite --connection '\".fide/graph.sqlite\"'",
   ],
   notes: [
-    "If no explicit graph definition is provided, `--graph <key>` first looks for a local project graph with the same key in `.fide/settings.json`.",
-    "Hosted graph writes are one-way projections of shared graph fields from the local project into the workspace bound in project `.fide/settings.json`.",
-    "Local connection details stay in project `.fide/settings.json` and are not saved to the workspace.",
-    "Use `--dry-run` to preview whether the hosted graph metadata would change before writing it.",
-    "Pass `--file` or `--stdin` to provide the full hosted graph metadata object instead of individual flags.",
+    "Writes a graph definition into this project's `.fide/settings.json`.",
+    "If the graph key already exists, this command updates it in place.",
+    "Use `fide start` to sync local graph metadata from project settings into the bound workspace.",
   ],
 });
 
@@ -57,221 +57,222 @@ const GRAPH_SAVE_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(graphSa
 
 export type GraphSaveOutput = {
   ok: true;
-  scope: "graph-save-workspace.v1";
+  scope: "graph-save-local.v1";
   command: "fide graph save";
   next?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
-function readGraphs(settings: Record<string, unknown>): Record<string, LocalProjectGraphRecord> {
+type GraphSaveResultState = "created" | "updated" | "unchanged";
+type LocalSettingsGraphRecord = NonNullable<FideSettings["graphs"]>[string];
+
+function canonicalizeValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => canonicalizeValue(entry));
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, canonicalizeValue(entry)] as const);
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+function localGraphsEqual(left: LocalSettingsGraphRecord | null, right: LocalSettingsGraphRecord): boolean {
+  return JSON.stringify(canonicalizeValue(left)) === JSON.stringify(canonicalizeValue(right));
+}
+
+function readGraphs(settings: Record<string, unknown>): Record<string, LocalSettingsGraphRecord> {
   const raw = settings.graphs;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  return raw as Record<string, LocalProjectGraphRecord>;
+  return raw as Record<string, LocalSettingsGraphRecord>;
 }
 
-function readLocalProjectGraph(graphKey: string, root: string = process.cwd()): LocalProjectGraphRecord | null {
-  const settingsPath = resolveSettingsPath(root);
-  const settings = readJsonFile<FideSettings>(settingsPath);
-  return readGraphs((settings ?? {}) as Record<string, unknown>)[graphKey] ?? null;
+function readSettings(settingsPath: string): FideSettings {
+  return readJsonFile<FideSettings>(settingsPath) ?? {};
 }
 
-async function readGraphInput(args: string[]): Promise<{ flags: Map<string, string | boolean>; graph: HostedWorkspaceGraphInput }> {
-  const { flags, positionals } = parseArgs(args, { booleanKeys: GRAPH_SAVE_PARSE_KEYS });
+function readLocalProjectGraph(graphKey: string, settingsPath: string): LocalSettingsGraphRecord | null {
+  return readGraphs(readSettings(settingsPath) as Record<string, unknown>)[graphKey] ?? null;
+}
+
+function assertWorkspaceGraphType(value: string | null | undefined): WorkspaceGraphType | null {
+  if (value === "postgres" || value === "sqlite" || value === "fide-jsonl") {
+    return value;
+  }
+  return null;
+}
+
+function parseConnectionFlag(raw: string | null): unknown {
+  if (raw === null) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid --connection value. Expected valid JSON.");
+  }
+}
+
+function resolvePostgresConnection(
+  connectionInput: unknown,
+  existingConnection: unknown,
+): { url?: string; schema: string } {
+  const nextConnection = connectionInput ?? existingConnection;
+  if (!nextConnection || typeof nextConnection !== "object" || Array.isArray(nextConnection)) {
+    throw new Error(
+      "Postgres graphs require --connection '{\"url\":\"...\",\"schema\":\"...\"}' when creating or updating without an existing connection object.",
+    );
+  }
+  const connection = nextConnection as Record<string, unknown>;
+  if (typeof connection.schema !== "string" || connection.schema.trim().length === 0) {
+    throw new Error(
+      "Postgres graph connection JSON must include a non-empty `schema` string.",
+    );
+  }
+  if (connection.url !== undefined && typeof connection.url !== "string") {
+    throw new Error("Postgres graph connection `url` must be a string when provided.");
+  }
+  return {
+    ...(typeof connection.url === "string" ? { url: connection.url } : {}),
+    schema: connection.schema,
+  };
+}
+
+function resolveStringConnection(
+  type: "sqlite" | "fide-jsonl",
+  connectionInput: unknown,
+  existingConnection: unknown,
+): string {
+  const nextConnection = connectionInput ?? existingConnection ?? null;
+  if (typeof nextConnection !== "string" || nextConnection.trim().length === 0) {
+    throw new Error(
+      `${type} graphs require --connection '\"...\"' when creating or updating without an existing connection string.`,
+    );
+  }
+  return nextConnection;
+}
+
+async function readGraphInput(args: string[]): Promise<{
+  flags: Map<string, string | boolean>;
+  graphKey: string;
+  graph: LocalSettingsGraphRecord;
+}> {
+  const { flags } = parseArgs(args, { booleanKeys: GRAPH_SAVE_PARSE_KEYS });
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(renderCommandHelp(graphSaveCommand));
-    return { flags, graph: { type: "postgres" } };
-  }
-
-  if (getStringFlag(flags, "connection") || getStringFlag(flags, "connection-ref")) {
-    throw new Error("`fide graph save` no longer accepts connection flags. Save graph metadata to the workspace and keep connection config in local project `.fide/settings.json`.");
-  }
-
-  const file = getStringFlag(flags, "file");
-  const useStdin = hasFlag(flags, "stdin");
-  if (file || useStdin || positionals.length > 0) {
-    const raw = file
-      ? await readUtf8(file)
-      : useStdin
-        ? await new Promise<string>((resolve, reject) => {
-            let input = "";
-            process.stdin.setEncoding("utf8");
-            process.stdin.on("data", (chunk) => {
-              input += chunk;
-            });
-            process.stdin.on("end", () => resolve(input));
-            process.stdin.on("error", reject);
-            process.stdin.resume();
-          })
-        : positionals.join(" ");
     return {
       flags,
-      graph: (() => {
-        const projected = projectLocalGraphToHostedGraph("__input__", JSON.parse(raw) as LocalProjectGraphRecord);
-        if (!projected) {
-          throw new Error("Invalid hosted graph input. Expected a graph object with type `postgres`, `sqlite`, or `fide-jsonl`.");
-        }
-        return {
-          type: projected.type,
-          ...(projected.recipe !== undefined ? { recipe: projected.recipe } : {}),
-          ...(projected.metadata !== undefined ? { metadata: projected.metadata } : {}),
-        };
-      })(),
+      graphKey: "__help__",
+      graph: { type: "postgres", connection: { schema: "fide_graph" } },
     };
   }
 
+  const settingsPath = resolveSettingsPath(process.cwd());
   const graphKeyRaw = getStringFlag(flags, "graph");
   const graphKey = graphKeyRaw ? assertGraphKey(graphKeyRaw) : null;
-  if (graphKey) {
-    const localGraph = readLocalProjectGraph(graphKey);
-    if (localGraph) {
-      const projected = projectLocalGraphToHostedGraph(graphKey, localGraph);
-      if (!projected) {
-        throw new Error(`Local project graph "${graphKey}" is not a valid hosted graph candidate.`);
-      }
-      return {
-        flags,
-        graph: {
-          type: projected.type,
-          ...(projected.recipe !== undefined ? { recipe: projected.recipe } : {}),
-          ...(projected.metadata !== undefined ? { metadata: projected.metadata } : {}),
-        },
-      };
-    }
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
+
+  const existing = readLocalProjectGraph(graphKey, settingsPath);
+  const type = assertWorkspaceGraphType(getStringFlag(flags, "type"))
+    ?? assertWorkspaceGraphType(existing?.type as string | undefined);
+  if (!type) {
+    throw new Error(
+      existing
+        ? `Graph "${graphKey}" is missing a valid type in settings.json.`
+        : "Missing required flag: --type <postgres|sqlite|fide-jsonl>.",
+    );
   }
 
-  const type = getStringFlag(flags, "type");
-  if (!type || !["postgres", "sqlite", "fide-jsonl"].includes(type)) {
-    if (graphKey) {
-      throw new Error(`No local project graph found for "${graphKey}". Pass --type, --file, or --stdin.`);
-    }
-    throw new Error("Missing required flag: --type <postgres|sqlite|fide-jsonl>.");
-  }
-  const graphType = type as HostedWorkspaceGraphInput["type"];
   const recipeFile = getStringFlag(flags, "recipe-file");
-  const recipe = recipeFile ? JSON.parse(await readUtf8(recipeFile)) : undefined;
+  const recipe = recipeFile ? JSON.parse(await readUtf8(recipeFile)) : existing?.recipe;
+  const connectionInput = parseConnectionFlag(getStringFlag(flags, "connection"));
+
+  if (type === "postgres") {
+    const nextConnection = resolvePostgresConnection(connectionInput, existing?.connection);
+    return {
+      flags,
+      graphKey,
+      graph: {
+        ...(existing ?? {}),
+        type,
+        connection: nextConnection,
+        ...(recipe !== undefined ? { recipe } : {}),
+      },
+    };
+  }
+
+  const connection = resolveStringConnection(type, connectionInput, existing?.connection);
 
   return {
     flags,
+    graphKey,
     graph: {
-      type: graphType,
-      ...(recipe ? { recipe } : {}),
+      ...(existing ?? {}),
+      type,
+      connection,
+      ...(recipe !== undefined ? { recipe } : {}),
     },
   };
 }
 
+async function writeSettings(settingsPath: string, settings: FideSettings): Promise<void> {
+  await mkdir(dirname(settingsPath), { recursive: true });
+  await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+}
+
+function getResultState(previous: LocalSettingsGraphRecord | null, next: LocalSettingsGraphRecord): GraphSaveResultState {
+  if (!previous) return "created";
+  return localGraphsEqual(previous, next) ? "unchanged" : "updated";
+}
+
 export async function runGraphSaveCommand(args: string[]): Promise<number> {
-  const { flags, graph } = await readGraphInput(args);
+  const { flags, graphKey, graph } = await readGraphInput(args);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     return 0;
   }
+
   const useJson = shouldUseJsonOutput(flags);
   const dryRun = hasFlag(flags, "dry-run");
-  const graphKeyFlag = getStringFlag(flags, "graph");
-  const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
-  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
+  const fide = resolveFideContext(process.cwd());
+  const settingsPath = resolveSettingsPath(process.cwd());
+  const settings = readSettings(settingsPath);
+  const previous = readLocalProjectGraph(graphKey, settingsPath);
+  const nextSettings: FideSettings = {
+    ...settings,
+    graphs: {
+      ...(settings.graphs ?? {}),
+      [graphKey]: graph,
+    },
+  };
 
-  const selection = await resolveWorkspaceSelectionOrThrow();
-  const { auth, client } = await requireWorkspaceApiClient(flags);
-  if (dryRun) {
-    let wouldChange = true;
-    let preview: {
-      targetState: "new-graph" | "existing-graph";
-      changeState: "would_change" | "unchanged";
-      reason: "graph_missing" | "graph_would_update" | "graph_unchanged";
-    } = {
-      targetState: "new-graph",
-      changeState: "would_change",
-      reason: "graph_missing",
-    };
-    try {
-      const existing = await client.getWorkspaceGraph(selection.workspaceId, graphKey);
-      const [operation] = planHostedWorkspaceGraphSync({
-        localGraphs: new Map([[graphKey, graph]]),
-        remoteGraphs: [existing],
-      });
-      wouldChange = operation?.status === "create" || operation?.status === "update";
-      preview = wouldChange
-        ? {
-            targetState: "existing-graph",
-            changeState: "would_change",
-            reason: "graph_would_update",
-          }
-        : {
-            targetState: "existing-graph",
-            changeState: "unchanged",
-            reason: "graph_unchanged",
-          };
-    } catch (error) {
-      const status = typeof error === "object" && error && "status" in error ? (error as { status?: unknown }).status : null;
-      if (status !== 404) {
-        throw await runHostedOperation(async () => {
-          throw error;
-        }, {
-          auth,
-          client,
-          targetScope: "workspace",
-          workspaceId: selection.workspaceId,
-          workspaceSelectionSource: selection.source,
-          graphKey,
-        });
-      }
-    }
+  validateGraphSettings(nextSettings);
+  const result = getResultState(previous, graph);
 
-    const payload = okResponse("graph-save-workspace.v1", {
-      dryRun: true,
-      graphKey,
-      workspaceId: selection.workspaceId,
-      wouldChange,
-      ...preview,
-      graph,
-    }, {
-      command: "fide graph save",
-      next: {
-        apply: `fide graph save --graph ${graphKey}`,
-      },
-    });
-
-    if (useJson) {
-      printJson(payload);
-    } else {
-      console.log(formatPretty("graph-save-workspace.v1", payload) ?? JSON.stringify(payload, null, 2));
-    }
-    return 0;
+  if (!dryRun) {
+    await writeSettings(settingsPath, nextSettings);
   }
 
-  const result = await runHostedOperation(
-    () => client.saveWorkspaceGraph({
-      workspaceId: selection.workspaceId,
-      graphKey,
-      graph,
-    }),
-    {
-      auth,
-      client,
-      targetScope: "workspace",
-      workspaceId: selection.workspaceId,
-      workspaceSelectionSource: selection.source,
-      graphKey,
-    },
-  );
-
-  const payload = okResponse("graph-save-workspace.v1", {
-    workspaceId: selection.workspaceId,
-    workspaceSelectionSource: selection.source,
+  const payload = okResponse("graph-save-local.v1", {
+    dryRun,
+    targetScope: "local",
+    root: fide.root,
+    fideDir: fide.fideDir,
+    settingsPath,
     graphKey,
-    graph: result,
+    result,
+    graph,
   }, {
     command: "fide graph save",
-    next: {
-      get: `fide graph get --graph ${graphKey}`,
-      run: `fide query run --graph ${graphKey} 'select * from statements limit 10'`,
-    },
+    next: dryRun
+      ? { apply: `fide graph save --graph ${graphKey}` }
+      : { sync: "fide start" },
   });
 
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(formatPretty("graph-save-workspace.v1", payload) ?? JSON.stringify(payload, null, 2));
+    console.log(formatPretty("graph-save-local.v1", payload) ?? JSON.stringify(payload, null, 2));
   }
   return 0;
 }
