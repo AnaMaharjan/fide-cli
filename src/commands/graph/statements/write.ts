@@ -4,6 +4,7 @@ import { getLocalFideWarnings, resolveGraphTarget } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../../util/io.js";
+import { formatPretty } from "../../../util/pretty.js";
 import { graphWriteCommand } from "../metadata.js";
 import { resolveStatementsBatch, ymdUtc } from "../shared.js";
 
@@ -110,7 +111,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
   if (shouldUseJsonOutput(flags)) {
     printJson(payload);
   } else {
-    console.log(outPath);
+    console.log(formatPretty("graph-statements-write.v1", payload));
   }
   return 0;
 }

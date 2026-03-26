@@ -5,6 +5,7 @@ import { executeGraphQuery } from "@chris-test/graph-db";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { getLocalFideWarnings, LocalQueryDefinition, readLocalQueries, renderQueryFile, resolveGraphTarget, resolveQueriesDir, resolveStoreTarget } from "@chris-test/graph";
 import { resolveSettingsPath } from "../../util/fide-dir.js";
 import {
@@ -129,7 +130,7 @@ function requireSavedQueryName(flags: Map<string, string | boolean>): string {
 
 function requireGraphKey(flags: Map<string, string | boolean>): string {
   const graphKey = getStringFlag(flags, "graph");
-  if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
   return assertGraphKey(graphKey);
 }
 
@@ -192,9 +193,9 @@ function assertLocalQueryableStore(
     const localTarget = resolveGraphTarget(flags);
     const configuredConnection = target.databaseUrlEnv ?? null;
     throw createCliStructuredError(
-      `Missing postgres connection for graph "${target.key ?? graphKey}". Configure graph.connection in settings.json or set the referenced env var.`,
+      `Missing postgres connection for graph "${target.key ?? graphKey}". Configure graph.connection.url in settings.json or set the referenced env var.`,
       {
-        hint: "For postgres graphs, graph.connection may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
+        hint: "For postgres graphs, graph.connection.url may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
         details: {
           graphKey,
           graphType: target.type,
@@ -272,7 +273,7 @@ async function runGraphQuerySaveProject(args: string[]): Promise<number> {
   if (shouldUseJsonOutput(flags)) {
     printJson(payload);
   } else {
-    console.log(outPath);
+    console.log(formatPretty("graph-query-save-local.v1", payload));
   }
   return 0;
 }
@@ -382,7 +383,7 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: ${graphKey}/${name} ${preview.reason}`);
+      console.log(formatPretty("graph-query-save-workspace.v1", payload));
     }
     return 0;
   }
@@ -424,7 +425,7 @@ async function runGraphQuerySaveWorkspace(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`${result.query.graphKey} ${result.query.name}`);
+    console.log(formatPretty("graph-query-save-workspace.v1", payload));
   }
   return 0;
 }
@@ -456,10 +457,7 @@ async function runGraphQueryListProject(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    for (const query of queries) {
-      const description = query.description ? ` - ${query.description}` : "";
-      console.log(`${query.graphKey} ${query.name}${description}`);
-    }
+    console.log(formatPretty("graph-query-list-local.v1", payload));
   }
   return 0;
 }
@@ -512,10 +510,7 @@ async function runGraphQueryListWorkspace(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    for (const query of queries) {
-      const description = query.description ? ` - ${query.description}` : "";
-      console.log(`${query.graphKey} ${query.name}${description}`);
-    }
+    console.log(formatPretty("graph-query-list-workspace.v1", payload));
   }
   return 0;
 }
@@ -542,7 +537,7 @@ async function runGraphQueryGetProject(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(query.sql);
+    console.log(formatPretty("graph-query-get-local.v1", payload));
   }
   return 0;
 }
@@ -594,7 +589,7 @@ async function runGraphQueryGetWorkspace(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(query.sql);
+    console.log(formatPretty("graph-query-get-workspace.v1", payload));
   }
   return 0;
 }
@@ -627,15 +622,16 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
       sql,
       allowWrite: hasFlag(resolvedFlags, "allow-write"),
     });
+    const localTarget = resolveGraphTarget(resolvedFlags);
+    const payload = {
+      targetScope: "local",
+      ...result,
+      ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
+    };
     if (shouldUseJsonOutput(resolvedFlags)) {
-      const localTarget = resolveGraphTarget(resolvedFlags);
-      printJson({
-        targetScope: "local",
-        ...result,
-        ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
-      });
+      printJson(payload);
     } else {
-      console.log(JSON.stringify(result.rows, null, 2));
+      console.log(formatPretty("graph-query-run-local.v1", payload));
     }
     return 0;
   }
@@ -686,7 +682,7 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(JSON.stringify(result.rows, null, 2));
+      console.log(formatPretty("graph-query-run-workspace.v1", payload));
     }
     return 0;
   }
@@ -702,15 +698,16 @@ async function runGraphQueryRun(args: string[]): Promise<number> {
     sql: query.sql,
     allowWrite: hasFlag(flags, "allow-write"),
   });
+  const localTarget = resolveGraphTarget(flags);
+  const payload = {
+    targetScope: "local",
+    ...result,
+    ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
+  };
   if (shouldUseJsonOutput(flags)) {
-    const localTarget = resolveGraphTarget(flags);
-    printJson({
-      targetScope: "local",
-      ...result,
-      ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
-    });
+    printJson(payload);
   } else {
-    console.log(JSON.stringify(result.rows, null, 2));
+    console.log(formatPretty("graph-query-run-local.v1", payload));
   }
   return 0;
 }

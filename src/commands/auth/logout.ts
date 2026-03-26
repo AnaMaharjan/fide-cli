@@ -1,9 +1,10 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
 import { clearStoredAuthSettings } from "../../util/auth-settings.js";
-import { resolveProfileSelection, resolveProfileSettingsPath } from "../../util/profile-settings.js";
+import { resolveSelectedAccount, resolveAccountSettingsPath } from "../../util/account-settings.js";
 import { authLogoutCommand } from "./metadata.js";
 
 export async function runAuthLogout(args: string[]): Promise<number> {
@@ -14,16 +15,16 @@ export async function runAuthLogout(args: string[]): Promise<number> {
     return 0;
   }
 
-  const profileSelection = await resolveProfileSelection(flags);
-  if (!profileSelection) {
-    throw new Error("No profile resolved for logout. A default profile is optional. Pass --profile <name>, set FIDE_PROFILE, use project .fide/settings.json, or run `fide login --profile <name>`.");
+  const accountSelection = await resolveSelectedAccount(flags);
+  if (!accountSelection) {
+    throw new Error("No account resolved for logout. Set FIDE_ACCOUNT_ID, set project .fide/settings.json with account.id, or run `fide login`.");
   }
 
-  await clearStoredAuthSettings(profileSelection.profile);
+  await clearStoredAuthSettings(accountSelection.accountId);
   const payload = okResponse("auth-logout.v1", {
     cleared: true,
-    profile: profileSelection.profile,
-    userSettingsPath: resolveProfileSettingsPath(profileSelection.profile),
+    accountId: accountSelection.accountId,
+    userSettingsPath: resolveAccountSettingsPath(accountSelection.accountId),
   }, {
     command: "fide logout",
   });
@@ -31,7 +32,7 @@ export async function runAuthLogout(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`Cleared saved Fide auth for profile ${profileSelection.profile}`);
+    console.log(formatPretty("auth-logout.v1", payload));
   }
   return 0;
 }

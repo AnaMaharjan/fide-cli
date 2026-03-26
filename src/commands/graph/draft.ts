@@ -10,6 +10,7 @@ import {
 } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { graphDraftCommand } from "./metadata.js";
 import { resolveStatementsBatch } from "./shared.js";
@@ -148,7 +149,7 @@ export async function runGraphDraft(args: string[]): Promise<number> {
   if (shouldUseJsonOutput(flags)) {
     printJson(payload);
   } else {
-    console.log(outPath);
+    console.log(formatPretty("graph-statements-draft.v1", payload));
   }
   return 0;
 }

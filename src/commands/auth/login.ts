@@ -4,49 +4,46 @@ import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.j
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
+import { formatPretty } from "../../util/pretty.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
 import { resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth-settings.js";
 import { startAgentAuthLoopbackServer } from "../../util/auth-loopback.js";
 import { openBrowser } from "../../util/browser.js";
-import { getWorkspaceFlag, writeStoredWorkspaceSelection } from "../../util/workspace-settings.js";
-import { assertWorkspaceId } from "../../util/public-ids.js";
-import { clearDefaultProfile, setDefaultProfile } from "../../util/profile-settings.js";
+import { getWorkspaceFlag } from "../../util/workspace-settings.js";
+import { assertAccountId, assertWorkspaceId } from "../../util/public-ids.js";
+import { writeProjectPointerSettings } from "../../util/project-pointer.js";
 import { authLoginCommand } from "./metadata.js";
+
+function renderLoginHelp(): string {
+  const activeEnv: string[] = [];
+  if (process.env.FIDE_API_BASE_URL?.trim()) {
+    activeEnv.push(`  FIDE_API_BASE_URL=${process.env.FIDE_API_BASE_URL.trim()}`);
+  }
+  if (process.env.FIDE_WORKSPACE_ID?.trim()) {
+    activeEnv.push(`  FIDE_WORKSPACE_ID=${process.env.FIDE_WORKSPACE_ID.trim()}`);
+  }
+  if (process.env.FIDE_WORKSPACE_URL?.trim()) {
+    activeEnv.push(`  FIDE_WORKSPACE_URL=${process.env.FIDE_WORKSPACE_URL.trim()}`);
+  }
+
+  if (activeEnv.length === 0) {
+    return renderCommandHelp(authLoginCommand);
+  }
+
+  return `${renderCommandHelp(authLoginCommand)}\n\nActive Env:\n${activeEnv.join("\n")}`;
+}
 
 export async function runAuthLogin(args: string[]): Promise<number> {
   const { flags } = parseArgs(args);
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
-    console.log(renderCommandHelp(authLoginCommand));
+    console.log(renderLoginHelp());
     return 0;
   }
 
-  const profile = getStringFlag(flags, "profile") ?? "default";
   const baseUrl = await resolveApiBaseUrl(getStringFlag(flags, "api-base-url"), flags);
   const agentName = getStringFlag(flags, "agent-name") ?? "My Agent";
-  const setDefault = flags.has("set-default");
-  const clearDefault = flags.has("clear-default");
   const requestedWorkspaceId = getWorkspaceFlag(flags);
-
-  if (setDefault && clearDefault) {
-    throw new Error("Invalid auth login flags. Use either --set-default or --clear-default, not both.");
-  }
-  if (clearDefault) {
-    if (flags.has("profile") || flags.has("web") || flags.has("workspace") || flags.has("agent-name")) {
-      throw new Error("Invalid auth login flags. --clear-default only clears the saved default profile and cannot be combined with login options.");
-    }
-    await clearDefaultProfile();
-    if (useJson) {
-      printJson(okResponse("auth-login.v1", {
-        clearedDefaultProfile: true,
-      }, {
-        command: "fide login",
-      }));
-    } else {
-      console.log("Cleared default profile.");
-    }
-    return 0;
-  }
 
   const loopback = await startAgentAuthLoopbackServer();
   try {
@@ -119,23 +116,42 @@ export async function runAuthLogin(args: string[]): Promise<number> {
       requestId: created.request.id,
       exchangeCode: callback.exchangeCode,
     });
-    await writeStoredAuthSettings(profile, { baseUrl, accessToken: exchanged.result.accessToken });
-    await writeStoredWorkspaceSelection(profile, exchanged.result.workspaceId);
-    if (setDefault) {
-      await setDefaultProfile(profile);
-    }
 
     const me = await createAuthApiClient({
       baseUrl,
       accessToken: exchanged.result.accessToken,
     }).me();
+    const accountId = assertAccountId(me.user.id ?? "");
+    const workspaceSummary = await createAuthApiClient({
+      baseUrl,
+      accessToken: exchanged.result.accessToken,
+    }).getWorkspace(exchanged.result.workspaceId);
+
+    await writeStoredAuthSettings(accountId, { accessToken: exchanged.result.accessToken });
+    const projectSettingsPath = await writeProjectPointerSettings({
+      account: {
+        id: accountId,
+        name: created.request.agentLabel ?? agentName,
+      },
+      workspace: {
+        id: exchanged.result.workspaceId,
+        name: workspaceSummary.name,
+      },
+    });
 
     const payload = okResponse("auth-login.v1", {
       baseUrl,
-      profile,
-      source: "profile",
+      account: {
+        id: accountId,
+        name: created.request.agentLabel ?? agentName,
+      },
+      source: "account",
       user: me,
-      workspaceId: exchanged.result.workspaceId,
+      workspace: {
+        id: exchanged.result.workspaceId,
+        name: workspaceSummary.name,
+      },
+      projectSettingsPath,
       requestId: created.request.id,
       loopback: Boolean(callback && callback.requestId),
     }, {
@@ -145,7 +161,7 @@ export async function runAuthLogin(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Saved agent auth for workspace ${exchanged.result.workspaceId} at ${baseUrl}`);
+      console.log(formatPretty("auth-login.v1", payload));
     }
     return 0;
   } finally {

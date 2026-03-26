@@ -214,6 +214,18 @@ export function createAuthApiClient(options: AuthClientOptions) {
       return parseApiResponse<WorkspaceSummary>(response, "workspace-get.v1");
     },
 
+    async updateWorkspace(input: {
+      workspaceId: string;
+      name: string;
+    }): Promise<WorkspaceSummary> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ name: input.name }),
+      });
+      return parseApiResponse<WorkspaceSummary>(response, "workspace-update.v1");
+    },
+
     async listWorkspaceGraphs(workspaceId: string): Promise<WorkspaceGraph[]> {
       const response = await fetch(`${baseUrl}/v1/workspaces/${workspaceId}/graphs`, {
         method: "GET",
@@ -241,6 +253,17 @@ export function createAuthApiClient(options: AuthClientOptions) {
         body: JSON.stringify(input.graph),
       });
       return parseApiResponse<WorkspaceGraph>(response, "graph-save-workspace.v1");
+    },
+
+    async deleteWorkspaceGraph(input: {
+      workspaceId: string;
+      graphKey: string;
+    }): Promise<{ ok: boolean }> {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/graphs/${encodeURIComponent(input.graphKey)}`, {
+        method: "DELETE",
+        headers,
+      });
+      return parseApiResponse<{ ok: boolean }>(response, "graph-delete-workspace.v1");
     },
 
     async listGraphQueries(input: {

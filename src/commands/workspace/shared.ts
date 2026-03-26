@@ -50,7 +50,7 @@ async function readAuthenticatedSubject(
 export async function requireWorkspaceApiClient(flags: Map<string, string | boolean> = new Map()) {
   const auth = await resolveAuthSettings(flags);
   if (!auth) {
-    throw new Error("No Fide auth profile resolved. A default profile is optional. Pass --profile <name>, set FIDE_PROFILE, use project .fide/settings.json, or run `fide login --profile <name>`.");
+    throw new Error("No Fide auth account resolved. Set FIDE_ACCOUNT_ID, set project .fide/settings.json with account.id, or run `fide login`.");
   }
   return {
     auth,

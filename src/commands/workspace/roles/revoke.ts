@@ -2,6 +2,7 @@ import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../..
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { assertUserId } from "../../../util/public-ids.js";
+import { formatPretty } from "../../../util/pretty.js";
 import { okResponse } from "../../../util/response.js";
 import { assertRoleKey } from "../../../util/selectors.js";
 import { workspaceRolesRevokeCommand } from "../metadata.js";
@@ -79,7 +80,7 @@ export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: revoke ${roleKey} from ${userId} in ${workspaceId} ${preview.reason}`);
+      console.log(formatPretty("workspace-roles-revoke.v1", payload));
     }
     return 0;
   }
@@ -110,7 +111,7 @@ export async function runWorkspaceRolesRevoke(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`Revoked ${roleKey} from ${userId} in ${workspaceId}`);
+    console.log(formatPretty("workspace-roles-revoke.v1", payload));
   }
   return 0;
 }

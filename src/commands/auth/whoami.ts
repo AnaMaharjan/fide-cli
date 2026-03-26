@@ -1,6 +1,7 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { okResponse } from "../../util/response.js";
 import { createAuthApiClient } from "../../util/auth-api.js";
 import { resolveAuthSettings } from "../../util/auth-settings.js";
@@ -16,7 +17,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
 
   const auth = await resolveAuthSettings(flags);
   if (!auth) {
-    throw new Error("No Fide auth profile resolved. A default profile is optional. Pass --profile <name>, set FIDE_PROFILE, use project .fide/settings.json, or run `fide login --profile <name>`.");
+    throw new Error("No Fide auth account resolved. Set FIDE_ACCOUNT_ID, set project .fide/settings.json with account.id, or run `fide login`.");
   }
 
   const me = await createAuthApiClient(auth).me();
@@ -31,7 +32,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`${me.user.id ?? me.auth.type}`);
+    console.log(formatPretty("auth-whoami.v1", payload));
   }
   return 0;
 }

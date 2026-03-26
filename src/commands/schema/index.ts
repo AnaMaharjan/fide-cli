@@ -1,6 +1,7 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
 import { renderHelp } from "../../util/help.js";
 import { printJson } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
 import { errorResponse, okResponse } from "../../util/response.js";
 import { COMMAND_SCHEMAS, EXTENDED_SCHEMAS } from "../../util/schemas.js";
 
@@ -87,12 +88,17 @@ export async function runSchemaCommand(surface: string | undefined, args: string
   }
 
   if (extendedSchema) {
-    printJson(okResponse("schema-surface.v1", {
+    const payload = okResponse("schema-surface.v1", {
       surface: resolvedSurface,
       schema: extendedSchema,
     }, {
       command: "fide schema",
-    }));
+    });
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(formatPretty("schema-surface.v1", payload));
+    }
     return 0;
   }
 
@@ -119,7 +125,12 @@ export async function runSchemaCommand(surface: string | undefined, args: string
       command: "fide schema",
     }));
   } else {
-    console.log(JSON.stringify(schema, null, 2));
+    console.log(formatPretty("schema-surface.v1", okResponse("schema-surface.v1", {
+      surface: resolvedSurface,
+      schema,
+    }, {
+      command: "fide schema",
+    })));
   }
   return 0;
 }

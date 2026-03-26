@@ -2,6 +2,7 @@ import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../..
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
 import { assertUserId } from "../../../util/public-ids.js";
+import { formatPretty } from "../../../util/pretty.js";
 import { okResponse } from "../../../util/response.js";
 import { assertRoleKey } from "../../../util/selectors.js";
 import { workspaceMembersAddCommand } from "../metadata.js";
@@ -97,7 +98,7 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: add ${target} to ${workspaceId} with ${roleKey} ${preview.reason}`);
+      console.log(formatPretty("workspace-members-add.v1", payload));
     }
     return 0;
   }
@@ -135,7 +136,7 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`Added ${target} to ${workspaceId} with ${roleKey}`);
+    console.log(formatPretty("workspace-members-add.v1", payload));
   }
   return 0;
 }

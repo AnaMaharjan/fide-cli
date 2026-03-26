@@ -28,6 +28,7 @@ function helpText(): string {
             "  fide <group> [command] [flags]",
             "  fide login [flags]",
             "  fide start [flags]",
+            "  fide stop [flags]",
             "  fide logout [flags]",
             "  fide whoami [flags]",
             "  fide docs <path>",
@@ -38,8 +39,9 @@ function helpText(): string {
           title: "Commands",
           items: [
             "  login    Save auth for this machine",
-            "  logout   Remove saved auth for a profile",
+            "  logout   Remove saved auth for an account",
             "  start    Start a workspace sync session",
+            "  stop     Stop the workspace sync session",
             "  status   Inspect machine, project, and workspace context",
             "  whoami   Show the current authenticated user",
           ],
@@ -57,8 +59,10 @@ function helpText(): string {
           title: "Workflows",
           items: [
             "  fide status",
-            "  fide login --profile work",
+            "  fide login",
             "  fide start",
+            "  fide stop",
+            "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
             "  fide graph statements write '<json>'",
             "  fide graph list --workspace workspace_<suffix>",
@@ -119,6 +123,16 @@ export async function runCli(argv: string[]): Promise<number> {
     if (group === "start") {
       const { runStartCommand } = await import("./commands/start.js");
       return await runStartCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
+    if (group === "stop") {
+      const { runStopCommand } = await import("./commands/stop.js");
+      return await runStopCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+    }
+
+    if (group === "__sync-runner") {
+      const { runSyncRunnerCommand } = await import("./commands/start.js");
+      return await runSyncRunnerCommand([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
     if (group === "logout") {

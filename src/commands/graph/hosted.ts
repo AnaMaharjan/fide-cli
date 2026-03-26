@@ -2,6 +2,7 @@ import type { FideSettings } from "@chris-test/graph";
 import { isDeepStrictEqual } from "node:util";
 import { parseArgs, getStringFlag, hasFlag, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
+import { formatPretty } from "../../util/pretty.js";
 import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
 import { printJson, readUtf8 } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
@@ -12,7 +13,7 @@ import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.
 
 type HostedGraphRecord = {
   type: "postgres" | "sqlite" | "fide-jsonl";
-  connection?: string;
+  connection?: unknown;
   recipe?: unknown;
   metadata?: unknown;
 };
@@ -148,9 +149,7 @@ export async function runGraphList(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    for (const graph of records) {
-      console.log(`${graph.graphKey} ${graph.type}`);
-    }
+    console.log(formatPretty("graph-list.v1", payload));
   }
   return 0;
 }
@@ -165,7 +164,7 @@ export async function runGraphGet(args: string[]): Promise<number> {
 
   const graphKeyFlag = getStringFlag(flags, "graph");
   const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
-  if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
@@ -194,7 +193,7 @@ export async function runGraphGet(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(JSON.stringify(payload.graph, null, 2));
+    console.log(formatPretty("graph-get.v1", payload));
   }
   return 0;
 }
@@ -208,7 +207,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
   const dryRun = hasFlag(flags, "dry-run");
   const graphKeyFlag = getStringFlag(flags, "graph");
   const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
-  if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
@@ -283,7 +282,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
     if (useJson) {
       printJson(payload);
     } else {
-      console.log(`Dry run: ${graphKey} ${preview.reason}`);
+      console.log(formatPretty("graph-save-workspace.v1", payload));
     }
     return 0;
   }
@@ -322,7 +321,7 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(`${graphKey} ${graph.type}`);
+    console.log(formatPretty("graph-save-workspace.v1", payload));
   }
   return 0;
 }

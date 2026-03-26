@@ -29,7 +29,8 @@
   "dependencies": {
     "@chris-test/db": "workspace:*",
     "@chris-test/graph": "workspace:*",
-    "@chris-test/graph-db": "workspace:*"
+    "@chris-test/graph-db": "workspace:*",
+    "chokidar": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

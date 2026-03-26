@@ -1,5 +1,82 @@
 type PrettyRenderable = Record<string, unknown>;
 
+function toDisplayLabel(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatScalar(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") return String(value);
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  return JSON.stringify(value);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function renderValue(label: string, value: unknown, indent: number): string[] {
+  const prefix = " ".repeat(indent);
+  const displayLabel = toDisplayLabel(label);
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${prefix}${displayLabel}: []`];
+    const allScalars = value.every((entry) => !Array.isArray(entry) && !isPlainObject(entry));
+    if (allScalars) {
+      return [`${prefix}${displayLabel}: ${value.map((entry) => formatScalar(entry)).join(", ")}`];
+    }
+    const lines = [`${prefix}${displayLabel}:`];
+    for (const entry of value) {
+      if (Array.isArray(entry) || isPlainObject(entry)) {
+        lines.push(`${prefix}  -`);
+        lines.push(...renderUnknown(entry, indent + 4));
+      } else {
+        lines.push(`${prefix}  - ${formatScalar(entry)}`);
+      }
+    }
+    return lines;
+  }
+
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return [`${prefix}${displayLabel}: {}`];
+    return [
+      `${prefix}${displayLabel}:`,
+      ...entries.flatMap(([childKey, childValue]) => renderValue(childKey, childValue, indent + 2)),
+    ];
+  }
+
+  return [`${prefix}${displayLabel}: ${formatScalar(value)}`];
+}
+
+function renderUnknown(value: unknown, indent = 0): string[] {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${" ".repeat(indent)}[]`];
+    return value.flatMap((entry) => {
+      const prefix = " ".repeat(indent);
+      if (Array.isArray(entry) || isPlainObject(entry)) {
+        return [`${prefix}-`, ...renderUnknown(entry, indent + 2)];
+      }
+      return [`${prefix}- ${formatScalar(entry)}`];
+    });
+  }
+
+  if (isPlainObject(value)) {
+    return Object.entries(value).flatMap(([key, entry]) => renderValue(key, entry, indent));
+  }
+
+  return [`${" ".repeat(indent)}${formatScalar(value)}`];
+}
+
+function renderGenericPretty(payload: PrettyRenderable): string {
+  return renderUnknown(payload).join("\n");
+}
+
 function formatTopLevelStatus(payload: PrettyRenderable): string {
   const machine = payload.machine as {
     authConfigured: boolean;
@@ -8,16 +85,41 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     baseUrl: string | null;
     authError: string | null;
     authResolutionHint?: string | null;
+    env_defaults?: {
+      FIDE_ACCOUNT_ID?: string;
+      FIDE_API_BASE_URL?: string;
+      FIDE_SYNC_BASE_URL?: string;
+      FIDE_WORKSPACE_ID?: string;
+      FIDE_WORKSPACE_URL?: string;
+    };
   };
   const project = payload.project as {
     root: string;
     fideDir: string;
     source: string;
     settingsPresent: boolean;
+    settings?: {
+      account?: {
+        id?: string;
+        name?: string;
+      };
+      workspace?: {
+        id?: string;
+        name?: string;
+      };
+    };
   };
   const workspace = payload.workspace as {
     selected: string | null;
     source: string | null;
+  };
+  const sync = payload.sync as null | {
+    pid: number;
+    status: string;
+    syncBaseUrl?: string;
+    syncEndpoint?: string | null;
+    projectFideRoots?: string[];
+    error?: string | null;
   };
 
   const machineLines = [
@@ -25,6 +127,11 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     `  auth: ${machine.authConfigured ? (machine.authValid ? "configured and valid" : "configured but invalid") : "not configured"}`,
     ...(machine.authSource ? [`  source: ${machine.authSource}`] : []),
     ...(machine.baseUrl ? [`  base URL: ${machine.baseUrl}`] : []),
+    ...(machine.env_defaults?.FIDE_ACCOUNT_ID ? [`  FIDE_ACCOUNT_ID: ${machine.env_defaults.FIDE_ACCOUNT_ID}`] : []),
+    ...(machine.env_defaults?.FIDE_API_BASE_URL ? [`  FIDE_API_BASE_URL: ${machine.env_defaults.FIDE_API_BASE_URL}`] : []),
+    ...(machine.env_defaults?.FIDE_SYNC_BASE_URL ? [`  FIDE_SYNC_BASE_URL: ${machine.env_defaults.FIDE_SYNC_BASE_URL}`] : []),
+    ...(machine.env_defaults?.FIDE_WORKSPACE_ID ? [`  FIDE_WORKSPACE_ID: ${machine.env_defaults.FIDE_WORKSPACE_ID}`] : []),
+    ...(machine.env_defaults?.FIDE_WORKSPACE_URL ? [`  FIDE_WORKSPACE_URL: ${machine.env_defaults.FIDE_WORKSPACE_URL}`] : []),
     ...(machine.authError ? [`  error: ${machine.authError}`] : []),
     ...(!machine.authConfigured && machine.authResolutionHint ? [`  hint: ${machine.authResolutionHint}`] : []),
   ];
@@ -35,6 +142,8 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     `  .fide: ${project.fideDir}`,
     `  source: ${project.source}`,
     `  settings: ${project.settingsPresent ? "present" : "missing"}`,
+    ...(project.settings?.account?.id ? [`  account: ${project.settings.account.id}${project.settings.account.name ? ` (${project.settings.account.name})` : ""}`] : []),
+    ...(project.settings?.workspace?.id ? [`  workspace: ${project.settings.workspace.id}${project.settings.workspace.name ? ` (${project.settings.workspace.name})` : ""}`] : []),
   ];
 
   const workspaceLines = [
@@ -43,12 +152,25 @@ function formatTopLevelStatus(payload: PrettyRenderable): string {
     ...(workspace.source ? [`  source: ${workspace.source}`] : []),
   ];
 
+  const syncLines = sync ? [
+    "Sync",
+    `  status: ${sync.status}`,
+    `  pid: ${sync.pid}`,
+    ...(sync.syncBaseUrl ? [`  base URL: ${sync.syncBaseUrl}`] : []),
+    ...(sync.syncEndpoint ? [`  endpoint: ${sync.syncEndpoint}`] : []),
+    ...(Array.isArray(sync.projectFideRoots) && sync.projectFideRoots.length > 0
+      ? sync.projectFideRoots.map((root) => `  project .fide: ${root}`)
+      : []),
+    ...(sync.error ? [`  error: ${sync.error}`] : []),
+  ] : [];
+
   return [
     ...machineLines,
     "",
     ...projectLines,
     "",
     ...workspaceLines,
+    ...(syncLines.length > 0 ? ["", ...syncLines] : []),
   ].join("\n");
 }
 
@@ -196,6 +318,6 @@ export function formatPretty(scope: string, payload: PrettyRenderable): string |
     case "workspace-members.v1":
       return formatWorkspaceMembers(payload);
     default:
-      return null;
+      return renderGenericPretty(payload);
   }
 }

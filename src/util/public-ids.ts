@@ -13,6 +13,10 @@ export function assertWorkspaceId(value: string): string {
   return assertPattern("workspace id", value, "workspace");
 }
 
+export function assertAccountId(value: string): string {
+  return assertPattern("account id", value, "account");
+}
+
 export function assertUserId(value: string): string {
   return assertPattern("user id", value, "user");
 }

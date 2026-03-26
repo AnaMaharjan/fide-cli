@@ -135,9 +135,9 @@ function missingPostgresConnectionError(input: {
   const configuredConnection = input.connectionEnv ?? null;
   const subject = input.scope === "recipe-source" ? "recipe source graph" : "graph";
   return createCliStructuredError(
-    `Missing postgres connection for ${subject} "${graphLabel}". Configure graph.connection in settings.json or set the referenced env var.`,
+    `Missing postgres connection for ${subject} "${graphLabel}". Configure graph.connection.url in settings.json or set the referenced env var.`,
     {
-      hint: "For postgres graphs, graph.connection may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
+      hint: "For postgres graphs, graph.connection.url may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
       details: {
         graphKey: input.graphKey,
         graphType: "postgres",
@@ -253,7 +253,7 @@ export async function runGraphBuild(args: string[] = []): Promise<number> {
   const dryRun = hasFlag(flags, "dry-run");
   const graphKeyFlag = getStringFlag(flags, "graph");
   const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
-  if (!graphKey) throw new Error("Missing required flag: --graph <name>.");
+  if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
 
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
   assertRecipeTarget(target);

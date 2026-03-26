@@ -22,7 +22,6 @@ export function workspaceCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide workspace list",
-          "  fide workspace list --profile work",
           "  fide workspace get --workspace workspace_<suffix>",
           "  fide workspace members list --workspace workspace_<suffix>",
           "  fide workspace members add --workspace workspace_<suffix> --user-id user_<suffix> --role member --dry-run",
@@ -35,7 +34,7 @@ export function workspaceCommandHelp(): string {
         items: [
           "  - Use `workspace` for shared hosted state: workspaces, members, and roles.",
           "  - `--workspace` is optional only when `FIDE_WORKSPACE_ID` is set.",
-          "  - `--profile` selects auth context; hosted workspace selection comes from `--workspace` or `FIDE_WORKSPACE_ID`.",
+          "  - Hosted auth resolves from the current project account or `FIDE_ACCOUNT_ID`.",
           "  - Hosted IDs are typed: use `workspace_*` for workspaces and `user_*` for members.",
           "  - Hosted membership and role mutations accept `--dry-run` to preview whether the change would modify shared state.",
         ],

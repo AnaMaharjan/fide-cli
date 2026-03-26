@@ -43,12 +43,12 @@ function runCli(args, env = process.env) {
   });
 }
 
-function readProfileWorkspaceId(profile = "default") {
-  const settingsPath = resolve(process.env.HOME ?? "", ".fide", "profiles", profile, "settings.json");
+function readProjectWorkspaceId() {
+  const settingsPath = resolve(PACKAGE_ROOT, "..", "..", ".tmp", "fide-test-statements", ".fide", "settings.json");
   if (!existsSync(settingsPath)) return null;
   try {
     const parsed = JSON.parse(readFileSync(settingsPath, "utf8"));
-    return typeof parsed.workspaceId === "string" && parsed.workspaceId.trim() ? parsed.workspaceId.trim() : null;
+    return typeof parsed?.workspace?.id === "string" && parsed.workspace.id.trim() ? parsed.workspace.id.trim() : null;
   } catch {
     return null;
   }
@@ -73,9 +73,9 @@ async function main() {
     workspaceId: "workspace-flag",
   });
 
-  const localScope = await withEnv({ FIDE_WORKSPACE_ID: undefined, FIDE_PROFILE: "work" }, () =>
+  const localScope = await withEnv({ FIDE_WORKSPACE_ID: undefined, FIDE_ACCOUNT_ID: undefined }, () =>
     resolveGraphQueryScope(new Map()));
-  assert.deepEqual(localScope, { targetScope: "local" }, "FIDE_PROFILE must not switch graph query scope");
+  assert.deepEqual(localScope, { targetScope: "local" }, "FIDE_ACCOUNT_ID must not switch graph query scope");
 
   const hostedScope = await withEnv({ FIDE_WORKSPACE_ID: "workspace-env" }, () =>
     resolveGraphQueryScope(new Map()));
@@ -103,7 +103,7 @@ async function main() {
   assert.equal(schemaPayload.surfaces.includes("workspace.settings.get"), false);
   assert.equal(schemaPayload.surfaces.includes("workspace.settings.set"), false);
 
-  const hostedWorkspaceId = readProfileWorkspaceId();
+  const hostedWorkspaceId = readProjectWorkspaceId();
   if (hostedWorkspaceId) {
     const hostedList = runCli(["graph", "query", "list"], { ...process.env, FIDE_WORKSPACE_ID: hostedWorkspaceId });
     if (hostedList.status === 0) {
@@ -115,7 +115,7 @@ async function main() {
       console.warn(`Skipping hosted graph query smoke: ${hostedList.stderr.trim()}`);
     }
   } else {
-    console.warn("Skipping hosted graph query smoke: no stored profile workspaceId found.");
+    console.warn("Skipping hosted graph query smoke: no project workspace id found.");
   }
 
   console.log("Scope model checks passed.");

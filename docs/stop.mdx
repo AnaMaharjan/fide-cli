@@ -1,0 +1,9 @@
+---
+title: "fide stop"
+description: "fide stop [--pretty|-p]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide stop","summary":"Stop the workspace sync session","description":"fide stop [--pretty|-p]","usage":["fide stop [--pretty|-p]"],"arguments":[],"options":[{"name":"--pretty","type":"boolean","required":false,"description":"Human-readable output"}],"outputFields":[{"name":"stopped","type":"boolean","required":false},{"name":"pid","type":"number?","required":false},{"name":"workspaceId","type":"string?","required":false}],"subcommands":[],"schemas":[{"surface":"stop","command":"fide stop","params":[{"name":"--pretty","type":"boolean","description":"Human-readable output"}],"outputFields":[{"name":"stopped","type":"boolean","required":false},{"name":"pid","type":"number?","required":false},{"name":"workspaceId","type":"string?","required":false}],"json":"{\n  \"command\": \"fide stop\",\n  \"params\": [\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {\n    \"stopped\": \"boolean\",\n    \"pid\": \"number?\",\n    \"workspaceId\": \"string?\"\n  }\n}"}],"examples":[],"notes":[{"title":"Notes","body":"Stops the detached local sync agent started by `fide start`."}]}} />
