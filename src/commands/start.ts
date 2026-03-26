@@ -4,6 +4,7 @@ import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import chokidar, { type FSWatcher } from "chokidar";
+import { readLocalQueries, type LocalQueryDefinition } from "@chris-test/graph";
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../util/args.js";
 import { renderCommandHelp } from "../util/command-metadata.js";
 import { resolveAuthSettings } from "../util/auth-settings.js";
@@ -40,6 +41,13 @@ type HostedWorkspaceGraphInput = {
   type: "postgres" | "sqlite" | "fide-jsonl";
   recipe?: unknown;
   metadata?: unknown;
+};
+
+type HostedWorkspaceQueryInput = {
+  graphKey: string;
+  name: string;
+  description: string | null;
+  sql: string;
 };
 
 function logSyncRunner(event: string, details?: Record<string, unknown>): void {
@@ -129,6 +137,21 @@ function readHostedGraphsFromProjectSettings(settingsPath: string): Map<string, 
   }
 
   return result;
+}
+
+function readHostedQueriesFromProject(root: string): Promise<Map<string, HostedWorkspaceQueryInput>> {
+  return readLocalQueries(root).then((queries) => {
+    const result = new Map<string, HostedWorkspaceQueryInput>();
+    for (const query of queries) {
+      result.set(`${query.graphKey}:${query.name}`, {
+        graphKey: query.graphKey,
+        name: query.name,
+        description: query.description ?? null,
+        sql: query.sql,
+      });
+    }
+    return result;
+  });
 }
 
 function renderStartHelp(): string {
@@ -344,6 +367,80 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
     }
   };
 
+  const syncProjectQueries = async () => {
+    const localQueries = await readHostedQueriesFromProject(fide.root);
+    const remoteQueryList = await workspaceApi.listGraphQueries({
+      workspaceId: workspace.workspaceId,
+    });
+
+    logSyncRunner("queries.sync.start", {
+      projectQueriesPath,
+      workspaceId: workspace.workspaceId,
+      localQueries: Array.from(localQueries.values()).map((query) => `${query.graphKey}/${query.name}`),
+      remoteQueries: remoteQueryList.queries.map((query) => `${query.graphKey}/${query.name}`),
+    });
+
+    for (const localQuery of localQueries.values()) {
+      const queryId = `${localQuery.graphKey}/${localQuery.name}`;
+      let remoteQuery: LocalQueryDefinition | HostedWorkspaceQueryInput | null = null;
+      try {
+        remoteQuery = await workspaceApi.getGraphQuery({
+          workspaceId: workspace.workspaceId,
+          graphKey: localQuery.graphKey,
+          name: localQuery.name,
+        });
+      } catch (error) {
+        const status = typeof error === "object" && error && "status" in error ? (error as { status?: unknown }).status : null;
+        if (status !== 404) {
+          throw error;
+        }
+      }
+
+      const normalizedRemoteQuery = remoteQuery
+        ? {
+          graphKey: remoteQuery.graphKey,
+          name: remoteQuery.name,
+          description: remoteQuery.description ?? null,
+          sql: remoteQuery.sql,
+        }
+        : null;
+
+      if (normalizedRemoteQuery && isDeepStrictEqual(normalizedRemoteQuery, localQuery)) {
+        logSyncRunner("queries.sync.skip", {
+          query: queryId,
+          reason: "unchanged",
+        });
+        continue;
+      }
+
+      logSyncRunner("queries.sync.upsert", {
+        query: queryId,
+        reason: remoteQuery ? "changed" : "missing_remote",
+      });
+      await workspaceApi.saveGraphQuery({
+        workspaceId: workspace.workspaceId,
+        graphKey: localQuery.graphKey,
+        name: localQuery.name,
+        sql: localQuery.sql,
+        description: localQuery.description,
+      });
+      logSyncRunner("queries.sync.upsert.ok", {
+        query: queryId,
+      });
+    }
+
+    for (const remoteQuery of remoteQueryList.queries) {
+      const queryId = `${remoteQuery.graphKey}/${remoteQuery.name}`;
+      if (localQueries.has(`${remoteQuery.graphKey}:${remoteQuery.name}`)) {
+        continue;
+      }
+      logSyncRunner("queries.sync.skip", {
+        query: queryId,
+        reason: "remote_only",
+      });
+    }
+  };
+
   const syncProjectState = async (path: string) => {
     const errors: string[] = [];
 
@@ -353,6 +450,17 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
       const message = error instanceof Error ? error.message : String(error);
       errors.push(message);
       logSyncRunner("graphs.sync.error", {
+        path,
+        error: message,
+      });
+    }
+
+    try {
+      await syncProjectQueries();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(message);
+      logSyncRunner("queries.sync.error", {
         path,
         error: message,
       });
@@ -395,10 +503,7 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
         return;
       }
       if (path.startsWith(projectQueriesPath)) {
-        logSyncRunner("queries.sync.skip", {
-          path,
-          reason: "not_implemented",
-        });
+        await syncProjectState(path);
       }
     });
 
@@ -409,10 +514,7 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
         return;
       }
       if (path.startsWith(projectQueriesPath)) {
-        logSyncRunner("queries.sync.skip", {
-          path,
-          reason: "not_implemented",
-        });
+        await syncProjectState(path);
       }
     });
 
