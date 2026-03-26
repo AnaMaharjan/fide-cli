@@ -1,0 +1,9 @@
+---
+title: "fide statements"
+description: "fide statements <command> [flags]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide statements","description":"fide statements <command> [flags]","usage":["fide statements <command> [flags]"],"arguments":[],"options":[],"outputFields":[],"subcommands":[{"name":"write","summary":"Write canonical statement batches into a local project","href":"./statements-write"},{"name":"draft","summary":"Create a markdown statement draft in a local project","href":"./statements-draft"}],"schemas":[{"surface":"statements","command":"fide statements","params":[],"outputFields":[],"json":"{\n  \"command\": \"fide statements\",\n  \"params\": [],\n  \"output\": {}\n}"}],"examples":[{"command":"fide statements write '[{ ... statement inputs ... }]'"},{"command":"fide statements write --file inputs.json"},{"command":"fide statements draft --name research-notes --file inputs.json"}],"notes":[{"title":"Notes","body":"`statements write` writes canonical JSONL batches into the local project `.fide` directory.\n`statements draft` creates or updates a local markdown draft from the same statement batch.\nThese commands are local-only and do not target hosted workspace state directly."}]}} />

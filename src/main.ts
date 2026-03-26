@@ -33,6 +33,8 @@ function helpText(): string {
             "  fide whoami [flags]",
             "  fide docs <path>",
             "  fide schema [surface]",
+            "  fide query <command> [flags]",
+            "  fide statements <command> [flags]",
           ],
         },
         {
@@ -50,6 +52,8 @@ function helpText(): string {
           title: "Groups",
           items: [
             "  graph    Local graph work and hosted graph/query projection",
+            "  query    Local query authoring and execution",
+            "  statements Local statement batch and draft authoring",
             "  workspace Workspace info, members, and roles",
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
@@ -64,10 +68,10 @@ function helpText(): string {
             "  fide stop",
             "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
-            "  fide graph statements write '<json>'",
+            "  fide statements write '<json>'",
             "  fide graph list --workspace workspace_<suffix>",
             "  fide graph save --workspace workspace_<suffix> --graph primary --type postgres",
-            "  fide graph query run --graph primary 'select * from statements limit 10'",
+            "  fide query run --graph primary 'select * from statements limit 10'",
             "  fide graph build --graph combined",
             "  fide workspace list",
           ],
@@ -78,7 +82,7 @@ function helpText(): string {
             "  - `fide start` runs a detached background agent and returns immediately.",
             "  - The current project `.fide/settings.json` is the source of truth for hosted graph sync.",
             "  - Hosted graph sync currently projects shared graph metadata only; local connection settings stay local.",
-            "  - Query files are watched by the sync agent but are not synced yet.",
+            "  - Query files are authored locally and synced by `fide start` into the selected workspace.",
           ],
         },
         {
@@ -163,6 +167,14 @@ export async function runCli(argv: string[]): Promise<number> {
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);
+      }
+      case "query": {
+        const { runQueryCommand } = await import("./commands/query/index.js");
+        return await runQueryCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+      }
+      case "statements": {
+        const { runStatementsCommand } = await import("./commands/statements/index.js");
+        return await runStatementsCommand([command, ...rest].filter((value): value is string => Boolean(value)));
       }
       case "workspace": {
         const { runWorkspaceCommand } = await import("./commands/workspace/index.js");

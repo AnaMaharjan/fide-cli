@@ -44,7 +44,7 @@ export const startCommand = defineCommand({
     "Starts a detached local sync agent and returns immediately.",
     "Current sync behavior is one-way: project .fide/settings.json is the source of truth for hosted graph metadata.",
     "Graph sync projects only shared graph fields upstream; local connection settings stay local.",
-    "Queries are watched for now but are not synced yet.",
+    "Local query files under .fide/queries/ are also synced one-way into the selected workspace.",
   ],
 });
 

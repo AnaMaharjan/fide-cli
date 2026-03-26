@@ -1,12 +1,12 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getLocalFideWarnings, resolveGraphTarget } from "@chris-test/graph";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderCommandHelp } from "../../../util/command-metadata.js";
-import { printJson, readUtf8, writeUtf8 } from "../../../util/io.js";
-import { formatPretty } from "../../../util/pretty.js";
-import { graphWriteCommand } from "../metadata.js";
-import { resolveStatementsBatch, ymdUtc } from "../shared.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
+import { renderCommandHelp } from "../../util/command-metadata.js";
+import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
+import { formatPretty } from "../../util/pretty.js";
+import { statementsWriteCommand } from "./metadata.js";
+import { resolveLocalStatementsBatchOrExit, ymdUtc } from "./shared.js";
 
 function resolveStatementsDir(root: string): string {
   return resolve(root, ".fide", "statements");
@@ -45,32 +45,25 @@ function updateDraftWriteFrontmatter(content: string, writtenAtUTC: string, writ
   return content.replace(/^---\n[\s\S]*?\n---\n/, `---\n${nextLines.join("\n")}\n---\n`);
 }
 
-export async function runGraphWrite(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
+export async function runStatementsWrite(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
   const initialParsed = argsOrFlags instanceof Map ? { positionals: [], flags: argsOrFlags } : parseArgs(argsOrFlags);
   if (hasFlag(initialParsed.flags, "help")) {
-    console.log(renderCommandHelp(graphWriteCommand));
+    console.log(renderCommandHelp(statementsWriteCommand));
     return 0;
   }
   if (hasFlag(initialParsed.flags, "draft")) {
-    throw new Error("`graph statements write` does not support `--draft`. Use `fide graph statements draft`.");
+    throw new Error("`statements write` does not support `--draft`. Use `fide statements draft`.");
   }
   if (hasFlag(initialParsed.flags, "query")) {
-    throw new Error("`graph statements write` no longer supports `--query`. Use `fide graph query save`.");
+    throw new Error("`statements write` no longer supports `--query`. Use `fide query save`.");
   }
-  const { parsed, batch, statementInputs } = await resolveStatementsBatch(argsOrFlags);
-  const flags = parsed.flags;
-
-  const graphTarget = resolveGraphTarget(flags);
+  const resolved = await resolveLocalStatementsBatchOrExit(argsOrFlags, statementsWriteCommand);
+  if (!resolved) {
+    return 0;
+  }
+  const { flags, batch, graphTarget } = resolved;
   if (hasFlag(flags, "out")) {
-    throw new Error("`graph statements write` does not accept --out. Output path is auto-generated.");
-  }
-  if (statementInputs.length === 0) {
-    console.error("Missing input for `graph statements write`. Use `--stdin`, `--file <path>`, or pass JSON inline.");
-    console.error(renderCommandHelp(graphWriteCommand));
-    return 1;
-  }
-  if (graphTarget.type !== "local") {
-    throw new Error("`graph statements write` only supports local `.fide` directories. Use `fide graph query` or `fide graph build` for configured sqlite or postgres stores.");
+    throw new Error("`statements write` does not accept --out. Output path is auto-generated.");
   }
 
   const statementsDir = resolveStatementsDir(graphTarget.root);
@@ -111,7 +104,7 @@ export async function runGraphWrite(argsOrFlags: string[] | Map<string, string |
   if (shouldUseJsonOutput(flags)) {
     printJson(payload);
   } else {
-    console.log(formatPretty("graph-statements-write.v1", payload));
+    console.log(formatPretty("statements-write-local.v1", payload));
   }
   return 0;
 }

@@ -1,77 +1,5 @@
 import { commandSchemas, defineCommand } from "../../util/command-metadata.js";
 
-export const graphWriteCommand = defineCommand({
-  surface: "graph.statements.write",
-  command: "fide graph statements write",
-  summary: "Write canonical statement batches into a local project graph",
-  usage: [
-    "fide graph statements write [--fide-dir <path>] <json>",
-    "fide graph statements write [--fide-dir <path>] --file <inputs> [--format <json|jsonl|fsd>]",
-    "fide graph statements write [--fide-dir <path>] --stdin [--format <json|jsonl|fsd>]",
-  ],
-  params: [
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "file", type: "string", description: "Read statement inputs from a file", valueLabel: "<inputs>" },
-    { name: "stdin", type: "boolean", description: "Read statement inputs from stdin" },
-    { name: "format", type: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
-    { name: "no-normalize", type: "boolean", description: "Disable reference identifier normalization" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    root: "string",
-    statementCount: "number",
-    mode: "string",
-    outPath: "string",
-    warnings: "string[]",
-  },
-  notes: [
-    "Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
-    "Use `fide graph query save` to save project query definitions.",
-  ],
-});
-
-export const graphDraftCommand = defineCommand({
-  surface: "graph.statements.draft",
-  command: "fide graph statements draft",
-  summary: "Create a markdown statement draft in a local .fide directory",
-  usage: [
-    "fide graph statements draft [--fide-dir <path>] --name <draft-name> <json>",
-    "fide graph statements draft [--fide-dir <path>] --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
-    "fide graph statements draft [--fide-dir <path>] --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
-  ],
-  params: [
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "name", type: "string", required: true, description: "Draft file name without .md", valueLabel: "<draft-name>" },
-    { name: "path", type: "string", description: "Optional subdirectory under .fide/drafts/statements", valueLabel: "<draft-path>" },
-    { name: "description", type: "string", description: "Optional draft description frontmatter", valueLabel: "<text>" },
-    { name: "file", type: "string", description: "Read statement inputs from a file", valueLabel: "<inputs>" },
-    { name: "stdin", type: "boolean", description: "Read statement inputs from stdin" },
-    { name: "format", type: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
-    { name: "no-normalize", type: "boolean", description: "Disable reference identifier normalization" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    name: "string",
-    root: "string",
-    statementCount: "number",
-    mode: "string",
-    outPath: "string",
-    createdAtUTC: "string",
-    updatedAtUTC: "string",
-    updateCount: "number",
-    next: "object",
-    warnings: "string[]",
-  },
-  notes: [
-    "Creates or updates a markdown statement draft for local editing.",
-    "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
-    "Reusing the same --name and --path updates the existing draft metadata and content.",
-    "Use --path to organize drafts by feature, workflow, or topic.",
-    "Draft statement lines are labeled @1, @2, ... for local references.",
-    "Use `fide graph statements write` for canonical JSONL statement batches.",
-  ],
-});
-
 export const graphDefsCommand = defineCommand({
   surface: "graph.defs",
   command: "fide graph defs",
@@ -127,47 +55,62 @@ export const graphStatusCommand = defineCommand({
 export const graphListCommand = defineCommand({
   surface: "graph.list",
   command: "fide graph list",
-  summary: "List hosted graphs owned by the current account in a workspace",
+  summary: "List local project graphs or hosted workspace graphs",
   usage: [
     "fide graph list [--workspace <workspace-id>]",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Enable hosted graph listing. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
-    baseUrl: "string",
-    source: "string",
-    workspaceId: "string",
-    workspaceSelectionSource: "string",
+    targetScope: "string",
+    root: "string?",
+    baseUrl: "string?",
+    source: "string?",
+    workspaceId: "string?",
+    workspaceSelectionSource: "string?",
     graphs: "array",
   },
   examples: [
+    "fide graph list",
     "fide graph list --workspace <workspace-id>",
+  ],
+  notes: [
+    "Without `--workspace`, this lists graph definitions from the current project's `.fide/settings.json`.",
+    "Pass `--workspace <workspace-id>`, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set, to list hosted graphs.",
   ],
 });
 
 export const graphGetCommand = defineCommand({
   surface: "graph.get",
   command: "fide graph get",
-  summary: "Inspect one hosted graph owned by the current account",
+  summary: "Inspect one local project graph or hosted workspace graph",
   usage: [
     "fide graph get [--workspace <workspace-id>] --graph <key>",
   ],
   params: [
-    { name: "workspace", type: "string", required: false, description: "Workspace to query. If omitted, resolve from FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
+    { name: "workspace", type: "string", required: false, description: "Enable hosted graph reads. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
     { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<key>" },
     { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
   ],
   output: {
-    baseUrl: "string",
-    source: "string",
-    workspaceId: "string",
-    workspaceSelectionSource: "string",
+    targetScope: "string",
+    root: "string?",
+    baseUrl: "string?",
+    source: "string?",
+    workspaceId: "string?",
+    workspaceSelectionSource: "string?",
+    graphKey: "string",
     graph: "object",
   },
   examples: [
+    "fide graph get --graph primary",
     "fide graph get --workspace <workspace-id> --graph primary",
+  ],
+  notes: [
+    "Without `--workspace`, this reads the graph definition from the current project's `.fide/settings.json`.",
+    "Pass `--workspace <workspace-id>`, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set, to read hosted graph metadata.",
   ],
 });
 
@@ -214,197 +157,6 @@ export const graphSaveCommand = defineCommand({
   ],
 });
 
-export const graphQueryCommand = defineCommand({
-  surface: "graph.query",
-  command: "fide graph query",
-  summary: "Run, inspect, and save graph queries",
-  usage: [
-    "fide graph query <command> [flags]",
-  ],
-  params: [],
-  output: {},
-  notes: [
-    "Mixed query commands default to local project queries.",
-    "Graph query commands only target hosted state when `--workspace` is present.",
-    "The sync agent watches `.fide/queries/`, but query sync is not implemented yet.",
-    "Pass `--workspace <workspace-id>` explicitly, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set.",
-  ],
-});
-
-export const graphQueryRunCommand = defineCommand({
-  surface: "graph.query.run",
-  command: "fide graph query run",
-  summary: "Run ad hoc SQL or execute a saved graph query",
-  usage: [
-    "fide graph query run --graph <key> <query>",
-    "fide graph query run --graph <key> --file <query.sql>",
-    "fide graph query run --graph <key> --stdin",
-    "fide graph query run --graph <key> --name <query-name>",
-    "fide graph query run [--workspace <workspace-id>] --graph <key> --name <query-name>",
-  ],
-  params: [
-    { name: "workspace", type: "string", description: "Enable hosted saved-query execution. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<key>" },
-    { name: "name", type: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
-    { name: "limit", type: "number", description: "Maximum row count for hosted saved-query execution", valueLabel: "<n>" },
-    { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
-    { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
-    { name: "allow-write", type: "boolean", description: "Allow write SQL for ad hoc local execution" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    targetScope: "string?",
-    ok: "boolean?",
-    graphStoreType: "string?",
-    key: "string?",
-    file: "string?",
-    schema: "string?",
-    rowCount: "number",
-    rows: "array",
-    warnings: "string[]?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
-    result: "object?",
-  },
-  examples: [
-    "fide graph query run --graph primary 'select * from statements limit 10'",
-    "fide graph query run --graph primary --name recentStatements",
-    "fide graph query run --workspace <workspace-id> --graph primary --name recentStatements",
-    "fide graph query run --workspace --graph primary --name recentStatements",
-  ],
-  notes: [
-    "Saved-query execution only targets hosted state when `--workspace` is present; otherwise it resolves against local project queries.",
-    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
-  ],
-});
-
-export const graphQueryListCommand = defineCommand({
-  surface: "graph.query.list",
-  command: "fide graph query list",
-  summary: "List project or hosted graph query summaries",
-  usage: [
-    "fide graph query list",
-    "fide graph query list --graph <key>",
-    "fide graph query list [--workspace <workspace-id>]",
-  ],
-  params: [
-    { name: "workspace", type: "string", description: "Enable hosted query listing. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "graph", type: "string", description: "Optional graph key filter", valueLabel: "<key>" },
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    targetScope: "string",
-    root: "string?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
-    queries: "array",
-    next: "object?",
-  },
-  examples: [
-    "fide graph query list",
-    "fide graph query list --workspace <workspace-id>",
-    "fide graph query list --workspace",
-  ],
-  notes: [
-    "Listing targets hosted state only when `--workspace` is present; otherwise it reads local project query summaries.",
-    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
-    "List output is intentionally compact and returns the query identity fields needed to choose one query.",
-    "Use `fide graph query get --graph <key> --name <query-name>` to read the full query text for a selected result.",
-  ],
-});
-
-export const graphQueryGetCommand = defineCommand({
-  surface: "graph.query.get",
-  command: "fide graph query get",
-  summary: "Read one full project or hosted graph query",
-  usage: [
-    "fide graph query get --graph <key> --name <query-name>",
-    "fide graph query get [--workspace <workspace-id>] --graph <key> --name <query-name>",
-  ],
-  params: [
-    { name: "workspace", type: "string", description: "Enable hosted query reads. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "graph", type: "string", required: true, description: "Graph key", valueLabel: "<key>" },
-    { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    targetScope: "string",
-    root: "string?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
-    query: "object",
-    next: "object?",
-  },
-  examples: [
-    "fide graph query get --graph primary --name recentStatements",
-    "fide graph query get --workspace <workspace-id> --graph primary --name recentStatements",
-    "fide graph query get --workspace --graph primary --name recentStatements",
-  ],
-  notes: [
-    "Reads hosted state only when `--workspace` is present; otherwise it reads the local project query definition.",
-    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
-    "Use `fide graph query list` first when you need to discover the available graph/name pairs.",
-  ],
-});
-
-export const graphQuerySaveCommand = defineCommand({
-  surface: "graph.query.save",
-  command: "fide graph query save",
-  summary: "Save a project or hosted graph query",
-  usage: [
-    "fide graph query save --graph <key> --name <query-name> <query>",
-    "fide graph query save --graph <key> --name <query-name> --file <query.sql>",
-    "fide graph query save --workspace <workspace-id> --graph <key> --name <query-name> <query>",
-  ],
-  params: [
-    { name: "workspace", type: "string", description: "Enable hosted query writes. Pass a workspace id explicitly, or omit the value and use FIDE_WORKSPACE_ID.", valueLabel: "<workspace-id>" },
-    { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<key>" },
-    { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
-    { name: "description", type: "string", description: "Optional query description", valueLabel: "<text>" },
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
-    { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
-    { name: "dry-run", type: "boolean", description: "Validate the hosted query write and show the intended change without saving it" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
-  output: {
-    targetScope: "string",
-    dryRun: "boolean?",
-    wouldChange: "boolean?",
-    preview: "object?",
-    ok: "boolean?",
-    mode: "string?",
-    graphKey: "string?",
-    name: "string?",
-    outPath: "string?",
-    warnings: "string[]?",
-    baseUrl: "string?",
-    source: "string?",
-    workspaceId: "string?",
-    workspaceSelectionSource: "string?",
-    query: "object?",
-    next: "object?",
-  },
-  examples: [
-    "fide graph query save --graph primary --name recentStatements 'select * from statements limit 10'",
-    "fide graph query save --workspace <workspace-id> --graph primary --name recentStatements 'select * from statements limit 10'",
-    "fide graph query save --workspace --graph primary --name recentStatements 'select * from statements limit 10'",
-  ],
-  notes: [
-    "Writes to hosted state only when `--workspace` is present; otherwise it saves into the current project's `.fide/queries/<graph>/` directory.",
-    "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
-    "Use `--dry-run` to preview whether a hosted workspace query write would change shared state before saving it.",
-  ],
-});
-
 export const graphBuildCommand = defineCommand({
   surface: "graph.build",
   command: "fide graph build",
@@ -445,17 +197,10 @@ export const graphBuildCommand = defineCommand({
 });
 
 export const GRAPH_COMMAND_METADATA = [
-  graphWriteCommand,
-  graphDraftCommand,
   graphStatusCommand,
   graphListCommand,
   graphGetCommand,
   graphSaveCommand,
-  graphQueryCommand,
-  graphQueryRunCommand,
-  graphQueryListCommand,
-  graphQueryGetCommand,
-  graphQuerySaveCommand,
   graphBuildCommand,
   graphDefsCommand,
 ] as const;

@@ -2,9 +2,7 @@ import { runGraphBuild } from "./build.js";
 import { runGraphDefs } from "./defs.js";
 import { graphCommandHelp } from "./help.js";
 import { runGraphGet, runGraphList, runGraphSaveCommand } from "./hosted.js";
-import { runGraphQueryCommand } from "./query.js";
 import { runGraphStatus } from "./status.js";
-import { runGraphStatementsCommand } from "./statements/index.js";
 
 /**
  * Route `fide graph <command>` subcommands.
@@ -13,10 +11,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
   if (!command || command === "--help" || command === "-h" || command === "help") {
     console.log(graphCommandHelp());
     return 0;
-  }
-
-  if (command === "statements") {
-    return runGraphStatementsCommand(args);
   }
 
   if (command === "status") {
@@ -33,10 +27,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "save") {
     return runGraphSaveCommand(args);
-  }
-
-  if (command === "query") {
-    return runGraphQueryCommand(args);
   }
 
   if (command === "build") {

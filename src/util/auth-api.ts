@@ -42,10 +42,11 @@ export type WorkspaceGraph = {
 };
 
 export type GraphQuery = {
+  type: string;
   graphKey: string;
   name: string;
   description: string | null;
-  sql: string;
+  query: string;
 };
 
 export type GraphQueryRunResult = GraphQuery & {
@@ -295,7 +296,8 @@ export function createAuthApiClient(options: AuthClientOptions) {
       workspaceId: string;
       graphKey: string;
       name: string;
-      sql: string;
+      type?: string;
+      query: string;
       description?: string | null;
     }): Promise<{ query: GraphQuery }> {
       const response = await fetch(
@@ -304,7 +306,8 @@ export function createAuthApiClient(options: AuthClientOptions) {
           method: "PUT",
           headers,
           body: JSON.stringify({
-            sql: input.sql,
+            ...(typeof input.type === "string" ? { type: input.type } : {}),
+            query: input.query,
             ...(typeof input.description === "string" ? { description: input.description } : {}),
           }),
         },

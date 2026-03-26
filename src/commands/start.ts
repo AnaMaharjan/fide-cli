@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import chokidar, { type FSWatcher } from "chokidar";
 import { readLocalQueries, type LocalQueryDefinition } from "@chris-test/graph";
+import {
+  planHostedWorkspaceGraphSync,
+  projectLocalGraphsToHostedGraphs,
+  type HostedWorkspaceGraphInput,
+  type LocalProjectGraphRecord,
+} from "@chris-test/workspace";
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../util/args.js";
 import { renderCommandHelp } from "../util/command-metadata.js";
 import { resolveAuthSettings } from "../util/auth-settings.js";
@@ -30,24 +36,15 @@ type SyncServerMessage = {
 };
 
 type ProjectSettingsRecord = {
-  graphs?: Record<string, {
-    type?: "postgres" | "sqlite" | "fide-jsonl";
-    recipe?: unknown;
-    metadata?: unknown;
-  }>;
-};
-
-type HostedWorkspaceGraphInput = {
-  type: "postgres" | "sqlite" | "fide-jsonl";
-  recipe?: unknown;
-  metadata?: unknown;
+  graphs?: Record<string, LocalProjectGraphRecord>;
 };
 
 type HostedWorkspaceQueryInput = {
+  type: string;
   graphKey: string;
   name: string;
   description: string | null;
-  sql: string;
+  query: string;
 };
 
 function logSyncRunner(event: string, details?: Record<string, unknown>): void {
@@ -115,28 +112,7 @@ function parseSyncMessage(raw: unknown): SyncServerMessage {
 
 function readHostedGraphsFromProjectSettings(settingsPath: string): Map<string, HostedWorkspaceGraphInput> {
   const settings = readJsonFile<ProjectSettingsRecord>(settingsPath);
-  const graphs = settings?.graphs;
-  const result = new Map<string, HostedWorkspaceGraphInput>();
-  if (!graphs || typeof graphs !== "object") {
-    return result;
-  }
-
-  for (const [graphKey, graph] of Object.entries(graphs)) {
-    if (!graph || typeof graph !== "object") {
-      continue;
-    }
-    const type = graph.type;
-    if (type !== "postgres" && type !== "sqlite" && type !== "fide-jsonl") {
-      continue;
-    }
-    result.set(graphKey, {
-      type,
-      ...(graph.recipe !== undefined ? { recipe: graph.recipe } : {}),
-      ...(graph.metadata !== undefined ? { metadata: graph.metadata } : {}),
-    });
-  }
-
-  return result;
+  return projectLocalGraphsToHostedGraphs(settings?.graphs);
 }
 
 function readHostedQueriesFromProject(root: string): Promise<Map<string, HostedWorkspaceQueryInput>> {
@@ -147,7 +123,8 @@ function readHostedQueriesFromProject(root: string): Promise<Map<string, HostedW
         graphKey: query.graphKey,
         name: query.name,
         description: query.description ?? null,
-        sql: query.sql,
+        type: "sql",
+        query: query.sql,
       });
     }
     return result;
@@ -315,6 +292,11 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
   const syncProjectGraphs = async () => {
     const localGraphs = readHostedGraphsFromProjectSettings(projectSettingsPath);
     const remoteGraphs = await workspaceApi.listWorkspaceGraphs(workspace.workspaceId);
+    const operations = planHostedWorkspaceGraphSync({
+      localGraphs,
+      remoteGraphs,
+    });
+
     logSyncRunner("graphs.sync.start", {
       projectSettingsPath,
       workspaceId: workspace.workspaceId,
@@ -322,47 +304,34 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
       remoteGraphKeys: remoteGraphs.map((graph) => graph.graphKey),
     });
 
-    for (const [graphKey, localGraph] of localGraphs.entries()) {
-      const remoteGraph = remoteGraphs.find((graph) => graph.graphKey === graphKey) ?? null;
-      const normalizedRemoteGraph = remoteGraph
-        ? {
-          type: remoteGraph.type,
-          ...(remoteGraph.recipe !== undefined ? { recipe: remoteGraph.recipe } : {}),
-          ...(remoteGraph.metadata !== undefined ? { metadata: remoteGraph.metadata } : {}),
-        }
-        : null;
-
-      if (normalizedRemoteGraph && isDeepStrictEqual(normalizedRemoteGraph, localGraph)) {
+    for (const operation of operations) {
+      if (operation.status === "unchanged") {
         logSyncRunner("graphs.sync.skip", {
-          graphKey,
+          graphKey: operation.graphKey,
           reason: "unchanged",
         });
         continue;
       }
-
+      if (operation.status === "remote_only") {
+        logSyncRunner("graphs.sync.skip", {
+          graphKey: operation.graphKey,
+          reason: "remote_only",
+        });
+        continue;
+      }
       logSyncRunner("graphs.sync.upsert", {
-        graphKey,
-        reason: remoteGraph ? "changed" : "missing_remote",
-        graph: localGraph,
+        graphKey: operation.graphKey,
+        reason: operation.status === "update" ? "changed" : "missing_remote",
+        graph: operation.localGraph,
       });
       const saved = await workspaceApi.saveWorkspaceGraph({
         workspaceId: workspace.workspaceId,
-        graphKey,
-        graph: localGraph,
+        graphKey: operation.graphKey,
+        graph: operation.localGraph,
       });
       logSyncRunner("graphs.sync.upsert.ok", {
         graphKey: saved.graphKey,
         type: saved.type,
-      });
-    }
-
-    for (const remoteGraph of remoteGraphs) {
-      if (localGraphs.has(remoteGraph.graphKey)) {
-        continue;
-      }
-      logSyncRunner("graphs.sync.skip", {
-        graphKey: remoteGraph.graphKey,
-        reason: "remote_only",
       });
     }
   };
@@ -401,7 +370,8 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
           graphKey: remoteQuery.graphKey,
           name: remoteQuery.name,
           description: remoteQuery.description ?? null,
-          sql: remoteQuery.sql,
+          type: remoteQuery.type,
+          query: remoteQuery.query,
         }
         : null;
 
@@ -421,7 +391,8 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
         workspaceId: workspace.workspaceId,
         graphKey: localQuery.graphKey,
         name: localQuery.name,
-        sql: localQuery.sql,
+        type: localQuery.type,
+        query: localQuery.query,
         description: localQuery.description,
       });
       logSyncRunner("queries.sync.upsert.ok", {

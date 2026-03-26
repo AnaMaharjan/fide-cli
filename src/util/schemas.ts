@@ -2,6 +2,8 @@ import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 import { AUTH_COMMAND_SCHEMAS } from "../commands/auth/metadata.js";
 import { CORE_COMMAND_SCHEMAS } from "../commands/metadata.js";
 import { GRAPH_COMMAND_SCHEMAS } from "../commands/graph/metadata.js";
+import { QUERY_COMMAND_SCHEMAS } from "../commands/query/metadata.js";
+import { STATEMENTS_COMMAND_SCHEMAS } from "../commands/statements/metadata.js";
 import { WORKSPACE_COMMAND_SCHEMAS } from "../commands/workspace/metadata.js";
 
 /**
@@ -13,6 +15,8 @@ const FIDE_ENTITY_TYPE_ENUM = Object.keys(FIDE_ENTITY_TYPES).sort();
 export const COMMAND_SCHEMAS: Record<string, { command: string; params: Array<{ name: string; type: string; required?: boolean; description?: string; enum?: string[] }>; output: Record<string, string> }> = {
   ...CORE_COMMAND_SCHEMAS,
   ...GRAPH_COMMAND_SCHEMAS,
+  ...QUERY_COMMAND_SCHEMAS,
+  ...STATEMENTS_COMMAND_SCHEMAS,
   ...AUTH_COMMAND_SCHEMAS,
   ...WORKSPACE_COMMAND_SCHEMAS,
   "graph.statement-input": {

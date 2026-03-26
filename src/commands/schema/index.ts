@@ -22,7 +22,8 @@ function schemaHelp(): string {
           "  fide schema",
           "  fide schema status",
           "  fide schema graph.statements.write",
-          "  fide schema graph.query",
+          "  fide schema query.run",
+          "  fide schema statements.write",
         ],
       },
       {

@@ -1,44 +1,46 @@
 import type { FideSettings } from "@chris-test/graph";
-import { isDeepStrictEqual } from "node:util";
+import {
+  planHostedWorkspaceGraphSync,
+  projectLocalGraphToHostedGraph,
+  type HostedWorkspaceGraphInput,
+  type LocalProjectGraphRecord,
+} from "@chris-test/workspace";
 import { parseArgs, getStringFlag, hasFlag, shouldUseJsonOutput } from "../../util/args.js";
 import { renderCommandHelp } from "../../util/command-metadata.js";
 import { formatPretty } from "../../util/pretty.js";
-import { readJsonFile, resolveSettingsPath } from "../../util/fide-dir.js";
+import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../../util/fide-dir.js";
 import { printJson, readUtf8 } from "../../util/io.js";
 import { okResponse } from "../../util/response.js";
 import { assertGraphKey } from "../../util/selectors.js";
-import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
+import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
 import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.js";
 
-type HostedGraphRecord = {
-  type: "postgres" | "sqlite" | "fide-jsonl";
-  connection?: unknown;
-  recipe?: unknown;
-  metadata?: unknown;
-};
-
-type HostedWorkspaceGraphInput = {
-  type: "postgres" | "sqlite" | "fide-jsonl";
-  recipe?: unknown;
-  metadata?: unknown;
-};
-
-function readGraphs(settings: Record<string, unknown>): Record<string, HostedGraphRecord> {
+function readGraphs(settings: Record<string, unknown>): Record<string, LocalProjectGraphRecord> {
   const raw = settings.graphs;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  return raw as Record<string, HostedGraphRecord>;
+  return raw as Record<string, LocalProjectGraphRecord>;
 }
 
-function toHostedWorkspaceGraphInput(graph: HostedGraphRecord): HostedWorkspaceGraphInput {
+function shouldUseHostedGraphScope(flags: Map<string, string | boolean>): boolean {
+  return flags.has("workspace");
+}
+
+function listLocalProjectGraphs(root: string = process.cwd()): {
+  root: string;
+  graphs: Array<{ graphKey: string; graph: LocalProjectGraphRecord }>;
+} {
+  const settingsPath = resolveSettingsPath(root);
+  const settings = readJsonFile<FideSettings>(settingsPath);
+  const graphs = readGraphs((settings ?? {}) as Record<string, unknown>);
+  const fide = resolveFideContext(root);
   return {
-    type: graph.type,
-    ...(graph.recipe !== undefined ? { recipe: graph.recipe } : {}),
-    ...(graph.metadata !== undefined ? { metadata: graph.metadata } : {}),
+    root: fide.root,
+    graphs: Object.entries(graphs).map(([graphKey, graph]) => ({ graphKey, graph })),
   };
 }
 
-function readLocalProjectGraph(graphKey: string, root: string = process.cwd()): HostedGraphRecord | null {
+function readLocalProjectGraph(graphKey: string, root: string = process.cwd()): LocalProjectGraphRecord | null {
   const settingsPath = resolveSettingsPath(root);
   const settings = readJsonFile<FideSettings>(settingsPath);
   return readGraphs((settings ?? {}) as Record<string, unknown>)[graphKey] ?? null;
@@ -74,7 +76,17 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
         : positionals.join(" ");
     return {
       flags,
-      graph: toHostedWorkspaceGraphInput(JSON.parse(raw) as HostedGraphRecord),
+      graph: (() => {
+        const projected = projectLocalGraphToHostedGraph("__input__", JSON.parse(raw) as LocalProjectGraphRecord);
+        if (!projected) {
+          throw new Error("Invalid hosted graph input. Expected a graph object with type `postgres`, `sqlite`, or `fide-jsonl`.");
+        }
+        return {
+          type: projected.type,
+          ...(projected.recipe !== undefined ? { recipe: projected.recipe } : {}),
+          ...(projected.metadata !== undefined ? { metadata: projected.metadata } : {}),
+        };
+      })(),
     };
   }
 
@@ -83,9 +95,17 @@ async function readGraphInput(args: string[]): Promise<{ flags: Map<string, stri
   if (graphKey) {
     const localGraph = readLocalProjectGraph(graphKey);
     if (localGraph) {
+      const projected = projectLocalGraphToHostedGraph(graphKey, localGraph);
+      if (!projected) {
+        throw new Error(`Local project graph "${graphKey}" is not a valid hosted graph candidate.`);
+      }
       return {
         flags,
-        graph: toHostedWorkspaceGraphInput(localGraph),
+        graph: {
+          type: projected.type,
+          ...(projected.recipe !== undefined ? { recipe: projected.recipe } : {}),
+          ...(projected.metadata !== undefined ? { metadata: projected.metadata } : {}),
+        },
       };
     }
   }
@@ -115,6 +135,25 @@ export async function runGraphList(args: string[]): Promise<number> {
   const useJson = shouldUseJsonOutput(flags);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(renderCommandHelp(graphListCommand));
+    return 0;
+  }
+
+  if (!shouldUseHostedGraphScope(flags)) {
+    const local = listLocalProjectGraphs();
+    const payload = {
+      targetScope: "local" as const,
+      root: local.root,
+      graphs: local.graphs.map(({ graphKey, graph }) => ({
+        graphKey,
+        ...graph,
+      })),
+    };
+
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(formatPretty("graph-list-local.v1", payload));
+    }
     return 0;
   }
 
@@ -165,6 +204,26 @@ export async function runGraphGet(args: string[]): Promise<number> {
   const graphKeyFlag = getStringFlag(flags, "graph");
   const graphKey = graphKeyFlag ? assertGraphKey(graphKeyFlag) : null;
   if (!graphKey) throw new Error("Missing required flag: --graph <key>.");
+
+  if (!shouldUseHostedGraphScope(flags)) {
+    const fide = resolveFideContext(process.cwd());
+    const graph = readLocalProjectGraph(graphKey);
+    if (!graph) {
+      throw new Error(`Local project graph not found: ${graphKey}. Use \`fide graph list\` to inspect local graphs, or pass \`--workspace <workspace-id>\` for hosted graphs.`);
+    }
+    const payload = {
+      targetScope: "local" as const,
+      root: fide.root,
+      graphKey,
+      graph,
+    };
+    if (useJson) {
+      printJson(payload);
+    } else {
+      console.log(formatPretty("graph-get-local.v1", payload));
+    }
+    return 0;
+  }
 
   const selection = await resolveWorkspaceSelectionOrThrow(flags);
   const { auth, client } = await requireWorkspaceApiClient(flags);
@@ -224,17 +283,11 @@ export async function runGraphSaveCommand(args: string[]): Promise<number> {
     };
     try {
       const existing = await client.getWorkspaceGraph(selection.workspaceId, graphKey);
-      const nextGraph = {
-        type: graph.type,
-        ...(graph.recipe !== undefined ? { recipe: graph.recipe } : {}),
-        ...(graph.metadata !== undefined ? { metadata: graph.metadata } : {}),
-      };
-      const currentGraph = {
-        type: existing.type,
-        ...(existing.recipe !== undefined ? { recipe: existing.recipe } : {}),
-        ...(existing.metadata !== undefined ? { metadata: existing.metadata } : {}),
-      };
-      wouldChange = !isDeepStrictEqual(currentGraph, nextGraph);
+      const [operation] = planHostedWorkspaceGraphSync({
+        localGraphs: new Map([[graphKey, graph]]),
+        remoteGraphs: [existing],
+      });
+      wouldChange = operation?.status === "create" || operation?.status === "update";
       preview = wouldChange
         ? {
           targetState: "existing-graph",

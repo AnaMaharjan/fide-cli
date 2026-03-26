@@ -20,13 +20,13 @@ function nextCommands(key: string | null, recipe: unknown, graphStoreType?: "pos
   if (!key) return undefined;
   if (graphStoreType === "fide-jsonl") {
     return {
-      writeHelpCommand: "fide graph statements write -h",
-      writeCommand: "fide graph statements write ...",
+      writeHelpCommand: "fide statements write -h",
+      writeCommand: "fide statements write ...",
     };
   }
   const next: Record<string, string> = {
-    queryHelpCommand: "fide graph query run -h",
-    queryCommand: `fide graph query run --graph ${key} ...`,
+    queryHelpCommand: "fide query run -h",
+    queryCommand: `fide query run --graph ${key} ...`,
   };
   if (Array.isArray(recipe) && recipe.length > 0) {
     next.buildHelpCommand = "fide graph build -h";
@@ -75,12 +75,12 @@ async function getRuntimeStatusOverview() {
         statusCommand: `fide graph status --graph ${key}`,
         ...(("graphStoreType" in detailed && detailed.graphStoreType === "fide-jsonl")
           ? {
-              writeHelpCommand: "fide graph statements write -h",
-              writeCommand: "fide graph statements write ...",
+              writeHelpCommand: "fide statements write -h",
+              writeCommand: "fide statements write ...",
             }
           : {
-              queryHelpCommand: "fide graph query run -h",
-              queryCommand: `fide graph query run --graph ${key} ...`,
+              queryHelpCommand: "fide query run -h",
+              queryCommand: `fide query run --graph ${key} ...`,
             }),
         ...(Array.isArray((detailed as { recipe?: unknown }).recipe) && (detailed as { recipe?: unknown[] }).recipe!.length > 0 && detailed.graphStoreType !== "fide-jsonl"
           ? {
@@ -149,8 +149,8 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
   const local = {
     configured: true,
     next: {
-      writeHelpCommand: "fide graph statements write -h",
-      writeCommand: "fide graph statements write ...",
+      writeHelpCommand: "fide statements write -h",
+      writeCommand: "fide statements write ...",
     },
     root,
     connection: graphTarget.connection ?? root,
