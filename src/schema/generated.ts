@@ -372,15 +372,11 @@ export const GENERATED_TYPE_SCHEMAS = {
       "required": [
         "ok",
         "scope",
-        "command",
-        "error"
+        "command"
       ],
       "properties": {
         "ok": {
-          "type": "boolean",
-          "enum": [
-            false
-          ]
+          "type": "boolean"
         },
         "scope": {
           "type": "string",
@@ -395,9 +391,34 @@ export const GENERATED_TYPE_SCHEMAS = {
           ]
         },
         "error": {
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
         },
         "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "pluginId": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "installDir": {
           "anyOf": [
             {
               "type": "string"
