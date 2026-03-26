@@ -62,9 +62,9 @@ const REFERENCE_TYPES = [
   "JSONLiteral",
 ] as const;
 
-function graphDefsNext(path = "/vocabulary"): Record<string, string> {
+function statementsGuideNext(path = "/vocabulary"): Record<string, string> {
   return {
-    defsCommand: "fide graph defs",
+    guideCommand: "fide statements guide",
     docsCommand: `fide docs ${path}`,
   };
 }
@@ -147,10 +147,10 @@ function normalizeCliError(err: unknown, scope: string): CliErrorPayload {
         code: "validation_error",
         message: `Invalid entityType: ${value}`,
         hint: value === "Text"
-          ? "Use TextLiteral for plain text values. Run `fide graph defs` to inspect valid entity types."
-          : "Run `fide graph defs` to inspect valid entity types.",
+          ? "Use TextLiteral for plain text values. Run `fide statements guide` to inspect valid entity types."
+          : "Run `fide statements guide` to inspect valid entity types.",
       },
-      next: graphDefsNext(value === "Text" ? "/vocabulary/definitions/text-literal" : "/vocabulary"),
+      next: statementsGuideNext(value === "Text" ? "/vocabulary/definitions/text-literal" : "/vocabulary"),
     };
   }
 
@@ -163,9 +163,9 @@ function normalizeCliError(err: unknown, scope: string): CliErrorPayload {
       error: {
         code: "validation_error",
         message: `Invalid referenceType: ${value}`,
-        hint: "Run `fide graph defs` to inspect valid reference types.",
+        hint: "Run `fide statements guide` to inspect valid reference types.",
       },
-      next: graphDefsNext(value === "Text" ? "/vocabulary/definitions/text-literal" : "/vocabulary"),
+      next: statementsGuideNext(value === "Text" ? "/vocabulary/definitions/text-literal" : "/vocabulary"),
     };
   }
 
@@ -208,7 +208,7 @@ export function printCliError(err: unknown, options: CliErrorOptions): void {
         if (typeof value === "string") {
           const label = key === "docsCommand"
             ? "Docs"
-            : key === "defsCommand"
+            : key === "guideCommand"
               ? "Next"
               : `Next (${key})`;
           console.error(`${label}: ${value}`);

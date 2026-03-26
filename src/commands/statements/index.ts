@@ -1,5 +1,6 @@
 import { statementsHelp } from "./help.js";
 import { runStatementsDraft } from "./draft.js";
+import { runStatementsGuide } from "./guide.js";
 import { runStatementsWrite } from "./write.js";
 
 export async function runStatementsCommand(args: string[]): Promise<number> {
@@ -15,6 +16,10 @@ export async function runStatementsCommand(args: string[]): Promise<number> {
 
   if (command === "draft") {
     return runStatementsDraft(rest);
+  }
+
+  if (command === "guide") {
+    return runStatementsGuide(rest);
   }
 
   console.error(`Unknown statements command: ${command}`);

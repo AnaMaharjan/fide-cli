@@ -28,10 +28,11 @@ export const graphStatusCommand = defineCommand({
     "fide graph status --fide-dir <path>",
     "fide graph status --graph <key>",
   ],
-  paramOrder: ["fide-dir", "graph"],
+  paramOrder: ["fide-dir", "graph", "pretty"],
   params: {
     "fide-dir": { kind: "string", description: "Optional local .fide directory override", valueLabel: "<path>" },
     graph: { kind: "string", description: "Configured graph key", valueLabel: "<key>" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   notes: [
     "With no selector, also returns local .fide status.",

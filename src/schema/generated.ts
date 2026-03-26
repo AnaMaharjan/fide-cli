@@ -94,73 +94,6 @@ export const GENERATED_TYPE_SCHEMAS = {
       }
     }
   },
-  "graph.defs.output": {
-    "command": "fide schema --surface graph.defs.output",
-    "format": "ts-type.v0",
-    "typeName": "GraphDefsOutput",
-    "source": "src/commands/graph/defs.ts",
-    "schema": {
-      "type": "object",
-      "required": [
-        "ok",
-        "scope",
-        "command",
-        "layers",
-        "statementRules"
-      ],
-      "properties": {
-        "ok": {
-          "type": "boolean",
-          "enum": [
-            true
-          ]
-        },
-        "scope": {
-          "type": "string",
-          "enum": [
-            "graph-defs.v1"
-          ]
-        },
-        "command": {
-          "type": "string",
-          "enum": [
-            "fide graph defs"
-          ]
-        },
-        "next": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {}
-            }
-          ]
-        },
-        "layers": {
-          "type": "object",
-          "properties": {}
-        },
-        "entities": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "unknown"
-              }
-            }
-          ]
-        },
-        "entity": {
-          "type": "unknown"
-        },
-        "statementRules": {
-          "type": "array",
-          "items": {
-            "type": "unknown"
-          }
-        }
-      }
-    }
-  },
   "graph.get.output": {
     "command": "fide schema --surface graph.get.output",
     "format": "ts-type.v0",
@@ -857,6 +790,73 @@ export const GENERATED_TYPE_SCHEMAS = {
           "type": "array",
           "items": {
             "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "statements.guide.output": {
+    "command": "fide schema --surface statements.guide.output",
+    "format": "ts-type.v0",
+    "typeName": "StatementsGuideOutput",
+    "source": "src/commands/statements/guide.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command",
+        "layers",
+        "statementRules"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "statements-guide.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide statements guide"
+          ]
+        },
+        "next": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {}
+            }
+          ]
+        },
+        "layers": {
+          "type": "object",
+          "properties": {}
+        },
+        "entities": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "unknown"
+              }
+            }
+          ]
+        },
+        "entity": {
+          "type": "unknown"
+        },
+        "statementRules": {
+          "type": "array",
+          "items": {
+            "type": "unknown"
           }
         }
       }

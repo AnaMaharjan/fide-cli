@@ -45,6 +45,7 @@ export const statementsDraftCommand = defineCommand({
     "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
     "Reusing the same --name and --path updates the existing draft.",
     "Use `fide statements write` for canonical JSONL batches.",
+    "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
   ],
 });
 

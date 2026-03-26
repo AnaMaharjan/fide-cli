@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { hasFlag, parseArgs } from "../util/command/args.js";
-import { defineCommand } from "../util/command/command-metadata.js";
-import { renderHelp } from "../util/command/help.js";
+import { hasFlag, parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
+import { defineCommand, renderCommandHelp } from "../util/command/command-metadata.js";
 import { printJson } from "../util/command/io.js";
+import { formatPretty } from "../util/command/pretty.js";
 import { errorResponse, okResponse } from "../util/command/response.js";
 
 type DocsMapping = {
@@ -35,9 +35,11 @@ export const docsCommand = defineCommand({
   command: "fide docs",
   outputType: "DocsOutput",
   summary: "Resolve local docs pointers",
-  usage: ["fide docs <path>"],
-  params: {},
-  paramOrder: [],
+  usage: ["fide docs <path> [--pretty|-p]"],
+  paramOrder: ["pretty"],
+  params: {
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
 });
 
 const DOCS_MAPPINGS: DocsMapping[] = [
@@ -60,21 +62,12 @@ const DOCS_MAPPINGS: DocsMapping[] = [
 ];
 
 function docsHelp(): string {
-  return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: [
-          "  fide docs <path>",
-        ],
-      },
-      {
-        title: "Examples",
-        items: [
-          "  fide docs /fcp/specification/statements",
-          "  fide docs /vocabulary/definitions/network-resource",
-        ],
-      },
+  return renderCommandHelp({
+    ...docsCommand,
+    usage: ["fide docs <path> [--pretty|-p]"],
+    examples: [
+      "fide docs /fcp/specification/statements",
+      "fide docs /vocabulary/definitions/network-resource",
     ],
   });
 }
@@ -129,6 +122,7 @@ function readDoc(pathValue: string): ParsedDoc | null {
 
 export async function runDocsCommand(args: string[]): Promise<number> {
   const { flags, positionals } = parseArgs(args);
+  const useJson = shouldUseJsonOutput(flags);
 
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(docsHelp());
@@ -144,13 +138,14 @@ export async function runDocsCommand(args: string[]): Promise<number> {
 
   const doc = readDoc(docsPath);
   if (!doc) {
-    printJson(errorResponse("docs.v1", `Unknown docs path: ${docsPath}`, {
+    const payload = errorResponse("docs.v1", `Unknown docs path: ${docsPath}`, {
       supportedPrefixes: DOCS_MAPPINGS.map((entry) => entry.prefix),
-    }, { command: "fide docs" }));
+    }, { command: "fide docs" });
+    printJson(payload);
     return 1;
   }
 
-  printJson(okResponse("docs.v1", {
+  const payload = okResponse("docs.v1", {
     path: doc.path,
     title: doc.title,
     description: doc.description,
@@ -158,6 +153,11 @@ export async function runDocsCommand(args: string[]): Promise<number> {
     filePath: doc.filePath,
   }, {
     command: "fide docs",
-  }));
+  });
+  if (useJson) {
+    printJson(payload);
+  } else {
+    console.log(formatPretty("docs.v1", payload) ?? JSON.stringify(payload, null, 2));
+  }
   return 0;
 }

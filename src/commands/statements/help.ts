@@ -1,5 +1,6 @@
 import { renderHelp } from "../../util/command/help.js";
 import { statementsDraftCommand } from "./draft.js";
+import { statementsGuideCommand } from "./guide.js";
 import { statementsWriteCommand } from "./write.js";
 
 export function statementsHelp(): string {
@@ -16,6 +17,7 @@ export function statementsHelp(): string {
         items: [
           `  write      ${statementsWriteCommand.summary}`,
           `  draft      ${statementsDraftCommand.summary}`,
+          `  guide      ${statementsGuideCommand.summary}`,
         ],
       },
       {
@@ -24,6 +26,7 @@ export function statementsHelp(): string {
           "  fide statements write '[{ ... statement inputs ... }]'",
           "  fide statements write --file inputs.json",
           "  fide statements draft --name research-notes --file inputs.json",
+          "  fide statements guide --entity NetworkResource",
         ],
       },
       {
@@ -31,6 +34,7 @@ export function statementsHelp(): string {
         items: [
           "  - `statements write` writes canonical JSONL batches into the local project `.fide` directory.",
           "  - `statements draft` creates or updates a local markdown draft from the same statement batch.",
+          "  - `statements guide` shows the statement-shape guidance and allowed entity types agents need while authoring statements.",
           "  - These commands are local-only and do not target hosted workspace state directly.",
         ],
       },

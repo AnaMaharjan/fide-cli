@@ -1,6 +1,5 @@
 import { renderHelp } from "../../util/command/help.js";
 import { graphBuildCommand } from "./build.js";
-import { graphDefsCommand } from "./defs.js";
 import { graphGetCommand } from "./get.js";
 import { graphListCommand } from "./list.js";
 import { graphSaveCommand } from "./save.js";
@@ -13,7 +12,6 @@ export function graphCommandHelp(): string {
     { name: "get", summary: graphGetCommand.summary },
     { name: "save", summary: graphSaveCommand.summary },
     { name: "build", summary: graphBuildCommand.summary },
-    { name: "defs", summary: graphDefsCommand.summary },
   ];
 
   return renderHelp({
@@ -39,7 +37,7 @@ export function graphCommandHelp(): string {
           "  fide query save --graph sqlite --name recentStatements 'select * from statements limit 10'",
           `  ${graphBuildCommand.examples?.[1] ?? "fide graph build --graph combined"}`,
           "  fide statements draft --name research-notes --file inputs.json",
-          "  fide graph defs",
+          "  fide statements guide --entity NetworkResource",
         ],
       },
       {
@@ -53,7 +51,7 @@ export function graphCommandHelp(): string {
           "  - `fide start` uses the same projection model when syncing local graphs into the hosted workspace.",
           "  - Hosted `graph save` accepts `--dry-run` to preview whether the write would change shared state.",
           "  - Prefer the top-level `fide query ...` and `fide statements ...` surfaces for local authoring.",
-          "  - Hosted graph/query commands resolve auth from the current project account or `FIDE_ACCOUNT_ID`.",
+          "  - Hosted graph commands resolve auth from the current project account.",
         ],
       },
     ],

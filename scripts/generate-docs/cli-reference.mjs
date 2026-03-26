@@ -25,7 +25,7 @@ const TOP_LEVEL_DOC_PAGES = [
 const PAGE_GROUPS = [
   {
     title: "Core",
-    match: (slug) => slug === "fide" || slug === "status" || slug === "docs" || slug === "schema",
+    match: (slug) => slug === "fide" || slug === "status" || slug === "start" || slug === "stop" || slug === "docs" || slug === "schema",
   },
   {
     title: "Auth",
@@ -37,20 +37,20 @@ const PAGE_GROUPS = [
   },
   {
     title: "Graph",
-    match: (slug) => slug.startsWith("graph-") && !slug.startsWith("graph-query-") && !slug.startsWith("graph-statements-"),
+    match: (slug) => slug === "graph" || (slug.startsWith("graph-") && !slug.startsWith("graph-query-") && !slug.startsWith("graph-statements-")),
   },
   {
-    title: "Graph Query",
-    match: (slug) => slug.startsWith("graph-query-"),
+    title: "Query",
+    match: (slug) => slug === "query" || slug.startsWith("query-"),
   },
   {
-    title: "Graph Statements",
-    match: (slug) => slug.startsWith("graph-statements-"),
+    title: "Statements",
+    match: (slug) => slug === "statements" || slug.startsWith("statements-"),
   },
   {
     title: "Workspace",
     match: (slug) =>
-      slug.startsWith("workspace-")
+      (slug === "workspace" || slug.startsWith("workspace-"))
       && slug !== "workspace-members"
       && !slug.startsWith("workspace-members-")
       && !slug.startsWith("workspace-roles-")

@@ -301,6 +301,53 @@ function formatWorkspaceMembers(payload: PrettyRenderable): string {
   return lines.join("\n");
 }
 
+function formatStatementsGuide(payload: PrettyRenderable): string {
+  const statementRules = Array.isArray(payload.statementRules)
+    ? payload.statementRules as Array<{ id?: string; description?: string }>
+    : [];
+  const entities = Array.isArray(payload.entities)
+    ? payload.entities as Array<{ name?: string; description?: string }>
+    : [];
+  const entity = payload.entity && isPlainObject(payload.entity)
+    ? payload.entity as Record<string, unknown>
+    : null;
+
+  const lines: string[] = [];
+
+  if (statementRules.length > 0) {
+    lines.push("Statement Rules");
+    for (const rule of statementRules) {
+      const description = typeof rule.description === "string" ? rule.description : "";
+      const id = typeof rule.id === "string" ? rule.id : null;
+      lines.push(`  - ${description}${id ? ` (${id})` : ""}`);
+    }
+  }
+
+  if (entities.length > 0) {
+    if (lines.length > 0) lines.push("");
+    lines.push("Entity Types");
+    for (const item of entities) {
+      const name = typeof item.name === "string" ? item.name : "Unknown";
+      const description = typeof item.description === "string" ? item.description : "";
+      lines.push(`  - ${name}: ${description}`);
+    }
+  }
+
+  if (entity) {
+    if (lines.length > 0) lines.push("");
+    lines.push("Entity");
+    for (const [key, value] of Object.entries(entity)) {
+      if (Array.isArray(value)) {
+        lines.push(`  ${toDisplayLabel(key)}: ${value.map((entry) => formatScalar(entry)).join(", ")}`);
+      } else {
+        lines.push(`  ${toDisplayLabel(key)}: ${formatScalar(value)}`);
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
 export function formatPretty(scope: string, payload: PrettyRenderable): string | null {
   switch (scope) {
     case "status.v1":
@@ -315,6 +362,8 @@ export function formatPretty(scope: string, payload: PrettyRenderable): string |
       return formatWorkspaceGet(payload);
     case "workspace-members.v1":
       return formatWorkspaceMembers(payload);
+    case "statements-guide.v1":
+      return formatStatementsGuide(payload);
     default:
       return renderGenericPretty(payload);
   }

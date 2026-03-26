@@ -1,5 +1,4 @@
 import { runGraphBuild } from "./build.js";
-import { runGraphDefs } from "./defs.js";
 import { runGraphGet } from "./get.js";
 import { graphCommandHelp } from "./help.js";
 import { runGraphList } from "./list.js";
@@ -33,10 +32,6 @@ export async function runGraphCommand(command: string | undefined, args: string[
 
   if (command === "build") {
     return runGraphBuild(args);
-  }
-
-  if (command === "defs") {
-    return runGraphDefs(args);
   }
 
   console.error(`Unknown graph command: ${command}`);

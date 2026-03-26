@@ -1,7 +1,6 @@
 import { hasFlag, parseArgs } from "../../util/command/args.js";
 import { booleanKeysFromCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
 import { queryGetCommand, runQueryGet } from "./get.js";
-import { queryGroupCommand } from "./group.js";
 import { queryCommandHelp } from "./help.js";
 import { queryListCommand, runQueryList } from "./list.js";
 import { runQueryRun } from "./run.js";
@@ -62,6 +61,4 @@ export async function runQueryCommand(args: string[]): Promise<number> {
   console.error(queryCommandHelp());
   return 1;
 }
-
-export { queryGroupCommand } from "./group.js";
 export { queryCommandHelp } from "./help.js";

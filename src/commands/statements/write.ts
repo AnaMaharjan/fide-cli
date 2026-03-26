@@ -34,6 +34,7 @@ export const statementsWriteCommand = defineCommand({
   },
   notes: [
     "Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
+    "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
   ],
 });
 
