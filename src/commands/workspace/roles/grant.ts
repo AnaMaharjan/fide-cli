@@ -1,7 +1,7 @@
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
-import { assertUserId } from "../../../util/public-ids.js";
+import { assertAccountId } from "../../../util/public-ids.js";
 import { formatPretty } from "../../../util/pretty.js";
 import { okResponse } from "../../../util/response.js";
 import { assertRoleKey } from "../../../util/selectors.js";
@@ -19,11 +19,11 @@ export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
 
   const selection = await requireHostedWorkspaceTarget(flags);
   const workspaceId = selection.workspaceId;
-  const userIdFlag = getStringFlag(flags, "user-id");
+  const accountIdFlag = getStringFlag(flags, "account-id");
   const roleFlag = getStringFlag(flags, "role");
-  if (!userIdFlag) throw new Error("Missing required flag: --user-id");
+  if (!accountIdFlag) throw new Error("Missing required flag: --account-id");
   if (!roleFlag) throw new Error("Missing required flag: --role");
-  const userId = assertUserId(userIdFlag);
+  const accountId = assertAccountId(accountIdFlag);
   const roleKey = assertRoleKey(roleFlag);
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
@@ -36,11 +36,11 @@ export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
         targetScope: "workspace",
         workspaceId,
         workspaceSelectionSource: selection.source,
-        userId,
+        accountId,
         roleKey,
       },
     );
-    const existing = members.members.find((member) => member.userId === userId);
+    const existing = members.members.find((member) => member.accountId === accountId);
     const alreadyHasRole = Boolean(existing?.roles.includes(roleKey));
     const preview = !existing
       ? {
@@ -68,7 +68,7 @@ export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
       source: auth.source,
       ok: true,
       workspaceId,
-      userId,
+      accountId,
       roleKey,
     }, {
       command: "fide workspace roles grant",
@@ -86,14 +86,14 @@ export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
   }
 
   const result = await runHostedOperation(
-    () => client.grantWorkspaceRole({ workspaceId, userId, roleKey }),
+    () => client.grantWorkspaceRole({ workspaceId, accountId, roleKey }),
     {
       auth,
       client,
       targetScope: "workspace",
       workspaceId,
       workspaceSelectionSource: selection.source,
-      userId,
+      accountId,
       roleKey,
     },
   );
@@ -105,7 +105,7 @@ export async function runWorkspaceRolesGrant(args: string[]): Promise<number> {
     command: "fide workspace roles grant",
     next: {
       members: `fide workspace members list --workspace ${workspaceId}`,
-      revoke: `fide workspace roles revoke --workspace ${workspaceId} --user-id ${userId} --role ${roleKey}`,
+      revoke: `fide workspace roles revoke --workspace ${workspaceId} --account-id ${accountId} --role ${roleKey}`,
     },
   });
 

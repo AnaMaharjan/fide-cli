@@ -1,7 +1,7 @@
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
 import { renderCommandHelp } from "../../../util/command-metadata.js";
 import { printJson } from "../../../util/io.js";
-import { assertUserId } from "../../../util/public-ids.js";
+import { assertAccountId } from "../../../util/public-ids.js";
 import { formatPretty } from "../../../util/pretty.js";
 import { okResponse } from "../../../util/response.js";
 import { assertRoleKey } from "../../../util/selectors.js";
@@ -19,15 +19,15 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
 
   const selection = await requireHostedWorkspaceTarget(flags);
   const workspaceId = selection.workspaceId;
-  const userIdFlag = getStringFlag(flags, "user-id");
+  const accountIdFlag = getStringFlag(flags, "account-id");
   const email = getStringFlag(flags, "human-email");
   const roleFlag = getStringFlag(flags, "role");
-  if (!userIdFlag && !email) throw new Error("Missing required flag: --user-id or --human-email");
-  if (userIdFlag && email) throw new Error("Pass only one of --user-id or --human-email");
+  if (!accountIdFlag && !email) throw new Error("Missing required flag: --account-id or --human-email");
+  if (accountIdFlag && email) throw new Error("Pass only one of --account-id or --human-email");
   if (!roleFlag) throw new Error("Missing required flag: --role");
-  const userId = userIdFlag ? assertUserId(userIdFlag) : null;
+  const accountId = accountIdFlag ? assertAccountId(accountIdFlag) : null;
   const roleKey = assertRoleKey(roleFlag);
-  const target = userId ?? email!;
+  const target = accountId ?? email!;
 
   const { auth, client } = await requireWorkspaceApiClient(flags);
   if (dryRun) {
@@ -39,13 +39,13 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
         targetScope: "workspace",
         workspaceId,
         workspaceSelectionSource: selection.source,
-        userId: userId ?? undefined,
+        accountId: accountId ?? undefined,
         roleKey,
         email: email ?? undefined,
       },
     );
-    const existing = userId
-      ? members.members.find((member) => member.userId === userId)
+    const existing = accountId
+      ? members.members.find((member) => member.accountId === accountId)
       : undefined;
     const alreadyHasRole = Boolean(existing?.roles.includes(roleKey));
     const targetState = email
@@ -85,7 +85,7 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
       source: auth.source,
       ok: true,
       workspaceId,
-      userId,
+      accountId,
       email: email ?? null,
       roleKey,
     }, {
@@ -106,7 +106,7 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
   const result = await runHostedOperation(
     () => client.addWorkspaceMember({
       workspaceId,
-      ...(userId ? { userId } : {}),
+      ...(accountId ? { accountId } : {}),
       ...(email ? { email } : {}),
       roleKey,
     }),
@@ -116,7 +116,7 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
       targetScope: "workspace",
       workspaceId,
       workspaceSelectionSource: selection.source,
-      userId: userId ?? undefined,
+      accountId: accountId ?? undefined,
       roleKey,
       email: email ?? undefined,
     },
@@ -129,7 +129,7 @@ export async function runWorkspaceMembersAdd(args: string[]): Promise<number> {
     command: "fide workspace members add",
     next: {
       members: `fide workspace members list --workspace ${workspaceId}`,
-      ...(userId ? { grantRole: `fide workspace roles grant --workspace ${workspaceId} --user-id ${userId} --role <role-key>` } : {}),
+      ...(accountId ? { grantRole: `fide workspace roles grant --workspace ${workspaceId} --account-id ${accountId} --role <role-key>` } : {}),
     },
   });
 

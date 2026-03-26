@@ -63,7 +63,7 @@ export type GraphQuerySummary = {
 };
 
 export type WorkspaceMember = {
-  userId: string;
+  accountId: string;
   userType?: "human" | "agent" | null;
   managementMode?: "self" | "workspace" | "controller" | null;
   managingWorkspaceId?: string | null;
@@ -75,9 +75,9 @@ export type WorkspaceMember = {
 export type WorkspaceMemberMutation = {
   ok: boolean;
   workspaceId: string;
-  selectorType?: "user_id" | "human_email";
+  selectorType?: "account_id" | "human_email";
   resultType?: "member_added" | "invitation_created";
-  userId: string | null;
+  accountId: string | null;
   email?: string | null;
   addedExistingUser?: boolean;
   roleKey: string;
@@ -341,7 +341,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async addWorkspaceMember(input: {
       workspaceId: string;
-      userId?: string;
+      accountId?: string;
       email?: string;
       roleKey: string;
     }): Promise<WorkspaceMemberMutation> {
@@ -349,7 +349,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
         method: "POST",
         headers,
         body: JSON.stringify({
-          ...(input.userId ? { userId: input.userId } : {}),
+          ...(input.accountId ? { accountId: input.accountId } : {}),
           ...(input.email ? { email: input.email } : {}),
           roleKey: input.roleKey,
         }),
@@ -359,10 +359,10 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async grantWorkspaceRole(input: {
       workspaceId: string;
-      userId: string;
+      accountId: string;
       roleKey: string;
     }): Promise<WorkspaceMemberMutation> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.userId}/roles`, {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.accountId}/roles`, {
         method: "POST",
         headers,
         body: JSON.stringify({ roleKey: input.roleKey }),
@@ -372,10 +372,10 @@ export function createAuthApiClient(options: AuthClientOptions) {
 
     async revokeWorkspaceRole(input: {
       workspaceId: string;
-      userId: string;
+      accountId: string;
       roleKey: string;
     }): Promise<WorkspaceMemberMutation> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.userId}/roles/${encodeURIComponent(input.roleKey)}`, {
+      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.accountId}/roles/${encodeURIComponent(input.roleKey)}`, {
         method: "DELETE",
         headers,
       });

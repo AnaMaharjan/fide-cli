@@ -285,7 +285,7 @@ function formatWorkspaceGet(payload: PrettyRenderable): string {
 
 function formatWorkspaceMembers(payload: PrettyRenderable): string {
   const members = Array.isArray(payload.members) ? (payload.members as Array<{
-    userId: string;
+    accountId: string;
     userType: string | null;
     roles: string[];
     permissions: string[];
@@ -296,7 +296,7 @@ function formatWorkspaceMembers(payload: PrettyRenderable): string {
     return lines.join("\n");
   }
   for (const member of members) {
-    lines.push(`  ${member.userId}  ${member.userType ?? "unknown"}`);
+    lines.push(`  ${member.accountId}  ${member.userType ?? "unknown"}`);
     lines.push(`    roles: ${member.roles.length > 0 ? member.roles.join(", ") : "none"}`);
     lines.push(`    permissions: ${member.permissions.length > 0 ? member.permissions.join(", ") : "none"}`);
   }

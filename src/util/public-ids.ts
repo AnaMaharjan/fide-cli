@@ -1,3 +1,5 @@
+import { assertPublicId } from "@chris-test/workspace/public-ids";
+
 const PUBLIC_ID_SUFFIX = "[23456789abcdefghjkmnpqrstvwxyz]{16}";
 
 function assertPattern(label: string, value: string, prefix: string): string {
@@ -10,17 +12,13 @@ function assertPattern(label: string, value: string, prefix: string): string {
 }
 
 export function assertWorkspaceId(value: string): string {
-  return assertPattern("workspace id", value, "workspace");
+  return assertPublicId("workspace", value);
 }
 
 export function assertAccountId(value: string): string {
-  return assertPattern("account id", value, "account");
-}
-
-export function assertUserId(value: string): string {
-  return assertPattern("user id", value, "user");
+  return assertPublicId("account", value);
 }
 
 export function assertAuthRequestId(value: string): string {
-  return assertPattern("agent auth request id", value, "auth_request");
+  return assertPublicId("auth_request", value);
 }

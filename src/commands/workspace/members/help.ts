@@ -20,7 +20,7 @@ export function workspaceMembersHelp(): string {
         title: "Workflows",
         items: [
           "  fide workspace members list --workspace <workspace-id>",
-          "  fide workspace members add --workspace <workspace-id> --user-id <user-id> --role member",
+          "  fide workspace members add --workspace <workspace-id> --account-id <account-id> --role member",
           "  fide workspace members add --workspace <workspace-id> --human-email <address> --role member",
         ],
       },

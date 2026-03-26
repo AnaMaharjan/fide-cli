@@ -13,7 +13,7 @@ type HostedCommandDebugInput = {
   workspaceSelectionSource?: WorkspaceSelectionSource;
   graphKey?: string;
   queryName?: string;
-  userId?: string;
+  accountId?: string;
   roleKey?: string;
   email?: string;
 };
@@ -106,7 +106,7 @@ export async function enrichHostedCommandError(
   if (input.workspaceSelectionSource) baseDetails.workspaceSelectionSource = input.workspaceSelectionSource;
   if (input.graphKey) baseDetails.graphKey = input.graphKey;
   if (input.queryName) baseDetails.queryName = input.queryName;
-  if (input.userId) baseDetails.userId = input.userId;
+  if (input.accountId) baseDetails.accountId = input.accountId;
   if (input.roleKey) baseDetails.roleKey = input.roleKey;
   if (input.email) baseDetails.email = input.email;
 
