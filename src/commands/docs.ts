@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hasFlag, parseArgs } from "../util/command/args.js";
+import { defineCommand } from "../util/command/command-metadata.js";
 import { renderHelp } from "../util/command/help.js";
 import { printJson } from "../util/command/io.js";
 import { errorResponse, okResponse } from "../util/command/response.js";
@@ -17,6 +18,27 @@ type ParsedDoc = {
   description: string | null;
   body: string;
 };
+
+export type DocsOutput = {
+  ok: true;
+  scope: "docs.v1";
+  command: "fide docs";
+  path: string;
+  title: string | null;
+  description: string | null;
+  body: string;
+  filePath: string;
+};
+
+export const docsCommand = defineCommand({
+  surface: "docs",
+  command: "fide docs",
+  outputType: "DocsOutput",
+  summary: "Resolve local docs pointers",
+  usage: ["fide docs <path>"],
+  params: {},
+  paramOrder: [],
+});
 
 const DOCS_MAPPINGS: DocsMapping[] = [
   {

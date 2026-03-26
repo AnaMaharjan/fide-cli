@@ -1,9 +1,45 @@
 import { FIDE_ENTITY_TYPES, type FideEntityTypeName } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs } from "../../util/command/args.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { errorResponse, okResponse } from "../../util/command/response.js";
-import { graphDefsCommand } from "./metadata.js";
+export const graphDefsCommand = defineCommand({
+  surface: "graph.defs",
+  command: "fide graph defs",
+  outputType: "GraphDefsOutput",
+  summary: "Inspect Fide entity definitions and statement rules",
+  usage: [
+    "fide graph defs [--entity <EntityType>]",
+    "fide graph defs <EntityType>",
+  ],
+  paramOrder: ["entity"],
+  params: {
+    entity: { kind: "string", description: "Optional entity type filter", valueLabel: "<EntityType>" },
+  },
+  examples: [
+    "fide graph defs",
+    "fide graph defs --entity NetworkResource",
+    "fide graph defs Person",
+  ],
+});
+
+const GRAPH_DEFS_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(graphDefsCommand));
+
+export type GraphDefsOutput = {
+  ok: true;
+  scope: "graph-defs.v1";
+  command: "fide graph defs";
+  next?: Record<string, unknown>;
+  layers: Record<string, string>;
+  entities?: unknown[];
+  entity?: unknown;
+  statementRules: unknown[];
+};
 
 type EntitySummary = {
   name: FideEntityTypeName;
@@ -54,7 +90,7 @@ function buildEntitySummary(name: FideEntityTypeName): EntitySummary {
 }
 
 export async function runGraphDefs(args: string[] = []): Promise<number> {
-  const { flags, positionals } = parseArgs(args);
+  const { flags, positionals } = parseArgs(args, { booleanKeys: GRAPH_DEFS_PARSE_KEYS });
 
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(renderCommandHelp(graphDefsCommand));

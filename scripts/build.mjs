@@ -7,6 +7,7 @@ function run(cmd, args) {
   }
 }
 
+run("pnpm", ["run", "generate:schema"]);
 run("pnpm", ["exec", "tsc", "-p", "tsconfig.json"]);
 
 if (process.argv.includes("--link")) {

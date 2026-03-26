@@ -1,5 +1,6 @@
 import { readStdinUtf8 } from "../graph/shared.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { booleanKeysFromCommand, mergeBooleanKeySets } from "../../util/command/command-metadata.js";
 import { readUtf8 } from "../../util/command/io.js";
 import {
   getLocalFideWarnings,
@@ -14,8 +15,24 @@ import { assertGraphKey, assertQueryName } from "../../util/ids/selectors.js";
 
 export type GraphQueryScope = { targetScope: "local" };
 
+let querySqlParseBooleanKeysCache: ReadonlySet<string> | undefined;
+
+async function querySqlParseBooleanKeys(): Promise<ReadonlySet<string>> {
+  if (!querySqlParseBooleanKeysCache) {
+    const [{ querySaveCommand }, { queryRunCommand }] = await Promise.all([
+      import("./save.js"),
+      import("./run.js"),
+    ]);
+    querySqlParseBooleanKeysCache = mergeBooleanKeySets(
+      booleanKeysFromCommand(querySaveCommand),
+      booleanKeysFromCommand(queryRunCommand),
+    );
+  }
+  return querySqlParseBooleanKeysCache;
+}
+
 export async function resolveQuerySql(args: string[]): Promise<{ parsed: ReturnType<typeof parseArgs>; sql: string }> {
-  const parsed = parseArgs(args);
+  const parsed = parseArgs(args, { booleanKeys: await querySqlParseBooleanKeys() });
   const flags = parsed.flags;
   const filePath = getStringFlag(flags, "file");
   const useStdin = hasFlag(flags, "stdin");
@@ -62,7 +79,7 @@ export async function resolveQuerySaveInput(args: string[]): Promise<{
   sql: string;
   fileDescription: string | null;
 }> {
-  const parsed = parseArgs(args);
+  const parsed = parseArgs(args, { booleanKeys: await querySqlParseBooleanKeys() });
   const flags = parsed.flags;
   const filePath = getStringFlag(flags, "file");
 

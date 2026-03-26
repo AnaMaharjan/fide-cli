@@ -24,12 +24,6 @@
     "graph-status",
     "--- Workspace ---",
     "workspace-get",
-    "workspace-list",
-    "--- Workspace Members ---",
-    "workspace-members-add",
-    "workspace-members-list",
-    "--- Workspace Roles ---",
-    "workspace-roles-grant",
-    "workspace-roles-revoke"
+    "workspace-list"
   ]
 }

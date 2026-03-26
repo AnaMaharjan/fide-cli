@@ -1,5 +1,6 @@
 import { renderHelp } from "../../util/command/help.js";
-import { statementsDraftCommand, statementsWriteCommand } from "./metadata.js";
+import { statementsDraftCommand } from "./draft.js";
+import { statementsWriteCommand } from "./write.js";
 
 export function statementsHelp(): string {
   return renderHelp({

@@ -1,12 +1,17 @@
 import { executeGraphQuery } from "@chris-test/graph-db";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { parseArgs } from "../../util/command/args.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  readCommandNumberFlag,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { queryRunCommand } from "./metadata.js";
 import {
   assertLocalQueryableStore,
   getLocalFideWarnings,
-  parseArgs,
   readProjectQueryOrThrow,
   requireGraphKey,
   resolveGraphQueryScope,
@@ -16,8 +21,46 @@ import {
   shouldUseJsonOutput,
 } from "./shared.js";
 
+export const queryRunCommand = defineCommand({
+  surface: "query.run",
+  command: "fide query run",
+  outputType: "QueryRunOutput",
+  summary: "Run ad hoc SQL or execute a saved query",
+  usage: [
+    "fide query run --graph <key> <query>",
+    "fide query run --graph <key> --file <query.sql>",
+    "fide query run --graph <key> --stdin",
+    "fide query run --graph <key> --name <query-name>",
+  ],
+  paramOrder: ["graph", "name", "limit", "file", "stdin", "allow-write", "pretty"],
+  params: {
+    graph: { kind: "string", required: true, description: "Graph key", valueLabel: "<key>" },
+    name: { kind: "string", description: "Saved query name instead of ad hoc SQL", valueLabel: "<query-name>" },
+    limit: { kind: "number", description: "Maximum row count for hosted saved-query execution", valueLabel: "<n>" },
+    file: { kind: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
+    stdin: { kind: "boolean", description: "Read SQL from stdin" },
+    "allow-write": { kind: "boolean", description: "Allow write SQL for ad hoc local execution" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  examples: [
+    "fide query run --graph primary 'select * from statements limit 10'",
+    "fide query run --graph primary --name recentStatements",
+  ],
+  notes: [
+    "Saved-query execution resolves against local project queries.",
+  ],
+});
+
+const QUERY_RUN_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(queryRunCommand));
+
+export type QueryRunOutput = {
+  targetScope: "local";
+  warnings?: string[];
+  [key: string]: unknown;
+};
+
 export async function runQueryRun(args: string[]): Promise<number> {
-  const initialParsed = parseArgs(args);
+  const initialParsed = parseArgs(args, { booleanKeys: QUERY_RUN_PARSE_KEYS });
   if (initialParsed.flags.has("help") || initialParsed.flags.has("-h")) {
     console.log(renderCommandHelp(queryRunCommand));
     return 0;
@@ -58,34 +101,35 @@ export async function runQueryRun(args: string[]): Promise<number> {
     return 0;
   }
 
-  const graphKey = requireGraphKey(flags);
-  const limitFlag = flags.get("limit");
-  const limit = typeof limitFlag === "string" ? Number(limitFlag) : undefined;
-  if (typeof limitFlag === "string" && (!Number.isInteger(limit) || Number(limit) <= 0)) {
+  const parsed = parseArgs(args, { booleanKeys: QUERY_RUN_PARSE_KEYS });
+  const graphKey = requireGraphKey(parsed.flags);
+  const limitParsed = readCommandNumberFlag(queryRunCommand, parsed, "limit");
+  const limit = limitParsed;
+  if (limit !== undefined && (!Number.isInteger(limit) || limit <= 0)) {
     throw new Error("Invalid --limit value. Expected a positive integer.");
   }
 
-  await resolveGraphQueryScope(flags);
+  await resolveGraphQueryScope(parsed.flags);
   void limit;
 
-  const { query } = await readProjectQueryOrThrow(flags);
+  const { query } = await readProjectQueryOrThrow(parsed.flags);
   const target = assertLocalQueryableStore(
     graphKey,
     resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]])),
-    flags,
+    parsed.flags,
   );
   const result = await executeGraphQuery({
     target,
     sql: query.sql,
-    allowWrite: flags.has("allow-write"),
+    allowWrite: parsed.flags.has("allow-write"),
   });
-  const localTarget = resolveGraphTarget(flags);
+  const localTarget = resolveGraphTarget(parsed.flags);
   const payload = {
     targetScope: "local",
     ...result,
     ...("file" in result ? { warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }) } : {}),
   };
-  if (shouldUseJsonOutput(flags)) {
+  if (shouldUseJsonOutput(parsed.flags)) {
     printJson(payload);
   } else {
     console.log(formatPretty("graph-query-run-local.v1", payload));

@@ -1,5 +1,10 @@
 import { getStringFlag, hasFlag, parseArgs } from "../../util/command/args.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+  type CommandDefinition,
+} from "../../util/command/command-metadata.js";
 import { readUtf8 } from "../../util/command/io.js";
 import {
   buildStatementsWithRoot,
@@ -10,7 +15,22 @@ import {
   resolveGraphTarget,
   type StatementInput,
 } from "@chris-test/graph";
-import type { CommandMetadata } from "../../util/command/command-metadata.js";
+
+let statementsInputBooleanKeysCache: ReadonlySet<string> | undefined;
+
+async function statementsInputParseBooleanKeys(): Promise<ReadonlySet<string>> {
+  if (!statementsInputBooleanKeysCache) {
+    const [{ statementsWriteCommand }, { statementsDraftCommand }] = await Promise.all([
+      import("./write.js"),
+      import("./draft.js"),
+    ]);
+    statementsInputBooleanKeysCache = mergeBooleanKeySets(
+      booleanKeysFromCommand(statementsWriteCommand),
+      booleanKeysFromCommand(statementsDraftCommand),
+    );
+  }
+  return statementsInputBooleanKeysCache;
+}
 
 export async function readStdinUtf8(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -29,7 +49,9 @@ export async function readStdinUtf8(): Promise<string> {
 export async function resolveStatementInputsFromArgs(
   argsOrFlags: string[] | Map<string, string | boolean>,
 ): Promise<{ parsed: ReturnType<typeof parseArgs>; statementInputs: StatementInput[] }> {
-  const parsed = argsOrFlags instanceof Map ? { positionals: [], flags: argsOrFlags } : parseArgs(argsOrFlags);
+  const parsed = argsOrFlags instanceof Map
+    ? { positionals: [], flags: argsOrFlags }
+    : parseArgs(argsOrFlags, { booleanKeys: await statementsInputParseBooleanKeys() });
   const flags = parsed.flags;
   const filePath = getStringFlag(flags, "file");
   const useStdin = hasFlag(flags, "stdin");
@@ -83,7 +105,7 @@ export async function resolveStatementsBatch(
 
 export async function resolveLocalStatementsBatchOrExit(
   argsOrFlags: string[] | Map<string, string | boolean>,
-  command: CommandMetadata,
+  command: CommandDefinition,
 ): Promise<{
   parsed: ReturnType<typeof parseArgs>;
   flags: Map<string, string | boolean>;
@@ -91,7 +113,10 @@ export async function resolveLocalStatementsBatchOrExit(
   batch: Awaited<ReturnType<typeof buildStatementsWithRoot>>;
   graphTarget: ReturnType<typeof resolveGraphTarget>;
 } | null> {
-  const initialParsed = argsOrFlags instanceof Map ? { positionals: [], flags: argsOrFlags } : parseArgs(argsOrFlags);
+  const keys = await statementsInputParseBooleanKeys();
+  const initialParsed = argsOrFlags instanceof Map
+    ? { positionals: [], flags: argsOrFlags }
+    : parseArgs(argsOrFlags, { booleanKeys: keys });
   if (hasFlag(initialParsed.flags, "help")) {
     console.log(renderCommandHelp(command));
     return null;

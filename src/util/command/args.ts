@@ -3,29 +3,24 @@ export type ParsedArgs = {
   flags: Map<string, string | boolean>;
 };
 
+export type ParseArgsOptions = {
+  /** Flag names that consume no value when `--key` appears without `=` and no following token. */
+  booleanKeys?: ReadonlySet<string>;
+};
+
 const SHORT_FLAG_ALIASES: Record<string, string> = {
   h: "help",
   p: "pretty",
 };
 
-const BOOLEAN_FLAGS = new Set([
-  "allow-write",
-  "dangerously-drop",
-  "gitignore",
-  "help",
-  "no-normalize",
-  "pretty",
-  "stdin",
-  "yes",
-]);
-
 /**
  * Parse CLI tokens into positional args and `--flag` values.
  * Supports `--key value`, `--key=value`, short aliases like `-p`, and boolean flags.
  */
-export function parseArgs(args: string[]): ParsedArgs {
+export function parseArgs(args: string[], options?: ParseArgsOptions): ParsedArgs {
   const positionals: string[] = [];
   const flags = new Map<string, string | boolean>();
+  const booleanKeys = options?.booleanKeys ?? null;
 
   for (let i = 0; i < args.length; i += 1) {
     const token = args[i];
@@ -53,7 +48,7 @@ export function parseArgs(args: string[]): ParsedArgs {
     }
 
     const key = keyValue;
-    if (BOOLEAN_FLAGS.has(key)) {
+    if (booleanKeys?.has(key)) {
       flags.set(key, true);
       continue;
     }

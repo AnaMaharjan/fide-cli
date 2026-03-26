@@ -32,7 +32,7 @@ function helpText(): string {
             "  fide logout [flags]",
             "  fide whoami [flags]",
             "  fide docs <path>",
-            "  fide schema [surface]",
+            "  fide schema [--surface <surface>]",
             "  fide query <command> [flags]",
             "  fide statements <command> [flags]",
           ],
@@ -120,7 +120,7 @@ export async function runCli(argv: string[]): Promise<number> {
     const [group, command, ...rest] = argv;
     if (group === "schema") {
       const { runSchemaCommand } = await import("./commands/schema/index.js");
-      return await runSchemaCommand(command, rest);
+      return await runSchemaCommand([command, ...rest].filter((value): value is string => Boolean(value)));
     }
 
     if (group === "status") {

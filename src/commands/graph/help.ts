@@ -1,5 +1,10 @@
 import { renderHelp } from "../../util/command/help.js";
-import { graphBuildCommand, graphGetCommand, graphListCommand, graphSaveCommand, graphStatusCommand } from "./metadata.js";
+import { graphBuildCommand } from "./build.js";
+import { graphDefsCommand } from "./defs.js";
+import { graphGetCommand } from "./get.js";
+import { graphListCommand } from "./list.js";
+import { graphSaveCommand } from "./save.js";
+import { graphStatusCommand } from "./status.js";
 
 export function graphCommandHelp(): string {
   const commandSummaries = [
@@ -8,7 +13,7 @@ export function graphCommandHelp(): string {
     { name: "get", summary: graphGetCommand.summary },
     { name: "save", summary: graphSaveCommand.summary },
     { name: "build", summary: graphBuildCommand.summary },
-    { name: "defs", summary: "Inspect statement and entity definitions" },
+    { name: "defs", summary: graphDefsCommand.summary },
   ];
 
   return renderHelp({
@@ -23,9 +28,9 @@ export function graphCommandHelp(): string {
         title: "Commands",
         items: commandSummaries.map(({ name, summary }) => `  ${name.padEnd(7, " ")} ${summary}`),
       },
-        {
-          title: "Workflows",
-          items: [
+      {
+        title: "Workflows",
+        items: [
           "  fide graph list",
           "  fide graph save --graph combined-graph-postgres --dry-run",
           "  fide graph save --graph primary --type postgres",

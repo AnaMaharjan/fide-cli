@@ -23,10 +23,48 @@ import {
 } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { graphBuildCommand } from "./metadata.js";
+export const graphBuildCommand = defineCommand({
+  surface: "graph.build",
+  command: "fide graph build",
+  outputType: "GraphBuildOutput",
+  summary: "Build configured graphs from graph sources",
+  usage: [
+    "fide graph build --graph <key>",
+    "fide graph build --dry-run --graph <key>",
+  ],
+  paramOrder: ["graph", "dry-run", "pretty"],
+  params: {
+    graph: { kind: "string", description: "Configured graph key with a recipe", valueLabel: "<key>" },
+    "dry-run": { kind: "boolean", description: "Resolve targets and inputs without mutating runtime state" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  examples: [
+    "fide graph build --graph sqlite",
+    "fide graph build --graph combined",
+    "fide graph build --dry-run --graph combined",
+  ],
+  notes: [
+    "Recipe SQL may include $lastRunAt for incremental runs.",
+    "On the first run, $lastRunAt resolves to 1970-01-01T00:00:00.000Z.",
+    "Use `--dry-run` to preview resolved build inputs and targets before mutating runtime state.",
+  ],
+});
+
+const GRAPH_BUILD_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(graphBuildCommand));
+
+export type GraphBuildOutput = {
+  ok: true;
+  scope: "graph-build.v1";
+  [key: string]: unknown;
+};
 
 function printBuildProgress(flags: Map<string, string | boolean>, message: string): void {
   if (shouldUseJsonOutput(flags)) return;
@@ -243,7 +281,7 @@ async function queryRecipeStep(
 }
 
 export async function runGraphBuild(args: string[] = []): Promise<number> {
-  const parsed = parseArgs(args);
+  const parsed = parseArgs(args, { booleanKeys: GRAPH_BUILD_PARSE_KEYS });
   const flags = parsed.flags;
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(buildHelp());

@@ -12,7 +12,12 @@ import {
   type LocalProjectGraphRecord,
 } from "@chris-test/workspace";
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
-import { renderCommandHelp } from "../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../util/command/command-metadata.js";
 import { resolveAuthSettings } from "../util/auth/auth-settings.js";
 import { createAuthApiClient } from "../util/auth/auth-api.js";
 import { printJson } from "../util/command/io.js";
@@ -28,7 +33,42 @@ import {
   writeSyncSession,
 } from "../util/workspace/sync-session.js";
 import { readJsonFile, resolveFideContext } from "../util/project/fide-dir.js";
-import { startCommand } from "./metadata.js";
+export const startCommand = defineCommand({
+  surface: "start",
+  command: "fide start",
+  outputType: "StartOutput",
+  summary: "Start the background sync agent for the current project",
+  usage: ["fide start [--sync-url <url>] [--pretty|-p]"],
+  paramOrder: ["sync-url", "pretty"],
+  params: {
+    "sync-url": { kind: "string", description: "Explicit sync URL override. Accepts ws(s)://.../ws or http(s):// base URLs.", valueLabel: "<url>" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  notes: [
+    "Sync URL resolution order: --sync-url, FIDE_SYNC_BASE_URL, then derived from the resolved API base URL.",
+    "API base URL resolution uses --api-base-url where supported, then FIDE_API_BASE_URL, then the default API base URL.",
+    "Workspace targeting resolves from the current project's .fide/settings.json.",
+    "Project targeting resolves from the current project's .fide/settings.json.",
+    "Starts a detached local sync agent and returns immediately.",
+    "Current sync behavior is one-way: project .fide/settings.json is the source of truth for hosted graph metadata.",
+    "Graph sync projects only shared graph fields upstream; local connection settings stay local.",
+    "Local query files under .fide/queries/ are also synced one-way into the selected workspace.",
+  ],
+});
+
+const START_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(startCommand));
+
+export type StartOutput = {
+  ok: true;
+  scope: "start.v1";
+  command: "fide start";
+  started?: boolean;
+  alreadyRunning?: boolean;
+  pid?: number;
+  syncUrl?: string;
+  workspaceId?: string;
+  [key: string]: unknown;
+};
 
 type SyncServerMessage = {
   type?: string;
@@ -263,7 +303,7 @@ async function runDetachedStart(flags: Map<string, string | boolean>, useJson: b
 }
 
 export async function runSyncRunnerCommand(args: string[]): Promise<number> {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, { booleanKeys: START_PARSE_KEYS });
   const auth = await resolveAuthSettings(flags);
   if (!auth) {
     throw new Error("Missing auth for sync runner.");
@@ -612,7 +652,7 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
 }
 
 export async function runStartCommand(args: string[]): Promise<number> {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, { booleanKeys: START_PARSE_KEYS });
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help") || flags.has("-h")) {
     console.log(renderStartHelp());

@@ -1,0 +1,9 @@
+---
+title: "fide workspace"
+description: "fide workspace <command> [flags]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide workspace","description":"fide workspace <command> [flags]","usage":["fide workspace <command> [flags]"],"arguments":[],"options":[],"outputFields":[],"subcommands":[{"name":"list","summary":"List accessible workspaces","href":"./workspace-list"},{"name":"get","summary":"Inspect a workspace by id","href":"./workspace-get"}],"schemas":[{"surface":"workspace","command":"fide workspace","params":[],"outputFields":[],"json":"{\n  \"command\": \"fide workspace\",\n  \"params\": [],\n  \"output\": {}\n}"}],"examples":[{"command":"fide workspace list"},{"command":"fide workspace get"}],"notes":[{"title":"Notes","body":"Use `workspace` for shared hosted workspace inspection.\n`workspace get` resolves the workspace bound in the current project's `.fide/settings.json`.\nHosted auth resolves from the current project account or `FIDE_ACCOUNT_ID`.\nHosted IDs are typed: use `workspace_*` for workspaces."}]}} />

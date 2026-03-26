@@ -2,12 +2,50 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getLocalFideWarnings, resolveGraphTarget } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { ymdUtc } from "../../util/project/path-date.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { statementsWriteCommand } from "./metadata.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
+
+export const statementsWriteCommand = defineCommand({
+  surface: "statements.write",
+  command: "fide statements write",
+  outputType: "StatementsWriteOutput",
+  summary: "Write canonical statement batches into a local project",
+  usage: [
+    "fide statements write [--fide-dir <path>] <json>",
+    "fide statements write [--fide-dir <path>] --file <inputs> [--format <json|jsonl|fsd>]",
+    "fide statements write [--fide-dir <path>] --stdin [--format <json|jsonl|fsd>]",
+  ],
+  paramOrder: ["fide-dir", "file", "stdin", "format", "no-normalize", "pretty"],
+  params: {
+    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
+    file: { kind: "string", description: "Read statement inputs from a file", valueLabel: "<inputs>" },
+    stdin: { kind: "boolean", description: "Read statement inputs from stdin" },
+    format: { kind: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
+    "no-normalize": { kind: "boolean", description: "Disable reference identifier normalization" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  notes: [
+    "Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
+  ],
+});
+
+const STATEMENTS_WRITE_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(statementsWriteCommand));
+
+export type StatementsWriteOutput = {
+  root: string;
+  statementCount: number;
+  mode: "local";
+  outPath: string;
+  warnings: string[];
+};
 
 function resolveStatementsDir(root: string): string {
   return resolve(root, ".fide", "statements");
@@ -47,7 +85,9 @@ function updateDraftWriteFrontmatter(content: string, writtenAtUTC: string, writ
 }
 
 export async function runStatementsWrite(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
-  const initialParsed = argsOrFlags instanceof Map ? { positionals: [], flags: argsOrFlags } : parseArgs(argsOrFlags);
+  const initialParsed = argsOrFlags instanceof Map
+    ? { positionals: [], flags: argsOrFlags }
+    : parseArgs(argsOrFlags, { booleanKeys: STATEMENTS_WRITE_PARSE_KEYS });
   if (hasFlag(initialParsed.flags, "help")) {
     console.log(renderCommandHelp(statementsWriteCommand));
     return 0;

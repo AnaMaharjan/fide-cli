@@ -1,17 +1,45 @@
 import { existsSync } from "node:fs";
 import type { FideSettings } from "@chris-test/graph";
 import { parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
-import { renderCommandHelp } from "../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../util/command/command-metadata.js";
 import { createAuthApiClient } from "../util/auth/auth-api.js";
+import { resolveSelectedAccount, resolveAccountSettingsPath } from "../util/auth/account-settings.js";
 import { readStoredAuthSettings, resolveAuthSettings } from "../util/auth/auth-settings.js";
 import { printJson } from "../util/command/io.js";
 import { formatPretty } from "../util/command/pretty.js";
 import { okResponse } from "../util/command/response.js";
-import { statusCommand } from "./metadata.js";
 import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/project/fide-dir.js";
-import { resolveWorkspaceSelection } from "../util/workspace/workspace-settings.js";
-import { resolveSelectedAccount, resolveAccountSettingsPath } from "../util/auth/account-settings.js";
 import { readLiveSyncSession } from "../util/workspace/sync-session.js";
+import { resolveWorkspaceSelection } from "../util/workspace/workspace-settings.js";
+
+export const statusCommand = defineCommand({
+  surface: "status",
+  command: "fide status",
+  outputType: "StatusOutput",
+  summary: "Show machine auth, project context, and sync runtime state",
+  usage: ["fide status [--pretty|-p]"],
+  paramOrder: ["pretty"],
+  params: {
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+});
+
+const STATUS_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(statusCommand));
+
+export type StatusOutput = {
+  ok: true;
+  scope: "status.v1";
+  command: "fide status";
+  machine: Record<string, unknown>;
+  project: Record<string, unknown>;
+  workspace: Record<string, unknown>;
+  sync: Record<string, unknown> | null;
+};
 
 function omitNullFields<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -28,7 +56,7 @@ function omitNullFields<T>(value: T): T {
 }
 
 export async function runStatusCommand(args: string[]): Promise<number> {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, { booleanKeys: STATUS_PARSE_KEYS });
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help") || flags.has("-h")) {
     console.log(renderCommandHelp(statusCommand));

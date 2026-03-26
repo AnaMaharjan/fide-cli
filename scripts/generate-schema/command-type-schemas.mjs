@@ -5,6 +5,7 @@ import ts from "typescript";
 const CLI_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const SRC_ROOT = path.join(CLI_ROOT, "src");
 const OUT_PATH = path.join(SRC_ROOT, "schema", "generated.ts");
+const COMMANDS_ROOT = path.join(SRC_ROOT, "commands");
 
 function loadCompilerOptions() {
   const configPath = ts.findConfigFile(CLI_ROOT, ts.sys.fileExists, "tsconfig.json");
@@ -93,28 +94,85 @@ function findExportedTypeAlias(sourceFile, typeName) {
   return null;
 }
 
+function readStringLiteralProperty(objectLiteral, name) {
+  for (const property of objectLiteral.properties) {
+    if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.name) || property.name.text !== name) {
+      continue;
+    }
+    if (ts.isStringLiteral(property.initializer) || ts.isNoSubstitutionTemplateLiteral(property.initializer)) {
+      return property.initializer.text;
+    }
+  }
+  return null;
+}
+
+function findCommandOutputEntries(sourceFile, relativeSourcePath) {
+  const entries = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    const exported = statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+    if (!exported) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!declaration.initializer || !ts.isCallExpression(declaration.initializer)) continue;
+      const call = declaration.initializer;
+      if (!ts.isIdentifier(call.expression) || call.expression.text !== "defineCommand") continue;
+      const [arg] = call.arguments;
+      if (!arg || !ts.isObjectLiteralExpression(arg)) continue;
+      const surface = readStringLiteralProperty(arg, "surface");
+      const outputType = readStringLiteralProperty(arg, "outputType");
+      if (!surface || !outputType) continue;
+      entries.push({
+        surface: `${surface}.output`,
+        command: `fide schema --surface ${surface}.output`,
+        source: relativeSourcePath,
+        typeName: outputType,
+        format: "ts-type.v0",
+      });
+    }
+  }
+  return entries;
+}
+
+function findOutputTypeEntries() {
+  const sourcePaths = ts.sys.readDirectory(COMMANDS_ROOT, [".ts"], undefined, undefined)
+    .filter((filePath) => !filePath.endsWith(".d.ts"));
+  const entries = [];
+  for (const sourcePath of sourcePaths) {
+    const text = ts.sys.readFile(sourcePath);
+    if (!text) continue;
+    const sourceFile = ts.createSourceFile(sourcePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const relativeSourcePath = path.relative(CLI_ROOT, sourcePath).replaceAll(path.sep, "/");
+    entries.push(...findCommandOutputEntries(sourceFile, relativeSourcePath));
+  }
+  return entries.sort((a, b) => a.surface.localeCompare(b.surface));
+}
+
 async function generate() {
   const options = loadCompilerOptions();
-  const savePath = path.join(SRC_ROOT, "commands", "query", "save.ts");
-  const program = ts.createProgram([savePath], options);
+  const outputTypeEntries = findOutputTypeEntries();
+  const sourcePaths = [...new Set(outputTypeEntries.map((entry) => path.join(CLI_ROOT, entry.source)))];
+  const program = ts.createProgram(sourcePaths, options);
   const checker = program.getTypeChecker();
-  const sourceFile = program.getSourceFile(savePath);
-  if (!sourceFile) throw new Error(`Missing source file: ${savePath}`);
+  const generatedSchemas = {};
 
-  const alias = findExportedTypeAlias(sourceFile, "QuerySaveOutput");
-  if (!alias) throw new Error("Could not find exported type alias QuerySaveOutput.");
-  const type = checker.getTypeAtLocation(alias);
-  const schema = serializeType(type, checker, alias);
+  for (const entry of outputTypeEntries) {
+    const sourcePath = path.join(CLI_ROOT, entry.source);
+    const sourceFile = program.getSourceFile(sourcePath);
+    if (!sourceFile) throw new Error(`Missing source file: ${sourcePath}`);
 
-  const generated = `export const GENERATED_TYPE_SCHEMAS = ${JSON.stringify({
-    "query.save.output": {
-      command: "fide schema query.save.output",
-      format: "ts-type.v0",
-      typeName: "QuerySaveOutput",
-      source: "src/commands/query/save.ts",
-      schema,
-    },
-  }, null, 2)} as const;\n`;
+    const alias = findExportedTypeAlias(sourceFile, entry.typeName);
+    if (!alias) throw new Error(`Could not find exported type alias ${entry.typeName}.`);
+    const type = checker.getTypeAtLocation(alias);
+    generatedSchemas[entry.surface] = {
+      command: entry.command,
+      format: entry.format,
+      typeName: entry.typeName,
+      source: entry.source,
+      schema: serializeType(type, checker, alias),
+    };
+  }
+
+  const generated = `export const GENERATED_TYPE_SCHEMAS = ${JSON.stringify(generatedSchemas, null, 2)} as const;\n`;
 
   await fs.mkdir(path.dirname(OUT_PATH), { recursive: true });
   await fs.writeFile(OUT_PATH, generated, "utf8");

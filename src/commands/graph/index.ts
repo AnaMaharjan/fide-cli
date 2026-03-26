@@ -1,7 +1,9 @@
 import { runGraphBuild } from "./build.js";
 import { runGraphDefs } from "./defs.js";
+import { runGraphGet } from "./get.js";
 import { graphCommandHelp } from "./help.js";
-import { runGraphGet, runGraphList, runGraphSaveCommand } from "./hosted.js";
+import { runGraphList } from "./list.js";
+import { runGraphSaveCommand } from "./save.js";
 import { runGraphStatus } from "./status.js";
 
 /**

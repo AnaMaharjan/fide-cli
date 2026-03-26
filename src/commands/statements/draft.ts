@@ -9,11 +9,59 @@ import {
   type FsdDraftFrontmatter,
 } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
-import { statementsDraftCommand } from "./metadata.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
+
+export const statementsDraftCommand = defineCommand({
+  surface: "statements.draft",
+  command: "fide statements draft",
+  outputType: "StatementsDraftOutput",
+  summary: "Create a markdown statement draft in a local project",
+  usage: [
+    "fide statements draft [--fide-dir <path>] --name <draft-name> <json>",
+    "fide statements draft [--fide-dir <path>] --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
+    "fide statements draft [--fide-dir <path>] --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
+  ],
+  paramOrder: ["fide-dir", "name", "path", "description", "file", "stdin", "format", "no-normalize", "pretty"],
+  params: {
+    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
+    name: { kind: "string", required: true, description: "Draft file name without .md", valueLabel: "<draft-name>" },
+    path: { kind: "string", description: "Optional subdirectory under .fide/drafts/statements", valueLabel: "<draft-path>" },
+    description: { kind: "string", description: "Optional draft description frontmatter", valueLabel: "<text>" },
+    file: { kind: "string", description: "Read statement inputs from a file", valueLabel: "<inputs>" },
+    stdin: { kind: "boolean", description: "Read statement inputs from stdin" },
+    format: { kind: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
+    "no-normalize": { kind: "boolean", description: "Disable reference identifier normalization" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  notes: [
+    "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
+    "Reusing the same --name and --path updates the existing draft.",
+    "Use `fide statements write` for canonical JSONL batches.",
+  ],
+});
+
+const STATEMENTS_DRAFT_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(statementsDraftCommand));
+
+export type StatementsDraftOutput = {
+  name: string;
+  root: string;
+  statementCount: number;
+  mode: "draft";
+  outPath: string;
+  createdAtUTC: string;
+  updatedAtUTC: string;
+  updateCount: number;
+  next: Record<string, unknown>;
+  warnings: string[];
+};
 
 function draftHelp(): string {
   return renderCommandHelp(statementsDraftCommand);
@@ -43,7 +91,7 @@ function inferUniformNodeDefaults(
 }
 
 export async function runStatementsDraft(args: string[]): Promise<number> {
-  const initialParsed = parseArgs(args);
+  const initialParsed = parseArgs(args, { booleanKeys: STATEMENTS_DRAFT_PARSE_KEYS });
   if (hasFlag(initialParsed.flags, "help")) {
     console.log(draftHelp());
     return 0;

@@ -2,7 +2,12 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { inspectGraphStore } from "@chris-test/graph-db";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
@@ -13,7 +18,35 @@ import {
   resolveGraphTarget,
   resolveStoreTarget,
 } from "@chris-test/graph";
-import { graphStatusCommand } from "./metadata.js";
+export const graphStatusCommand = defineCommand({
+  surface: "graph.status",
+  command: "fide graph status",
+  outputType: "GraphStatusOutput",
+  summary: "Inspect local graph state and configured runtime status",
+  usage: [
+    "fide graph status",
+    "fide graph status --fide-dir <path>",
+    "fide graph status --graph <key>",
+  ],
+  paramOrder: ["fide-dir", "graph"],
+  params: {
+    "fide-dir": { kind: "string", description: "Optional local .fide directory override", valueLabel: "<path>" },
+    graph: { kind: "string", description: "Configured graph key", valueLabel: "<key>" },
+  },
+  notes: [
+    "With no selector, also returns local .fide status.",
+    "Use `--graph <key>` to narrow the graph status to one configured graph.",
+  ],
+});
+
+const GRAPH_STATUS_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(graphStatusCommand));
+
+export type GraphStatusOutput = {
+  ok: true;
+  scope: "graph-status.v1";
+  local: Record<string, unknown> | null;
+  graphs: unknown[];
+};
 
 function nextCommands(key: string | null, recipe: unknown, graphStoreType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
@@ -96,7 +129,7 @@ async function getRuntimeStatusOverview() {
 }
 
 export async function runGraphStatus(args: string[] = []): Promise<number> {
-  const { flags, positionals } = parseArgs(args);
+  const { flags, positionals } = parseArgs(args, { booleanKeys: GRAPH_STATUS_PARSE_KEYS });
   const useJson = shouldUseJsonOutput(flags);
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
     console.log(renderCommandHelp(graphStatusCommand));

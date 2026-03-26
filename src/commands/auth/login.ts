@@ -1,17 +1,61 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output, stderr } from "node:process";
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import {
+  booleanKeysFromCommand,
+  defineCommand,
+  mergeBooleanKeySets,
+  renderCommandHelp,
+} from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { okResponse } from "../../util/command/response.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { createAuthApiClient } from "../../util/auth/auth-api.js";
-import { resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth/auth-settings.js";
+import { DEFAULT_FIDE_API_BASE_URL, resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth/auth-settings.js";
 import { startAgentAuthLoopbackServer } from "../../util/auth/auth-loopback.js";
 import { openBrowser } from "../../util/auth/browser.js";
 import { assertAccountId } from "../../util/ids/public-ids.js";
 import { writeProjectPointerSettings } from "../../util/project/project-pointer.js";
-import { authLoginCommand } from "./metadata.js";
+export const authLoginCommand = defineCommand({
+  surface: "login",
+  command: "fide login",
+  outputType: "AuthLoginOutput",
+  summary: "Save auth for this machine via browser handoff",
+  usage: ["fide login [--api-base-url <url>] [--agent-name <name>] [--pretty|-p]"],
+  paramOrder: ["api-base-url", "agent-name", "pretty"],
+  params: {
+    "api-base-url": {
+      kind: "string",
+      description: `Fide API base URL. Defaults to ${DEFAULT_FIDE_API_BASE_URL}.`,
+      valueLabel: "<url>",
+    },
+    "agent-name": { kind: "string", description: "Suggested agent name for browser-based agent login.", valueLabel: "<name>" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  notes: [
+    "Login opens the browser for agent authorization and stores returned machine auth locally.",
+    "Login writes machine auth into ~/.fide/accounts/<account_id>/settings.json and binds the current project in .fide/settings.json.",
+    "API base URL resolution uses --api-base-url, then FIDE_API_BASE_URL, then the default API base URL.",
+    "Other commands resolve auth from FIDE_ACCOUNT_ID or project .fide/settings.json.",
+    "Workspace selection comes from project .fide/settings.json after login binds the project.",
+  ],
+});
+
+const LOGIN_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(authLoginCommand));
+
+export type AuthLoginOutput = {
+  ok: true;
+  scope: "auth-login.v1";
+  command: "fide login";
+  baseUrl: string;
+  account: Record<string, unknown>;
+  source: string;
+  user: Record<string, unknown>;
+  workspace: Record<string, unknown>;
+  projectSettingsPath: string;
+  requestId: string;
+  loopback: boolean;
+};
 
 function renderLoginHelp(): string {
   const activeEnv: string[] = [];
@@ -30,7 +74,7 @@ function renderLoginHelp(): string {
 }
 
 export async function runAuthLogin(args: string[]): Promise<number> {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, { booleanKeys: LOGIN_PARSE_KEYS });
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help")) {
     console.log(renderLoginHelp());

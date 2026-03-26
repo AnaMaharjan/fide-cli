@@ -9,6 +9,9 @@ const REPO_ROOT = resolve(PACKAGE_ROOT, "..", "..");
 const CHECK_MODE = process.argv.includes("--check");
 const DOCS_ROOT = resolve(PACKAGE_ROOT, "docs");
 const CLI_BIN = resolve(PACKAGE_ROOT, "dist/bin/fide.js");
+
+/** Must match `SchemaIndexPayloadV1` / `SCHEMA_INDEX_PAYLOAD_V1_KEYS` in `src/util/command/schemas.ts`. */
+const SCHEMA_INDEX_V1 = { schemas: "schemas", surfaces: "surfaces" };
 const GENERATED_PATHS = [
   "packages/cli/docs",
 ];
@@ -180,7 +183,7 @@ function tokensFromCommand(command) {
 }
 
 function readSchema(surface) {
-  const output = runCapture("node", [CLI_BIN, "schema", surface]);
+  const output = runCapture("node", [CLI_BIN, "schema", "--surface", surface]);
   const parsed = JSON.parse(output);
   return parsed.schema ?? parsed.data?.schema ?? null;
 }
@@ -188,7 +191,8 @@ function readSchema(surface) {
 function readSchemaIndex() {
   const output = runCapture("node", [CLI_BIN, "schema"]);
   const parsed = JSON.parse(output);
-  return parsed.schemas ?? parsed.data?.schemas ?? {};
+  const k = SCHEMA_INDEX_V1.schemas;
+  return parsed[k] ?? parsed.data?.[k] ?? {};
 }
 
 function buildDocPages(schemaIndex) {

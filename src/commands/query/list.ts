@@ -1,18 +1,49 @@
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { parseArgs } from "../../util/command/args.js";
+import { booleanKeysFromCommand, defineCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { queryListCommand } from "./metadata.js";
 import {
   assertGraphKey,
   assertLocalQueryCommand,
-  parseArgs,
   readLocalQueries,
   resolveGraphTarget,
   shouldUseJsonOutput,
 } from "./shared.js";
 
+export const queryListCommand = defineCommand({
+  surface: "query.list",
+  command: "fide query list",
+  outputType: "QueryListOutput",
+  summary: "List local project query summaries",
+  usage: ["fide query list", "fide query list --graph <key>"],
+  paramOrder: ["graph", "fide-dir", "pretty"],
+  params: {
+    graph: { kind: "string", description: "Optional graph key filter", valueLabel: "<key>" },
+    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
+  examples: ["fide query list", "fide query list --graph primary"],
+  notes: [
+    "Lists query definitions from the current project's `.fide/queries/` directory.",
+    "The query list is local-first source of truth and does not read hosted state.",
+    "Use `fide query get --graph <key> --name <query-name>` to read the full query text for a selected result.",
+  ],
+});
+
+const QUERY_LIST_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(queryListCommand));
+
+export type QueryListOutput = {
+  targetScope: "local";
+  root: string;
+  queries: Array<{
+    graphKey: string;
+    name: string;
+    description: string | null;
+  }>;
+};
+
 export async function runQueryList(args: string[]): Promise<number> {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, { booleanKeys: QUERY_LIST_PARSE_KEYS });
   const useJson = shouldUseJsonOutput(flags);
   if (flags.has("help") || flags.has("-h")) {
     console.log(renderCommandHelp(queryListCommand));

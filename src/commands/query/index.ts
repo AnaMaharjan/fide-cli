@@ -1,11 +1,20 @@
 import { hasFlag, parseArgs } from "../../util/command/args.js";
-import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { booleanKeysFromCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
+import { queryGetCommand, runQueryGet } from "./get.js";
+import { queryGroupCommand } from "./group.js";
 import { queryCommandHelp } from "./help.js";
-import { queryGetCommand, queryListCommand, queryRunCommand } from "./metadata.js";
-import { runQueryGet } from "./get.js";
-import { runQueryList } from "./list.js";
+import { queryListCommand, runQueryList } from "./list.js";
 import { runQueryRun } from "./run.js";
-import { querySaveCommand, runQuerySave } from "./save.js";
+import { queryRunCommand } from "./run.js";
+import { runQuerySave } from "./save.js";
+import { querySaveCommand } from "./save.js";
+
+export const QUERY_ROUTER_BOOLEAN_KEYS = mergeBooleanKeySets(
+  booleanKeysFromCommand(queryRunCommand),
+  booleanKeysFromCommand(queryListCommand),
+  booleanKeysFromCommand(queryGetCommand),
+  booleanKeysFromCommand(querySaveCommand),
+);
 
 function commandHelp(command: string): string {
   switch (command) {
@@ -30,7 +39,7 @@ export async function runQueryCommand(args: string[]): Promise<number> {
     return 0;
   }
 
-  const parsed = parseArgs(rest);
+  const parsed = parseArgs(rest, { booleanKeys: QUERY_ROUTER_BOOLEAN_KEYS });
   if (hasFlag(parsed.flags, "help") || hasFlag(parsed.flags, "-h")) {
     console.log(commandHelp(command));
     return 0;
@@ -54,4 +63,5 @@ export async function runQueryCommand(args: string[]): Promise<number> {
   return 1;
 }
 
+export { queryGroupCommand } from "./group.js";
 export { queryCommandHelp } from "./help.js";

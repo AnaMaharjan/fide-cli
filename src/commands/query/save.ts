@@ -1,8 +1,10 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { hasFlag } from "../../util/command/args.js";
+import { hasFlag, parseArgs } from "../../util/command/args.js";
 import {
+  booleanKeysFromCommand,
   defineCommand,
+  mergeBooleanKeySets,
   readCommandStringFlag,
   renderCommandHelp,
 } from "../../util/command/command-metadata.js";
@@ -11,7 +13,6 @@ import { formatPretty } from "../../util/command/pretty.js";
 import {
   assertLocalQueryCommand,
   getLocalFideWarnings,
-  parseArgs,
   readLocalQueries,
   renderLocalQueryFileWithDescriptionLine,
   resolveGraphTarget,
@@ -23,20 +24,22 @@ import {
 export const querySaveCommand = defineCommand({
   surface: "query.save",
   command: "fide query save",
+  outputType: "QuerySaveOutput",
   summary: "Save a local project query",
   usage: [
     "fide query save --graph <key> --name <query-name> <query>",
     "fide query save --graph <key> --name <query-name> --file <query.sql>",
   ],
-  params: [
-    { name: "graph", type: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<key>" },
-    { name: "name", type: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
-    { name: "description", type: "string", description: "Optional query description", valueLabel: "<text>" },
-    { name: "fide-dir", type: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    { name: "file", type: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
-    { name: "stdin", type: "boolean", description: "Read SQL from stdin" },
-    { name: "pretty", type: "boolean", shorthand: "-p", description: "Human-readable output" },
-  ],
+  paramOrder: ["graph", "name", "description", "fide-dir", "file", "stdin", "pretty"],
+  params: {
+    graph: { kind: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<key>" },
+    name: { kind: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
+    description: { kind: "string", description: "Optional query description", valueLabel: "<text>" },
+    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
+    file: { kind: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
+    stdin: { kind: "boolean", description: "Read SQL from stdin" },
+    pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
+  },
   examples: [
     "fide query save --graph primary --name recentStatements 'select * from statements limit 10'",
     "fide query save --graph primary --name recentStatements --description 'Recent statement sample'",
@@ -47,6 +50,8 @@ export const querySaveCommand = defineCommand({
     "Use `fide start` to sync the local query definition into the selected workspace.",
   ],
 });
+
+const QUERY_SAVE_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(querySaveCommand));
 
 export type QuerySaveOutput = {
   ok: true;
@@ -66,7 +71,6 @@ function resolveQuerySaveDescriptionInput(
   if (description !== null) {
     return { mode: "set", value: description };
   }
-  // `--description` with no value is parsed as a boolean flag; treat as clearing the description.
   if (hasFlag(parsed.flags, "description")) {
     return { mode: "set", value: null };
   }
@@ -77,7 +81,7 @@ function resolveQuerySaveDescriptionInput(
 }
 
 export async function runQuerySave(args: string[]): Promise<number> {
-  const initialParsed = parseArgs(args);
+  const initialParsed = parseArgs(args, { booleanKeys: QUERY_SAVE_PARSE_KEYS });
   if (initialParsed.flags.has("help") || initialParsed.flags.has("-h")) {
     console.log(renderCommandHelp(querySaveCommand));
     return 0;
