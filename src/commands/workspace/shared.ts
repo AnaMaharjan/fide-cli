@@ -1,9 +1,9 @@
-import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
-import { createAuthApiClient } from "../../util/auth-api.js";
-import type { MeResponse } from "../../util/auth-api.js";
-import type { ResolvedAuthSettings } from "../../util/auth-settings.js";
-import { resolveAuthSettings } from "../../util/auth-settings.js";
-import type { WorkspaceSelectionSource } from "../../util/workspace-settings.js";
+import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
+import { createAuthApiClient } from "../../util/auth/auth-api.js";
+import type { MeResponse } from "../../util/auth/auth-api.js";
+import type { ResolvedAuthSettings } from "../../util/auth/auth-settings.js";
+import { resolveAuthSettings } from "../../util/auth/auth-settings.js";
+import type { WorkspaceSelectionSource } from "../../util/workspace/workspace-settings.js";
 
 type HostedCommandDebugInput = {
   auth: ResolvedAuthSettings;

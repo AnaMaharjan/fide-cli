@@ -1,10 +1,10 @@
-import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
-import { okResponse } from "../../util/response.js";
-import { clearStoredAuthSettings } from "../../util/auth-settings.js";
-import { resolveSelectedAccount, resolveAccountSettingsPath } from "../../util/account-settings.js";
+import { parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { okResponse } from "../../util/command/response.js";
+import { clearStoredAuthSettings } from "../../util/auth/auth-settings.js";
+import { resolveSelectedAccount, resolveAccountSettingsPath } from "../../util/auth/account-settings.js";
 import { authLogoutCommand } from "./metadata.js";
 
 export async function runAuthLogout(args: string[]): Promise<number> {

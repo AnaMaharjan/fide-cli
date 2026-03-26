@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/help.js";
+import { renderHelp } from "../../util/command/help.js";
 import { queryGetCommand, queryListCommand, queryRunCommand, querySaveCommand } from "./metadata.js";
 
 export function queryCommandHelp(): string {

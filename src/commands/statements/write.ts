@@ -1,12 +1,13 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getLocalFideWarnings, resolveGraphTarget } from "@chris-test/graph";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
+import { ymdUtc } from "../../util/project/path-date.js";
+import { formatPretty } from "../../util/command/pretty.js";
 import { statementsWriteCommand } from "./metadata.js";
-import { resolveLocalStatementsBatchOrExit, ymdUtc } from "./shared.js";
+import { resolveLocalStatementsBatchOrExit } from "./shared.js";
 
 function resolveStatementsDir(root: string): string {
   return resolve(root, ".fide", "statements");

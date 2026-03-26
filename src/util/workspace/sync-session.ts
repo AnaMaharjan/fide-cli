@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { resolveFideConfigDir } from "./account-settings.js";
+import { resolveFideConfigDir } from "../auth/account-settings.js";
 
 export type SyncSessionState = "starting" | "connected" | "attached" | "error" | "stopped";
 

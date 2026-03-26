@@ -1,8 +1,8 @@
-import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
-import { okResponse } from "../../util/response.js";
+import { parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { okResponse } from "../../util/command/response.js";
 import { workspaceListCommand } from "./metadata.js";
 import { requireWorkspaceApiClient, runHostedOperation } from "./shared.js";
 

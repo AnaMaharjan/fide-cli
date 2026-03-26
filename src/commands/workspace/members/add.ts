@@ -1,10 +1,10 @@
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/args.js";
-import { renderCommandHelp } from "../../../util/command-metadata.js";
-import { printJson } from "../../../util/io.js";
-import { assertAccountId } from "../../../util/public-ids.js";
-import { formatPretty } from "../../../util/pretty.js";
-import { okResponse } from "../../../util/response.js";
-import { assertRoleKey } from "../../../util/selectors.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../../util/command/args.js";
+import { renderCommandHelp } from "../../../util/command/command-metadata.js";
+import { printJson } from "../../../util/command/io.js";
+import { assertAccountId } from "../../../util/ids/public-ids.js";
+import { formatPretty } from "../../../util/command/pretty.js";
+import { okResponse } from "../../../util/command/response.js";
+import { assertRoleKey } from "../../../util/ids/selectors.js";
 import { workspaceMembersAddCommand } from "../metadata.js";
 import { requireHostedWorkspaceTarget, requireWorkspaceApiClient, runHostedOperation } from "../shared.js";
 

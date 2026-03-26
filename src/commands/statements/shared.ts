@@ -1,6 +1,6 @@
-import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { readUtf8 } from "../../util/io.js";
+import { getStringFlag, hasFlag, parseArgs } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { readUtf8 } from "../../util/command/io.js";
 import {
   buildStatementsWithRoot,
   detectStatementsInputFormat,
@@ -10,13 +10,7 @@ import {
   resolveGraphTarget,
   type StatementInput,
 } from "@chris-test/graph";
-import type { CommandMetadata } from "../../util/command-metadata.js";
-
-export function ymdUtc(date: Date): { yyyy: string; mm: string; dd: string } {
-  const iso = date.toISOString().slice(0, 10);
-  const [yyyy, mm, dd] = iso.split("-");
-  return { yyyy, mm, dd };
-}
+import type { CommandMetadata } from "../../util/command/command-metadata.js";
 
 export async function readStdinUtf8(): Promise<string> {
   const chunks: Buffer[] = [];

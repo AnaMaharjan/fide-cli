@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderHelp } from "./util/help.js";
-import { printCliError } from "./util/error.js";
-import { ensureFideEnvLoaded } from "./util/fide-dir.js";
+import { renderHelp } from "./util/command/help.js";
+import { printCliError } from "./util/command/error.js";
+import { ensureFideEnvLoaded } from "./util/project/fide-dir.js";
 
 function readCliVersion(): string {
   const srcDir = dirname(fileURLToPath(import.meta.url));

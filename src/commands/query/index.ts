@@ -1,5 +1,5 @@
-import { hasFlag, parseArgs } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
+import { hasFlag, parseArgs } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
 import { queryCommandHelp } from "./help.js";
 import { queryGetCommand, queryListCommand, queryRunCommand, querySaveCommand } from "./metadata.js";
 import { runQueryGet } from "./get.js";

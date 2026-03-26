@@ -5,14 +5,14 @@ import {
   type HostedWorkspaceGraphInput,
   type LocalProjectGraphRecord,
 } from "@chris-test/workspace";
-import { parseArgs, getStringFlag, hasFlag, shouldUseJsonOutput } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { formatPretty } from "../../util/pretty.js";
-import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../../util/fide-dir.js";
-import { printJson, readUtf8 } from "../../util/io.js";
-import { okResponse } from "../../util/response.js";
-import { assertGraphKey } from "../../util/selectors.js";
-import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
+import { parseArgs, getStringFlag, hasFlag, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../../util/project/fide-dir.js";
+import { printJson, readUtf8 } from "../../util/command/io.js";
+import { okResponse } from "../../util/command/response.js";
+import { assertGraphKey } from "../../util/ids/selectors.js";
+import { resolveWorkspaceSelection, resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
 import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { graphGetCommand, graphListCommand, graphSaveCommand } from "./metadata.js";
 

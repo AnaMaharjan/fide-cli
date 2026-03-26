@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson, writeUtf8 } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson, writeUtf8 } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
 import { querySaveCommand } from "./metadata.js";
 import {
   assertLocalQueryCommand,

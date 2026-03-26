@@ -1,6 +1,6 @@
 import { readStdinUtf8 } from "../graph/shared.js";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { readUtf8 } from "../../util/io.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { readUtf8 } from "../../util/command/io.js";
 import {
   getLocalFideWarnings,
   type LocalQueryDefinition,
@@ -9,12 +9,12 @@ import {
   resolveQueriesDir,
   resolveStoreTarget,
 } from "@chris-test/graph";
-import { resolveSettingsPath } from "../../util/fide-dir.js";
-import { assertGraphKey, assertQueryName } from "../../util/selectors.js";
+import { resolveSettingsPath } from "../../util/project/fide-dir.js";
+import { assertGraphKey, assertQueryName } from "../../util/ids/selectors.js";
 import {
   resolveWorkspaceSelection,
   type WorkspaceSelectionSource,
-} from "../../util/workspace-settings.js";
+} from "../../util/workspace/workspace-settings.js";
 
 export type GraphQueryScope =
   | { targetScope: "local" }

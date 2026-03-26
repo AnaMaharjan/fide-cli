@@ -8,10 +8,10 @@ import {
   type StatementInput,
   type FsdDraftFrontmatter,
 } from "@chris-test/graph";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { printJson, readUtf8, writeUtf8 } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
 import { statementsDraftCommand } from "./metadata.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
 

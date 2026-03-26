@@ -1,5 +1,5 @@
-import { createAuthApiClient } from "../../../util/auth-api.js";
-import { resolveAuthSettings } from "../../../util/auth-settings.js";
+import { createAuthApiClient } from "../../../util/auth/auth-api.js";
+import { resolveAuthSettings } from "../../../util/auth/auth-settings.js";
 
 export async function requireAuthApiClient(flags: Map<string, string | boolean> = new Map()) {
   const auth = await resolveAuthSettings(flags);

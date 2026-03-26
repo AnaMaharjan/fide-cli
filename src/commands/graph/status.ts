@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { inspectGraphStore } from "@chris-test/graph-db";
-import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
-import { assertGraphKey } from "../../util/selectors.js";
+import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { assertGraphKey } from "../../util/ids/selectors.js";
 import {
   getLocalFideWarnings,
   inspectFideJsonlStore,

@@ -1,9 +1,9 @@
-import { parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderHelp } from "../../util/help.js";
-import { printJson } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
-import { errorResponse, okResponse } from "../../util/response.js";
-import { COMMAND_SCHEMAS, EXTENDED_SCHEMAS } from "../../util/schemas.js";
+import { parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderHelp } from "../../util/command/help.js";
+import { printJson } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { errorResponse, okResponse } from "../../util/command/response.js";
+import { COMMAND_SCHEMAS, EXTENDED_SCHEMAS } from "../../util/command/schemas.js";
 
 const SCHEMAS = COMMAND_SCHEMAS;
 

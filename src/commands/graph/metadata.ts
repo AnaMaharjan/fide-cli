@@ -1,4 +1,4 @@
-import { commandSchemas, defineCommand } from "../../util/command-metadata.js";
+import { commandSchemas, defineCommand } from "../../util/command/command-metadata.js";
 
 export const graphDefsCommand = defineCommand({
   surface: "graph.defs",

@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { hasFlag, parseArgs } from "../util/args.js";
-import { renderHelp } from "../util/help.js";
-import { printJson } from "../util/io.js";
-import { errorResponse, okResponse } from "../util/response.js";
+import { hasFlag, parseArgs } from "../util/command/args.js";
+import { renderHelp } from "../util/command/help.js";
+import { printJson } from "../util/command/io.js";
+import { errorResponse, okResponse } from "../util/command/response.js";
 
 type DocsMapping = {
   prefix: string;

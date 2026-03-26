@@ -1,17 +1,17 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output, stderr } from "node:process";
-import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { okResponse } from "../../util/response.js";
-import { formatPretty } from "../../util/pretty.js";
-import { createAuthApiClient } from "../../util/auth-api.js";
-import { resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth-settings.js";
-import { startAgentAuthLoopbackServer } from "../../util/auth-loopback.js";
-import { openBrowser } from "../../util/browser.js";
-import { getWorkspaceFlag } from "../../util/workspace-settings.js";
-import { assertAccountId, assertWorkspaceId } from "../../util/public-ids.js";
-import { writeProjectPointerSettings } from "../../util/project-pointer.js";
+import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { okResponse } from "../../util/command/response.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { createAuthApiClient } from "../../util/auth/auth-api.js";
+import { resolveApiBaseUrl, writeStoredAuthSettings } from "../../util/auth/auth-settings.js";
+import { startAgentAuthLoopbackServer } from "../../util/auth/auth-loopback.js";
+import { openBrowser } from "../../util/auth/browser.js";
+import { getWorkspaceFlag } from "../../util/workspace/workspace-settings.js";
+import { assertAccountId, assertWorkspaceId } from "../../util/ids/public-ids.js";
+import { writeProjectPointerSettings } from "../../util/project/project-pointer.js";
 import { authLoginCommand } from "./metadata.js";
 
 function renderLoginHelp(): string {

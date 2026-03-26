@@ -1,17 +1,17 @@
 import { existsSync } from "node:fs";
 import type { FideSettings } from "@chris-test/graph";
-import { parseArgs, shouldUseJsonOutput } from "../util/args.js";
-import { renderCommandHelp } from "../util/command-metadata.js";
-import { createAuthApiClient } from "../util/auth-api.js";
-import { readStoredAuthSettings, resolveAuthSettings } from "../util/auth-settings.js";
-import { printJson } from "../util/io.js";
-import { formatPretty } from "../util/pretty.js";
-import { okResponse } from "../util/response.js";
+import { parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
+import { renderCommandHelp } from "../util/command/command-metadata.js";
+import { createAuthApiClient } from "../util/auth/auth-api.js";
+import { readStoredAuthSettings, resolveAuthSettings } from "../util/auth/auth-settings.js";
+import { printJson } from "../util/command/io.js";
+import { formatPretty } from "../util/command/pretty.js";
+import { okResponse } from "../util/command/response.js";
 import { statusCommand } from "./metadata.js";
-import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/fide-dir.js";
-import { resolveWorkspaceSelection } from "../util/workspace-settings.js";
-import { resolveSelectedAccount, resolveAccountSettingsPath } from "../util/account-settings.js";
-import { readLiveSyncSession } from "../util/sync-session.js";
+import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/project/fide-dir.js";
+import { resolveWorkspaceSelection } from "../util/workspace/workspace-settings.js";
+import { resolveSelectedAccount, resolveAccountSettingsPath } from "../util/auth/account-settings.js";
+import { readLiveSyncSession } from "../util/workspace/sync-session.js";
 
 function omitNullFields<T>(value: T): T {
   if (Array.isArray(value)) {

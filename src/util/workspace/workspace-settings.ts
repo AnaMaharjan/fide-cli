@@ -1,6 +1,6 @@
-import { getStringFlag } from "./args.js";
-import { resolveProjectPointerSettings } from "./project-pointer.js";
-import { assertWorkspaceId } from "./public-ids.js";
+import { getStringFlag } from "../command/args.js";
+import { resolveProjectPointerSettings } from "../project/project-pointer.js";
+import { assertWorkspaceId } from "../ids/public-ids.js";
 
 export type WorkspaceSelectionSource = "flag" | "env" | "project";
 

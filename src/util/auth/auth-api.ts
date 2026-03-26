@@ -1,4 +1,4 @@
-import { errorResponse } from "./response.js";
+import { errorResponse } from "../command/response.js";
 
 class ApiResponseError extends Error {
   hint?: string;

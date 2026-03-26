@@ -1,5 +1,5 @@
-import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
-import { readUtf8 } from "../../util/io.js";
+import { getStringFlag, hasFlag, parseArgs } from "../../util/command/args.js";
+import { readUtf8 } from "../../util/command/io.js";
 import {
   buildStatementsWithRoot,
   detectStatementsInputFormat,

@@ -1,8 +1,8 @@
 import { FIDE_ENTITY_TYPES, type FideEntityTypeName } from "@chris-test/graph";
-import { getStringFlag, hasFlag, parseArgs } from "../../util/args.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { errorResponse, okResponse } from "../../util/response.js";
+import { getStringFlag, hasFlag, parseArgs } from "../../util/command/args.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { errorResponse, okResponse } from "../../util/command/response.js";
 import { graphDefsCommand } from "./metadata.js";
 
 type EntitySummary = {

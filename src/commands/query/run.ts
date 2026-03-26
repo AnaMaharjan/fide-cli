@@ -1,8 +1,8 @@
 import { executeGraphQuery } from "@chris-test/graph-db";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
-import { okResponse } from "../../util/response.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
+import { okResponse } from "../../util/command/response.js";
 import { requireWorkspaceApiClient, runHostedOperation } from "../workspace/shared.js";
 import { queryRunCommand } from "./metadata.js";
 import {
@@ -18,7 +18,7 @@ import {
   resolveStoreTarget,
   shouldUseJsonOutput,
 } from "./shared.js";
-import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace-settings.js";
+import { resolveWorkspaceSelectionOrThrow } from "../../util/workspace/workspace-settings.js";
 
 export async function runQueryRun(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args);

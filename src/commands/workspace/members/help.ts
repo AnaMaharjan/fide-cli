@@ -1,4 +1,4 @@
-import { renderHelp } from "../../../util/help.js";
+import { renderHelp } from "../../../util/command/help.js";
 
 export function workspaceMembersHelp(): string {
   return renderHelp({

@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/help.js";
+import { renderHelp } from "../../util/command/help.js";
 import { graphBuildCommand, graphGetCommand, graphListCommand, graphSaveCommand, graphStatusCommand } from "./metadata.js";
 
 export function graphCommandHelp(): string {

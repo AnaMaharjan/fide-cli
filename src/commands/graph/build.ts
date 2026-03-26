@@ -21,11 +21,11 @@ import {
   type ResolvedGraphStore,
   validateGraphSettings,
 } from "@chris-test/graph";
-import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/args.js";
-import { assertGraphKey } from "../../util/selectors.js";
-import { renderCommandHelp } from "../../util/command-metadata.js";
-import { printJson } from "../../util/io.js";
-import { formatPretty } from "../../util/pretty.js";
+import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { assertGraphKey } from "../../util/ids/selectors.js";
+import { renderCommandHelp } from "../../util/command/command-metadata.js";
+import { printJson } from "../../util/command/io.js";
+import { formatPretty } from "../../util/command/pretty.js";
 import { graphBuildCommand } from "./metadata.js";
 
 function printBuildProgress(flags: Map<string, string | boolean>, message: string): void {

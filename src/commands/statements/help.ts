@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/help.js";
+import { renderHelp } from "../../util/command/help.js";
 import { statementsDraftCommand, statementsWriteCommand } from "./metadata.js";
 
 export function statementsHelp(): string {

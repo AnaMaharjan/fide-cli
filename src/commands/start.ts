@@ -11,14 +11,14 @@ import {
   type HostedWorkspaceGraphInput,
   type LocalProjectGraphRecord,
 } from "@chris-test/workspace";
-import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../util/args.js";
-import { renderCommandHelp } from "../util/command-metadata.js";
-import { resolveAuthSettings } from "../util/auth-settings.js";
-import { createAuthApiClient } from "../util/auth-api.js";
-import { printJson } from "../util/io.js";
-import { formatPretty } from "../util/pretty.js";
-import { resolveWorkspaceSelectionOrThrow } from "../util/workspace-settings.js";
-import { okResponse } from "../util/response.js";
+import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
+import { renderCommandHelp } from "../util/command/command-metadata.js";
+import { resolveAuthSettings } from "../util/auth/auth-settings.js";
+import { createAuthApiClient } from "../util/auth/auth-api.js";
+import { printJson } from "../util/command/io.js";
+import { formatPretty } from "../util/command/pretty.js";
+import { resolveWorkspaceSelectionOrThrow } from "../util/workspace/workspace-settings.js";
+import { okResponse } from "../util/command/response.js";
 import {
   clearSyncSession,
   isProcessAlive,
@@ -26,8 +26,8 @@ import {
   resolveSyncDir,
   updateSyncSession,
   writeSyncSession,
-} from "../util/sync-session.js";
-import { readJsonFile, resolveFideContext } from "../util/fide-dir.js";
+} from "../util/workspace/sync-session.js";
+import { readJsonFile, resolveFideContext } from "../util/project/fide-dir.js";
 import { startCommand } from "./metadata.js";
 
 type SyncServerMessage = {

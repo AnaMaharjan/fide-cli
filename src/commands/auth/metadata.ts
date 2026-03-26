@@ -1,5 +1,5 @@
-import { DEFAULT_FIDE_API_BASE_URL } from "../../util/auth-settings.js";
-import { commandSchemas, defineCommand } from "../../util/command-metadata.js";
+import { DEFAULT_FIDE_API_BASE_URL } from "../../util/auth/auth-settings.js";
+import { commandSchemas, defineCommand } from "../../util/command/command-metadata.js";
 
 export const authLoginCommand = defineCommand({
   surface: "login",

@@ -1,10 +1,10 @@
 import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
-import { AUTH_COMMAND_SCHEMAS } from "../commands/auth/metadata.js";
-import { CORE_COMMAND_SCHEMAS } from "../commands/metadata.js";
-import { GRAPH_COMMAND_SCHEMAS } from "../commands/graph/metadata.js";
-import { QUERY_COMMAND_SCHEMAS } from "../commands/query/metadata.js";
-import { STATEMENTS_COMMAND_SCHEMAS } from "../commands/statements/metadata.js";
-import { WORKSPACE_COMMAND_SCHEMAS } from "../commands/workspace/metadata.js";
+import { AUTH_COMMAND_SCHEMAS } from "../../commands/auth/metadata.js";
+import { CORE_COMMAND_SCHEMAS } from "../../commands/metadata.js";
+import { GRAPH_COMMAND_SCHEMAS } from "../../commands/graph/metadata.js";
+import { QUERY_COMMAND_SCHEMAS } from "../../commands/query/metadata.js";
+import { STATEMENTS_COMMAND_SCHEMAS } from "../../commands/statements/metadata.js";
+import { WORKSPACE_COMMAND_SCHEMAS } from "../../commands/workspace/metadata.js";
 
 /**
  * Machine-readable command schemas for agent introspection.
