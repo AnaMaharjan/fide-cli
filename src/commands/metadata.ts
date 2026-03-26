@@ -3,7 +3,7 @@ import { commandSchemas, defineCommand } from "../util/command-metadata.js";
 export const statusCommand = defineCommand({
   surface: "status",
   command: "fide status",
-  summary: "Show active machine, project, and workspace context",
+  summary: "Show machine auth, project context, and sync runtime state",
   usage: [
     "fide status [--pretty|-p]",
   ],
@@ -15,15 +15,12 @@ export const statusCommand = defineCommand({
     project: "object",
     workspace: "object",
   },
-  notes: [
-    "Shows active machine, project, and workspace context in one response.",
-  ],
 });
 
 export const startCommand = defineCommand({
   surface: "start",
   command: "fide start",
-  summary: "Start a workspace sync session for this device",
+  summary: "Start the background sync agent for the current project",
   usage: [
     "fide start [--sync-url <url>] [--workspace <workspace_id>] [--pretty|-p]",
   ],
@@ -43,14 +40,18 @@ export const startCommand = defineCommand({
     "Sync URL resolution order: --sync-url, FIDE_SYNC_BASE_URL, then derived from the resolved API base URL.",
     "API base URL resolution uses --api-base-url where supported, then FIDE_API_BASE_URL, then the default API base URL.",
     "Workspace targeting resolves from --workspace, FIDE_WORKSPACE_ID, or project .fide/settings.json.",
+    "Project targeting resolves from the current project's .fide/settings.json.",
     "Starts a detached local sync agent and returns immediately.",
+    "Current sync behavior is one-way: project .fide/settings.json is the source of truth for hosted graph metadata.",
+    "Graph sync projects only shared graph fields upstream; local connection settings stay local.",
+    "Queries are watched for now but are not synced yet.",
   ],
 });
 
 export const stopCommand = defineCommand({
   surface: "stop",
   command: "fide stop",
-  summary: "Stop the background workspace sync session for this device",
+  summary: "Stop the background sync agent for this device",
   usage: [
     "fide stop [--pretty|-p]",
   ],
@@ -62,9 +63,6 @@ export const stopCommand = defineCommand({
     pid: "number?",
     workspaceId: "string?",
   },
-  notes: [
-    "Stops the detached local sync agent started by `fide start`.",
-  ],
 });
 
 export const CORE_COMMAND_METADATA = [statusCommand, startCommand, stopCommand] as const;

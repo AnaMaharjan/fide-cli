@@ -32,8 +32,6 @@ export function authCommandHelp(): string {
         title: "Notes",
         items: [
           "  - Environment variables override stored account auth: FIDE_API_BASE_URL, FIDE_SYNC_BASE_URL, FIDE_ACCESS_TOKEN, and FIDE_ACCOUNT_ID.",
-          "  - If FIDE_API_BASE_URL is not set, the CLI falls back to https://api.fide.work.",
-          "  - `fide login` uses --api-base-url first, then FIDE_API_BASE_URL, then the default API base URL.",
           "  - If FIDE_SYNC_BASE_URL is set, `fide start` uses it without needing --sync-url.",
           "  - Machine auth lives under ~/.fide/accounts/<account_id>/settings.json.",
           "  - Commands resolve auth from FIDE_ACCOUNT_ID or project .fide/settings.json.",

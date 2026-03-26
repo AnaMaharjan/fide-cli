@@ -40,16 +40,16 @@ function helpText(): string {
           items: [
             "  login    Save auth for this machine",
             "  logout   Remove saved auth for an account",
-            "  start    Start a workspace sync session",
-            "  stop     Stop the workspace sync session",
-            "  status   Inspect machine, project, and workspace context",
+            "  start    Start the background sync agent for this project",
+            "  stop     Stop the background sync agent",
+            "  status   Inspect machine auth, project context, and sync state",
             "  whoami   Show the current authenticated user",
           ],
         },
         {
           title: "Groups",
           items: [
-            "  graph    Local graph work and hosted graph/query management",
+            "  graph    Local graph work and hosted graph/query projection",
             "  workspace Workspace info, members, and roles",
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
@@ -70,6 +70,15 @@ function helpText(): string {
             "  fide graph query run --graph primary 'select * from statements limit 10'",
             "  fide graph build --graph combined",
             "  fide workspace list",
+          ],
+        },
+        {
+          title: "Notes",
+          items: [
+            "  - `fide start` runs a detached background agent and returns immediately.",
+            "  - The current project `.fide/settings.json` is the source of truth for hosted graph sync.",
+            "  - Hosted graph sync currently projects shared graph metadata only; local connection settings stay local.",
+            "  - Query files are watched by the sync agent but are not synced yet.",
           ],
         },
         {

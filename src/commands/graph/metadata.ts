@@ -127,7 +127,7 @@ export const graphStatusCommand = defineCommand({
 export const graphListCommand = defineCommand({
   surface: "graph.list",
   command: "fide graph list",
-  summary: "List hosted graphs for a workspace",
+  summary: "List hosted graphs owned by the current account in a workspace",
   usage: [
     "fide graph list [--workspace <workspace-id>]",
   ],
@@ -150,7 +150,7 @@ export const graphListCommand = defineCommand({
 export const graphGetCommand = defineCommand({
   surface: "graph.get",
   command: "fide graph get",
-  summary: "Inspect one hosted graph for a workspace",
+  summary: "Inspect one hosted graph owned by the current account",
   usage: [
     "fide graph get [--workspace <workspace-id>] --graph <key>",
   ],
@@ -174,7 +174,7 @@ export const graphGetCommand = defineCommand({
 export const graphSaveCommand = defineCommand({
   surface: "graph.save",
   command: "fide graph save",
-  summary: "Save hosted graph metadata",
+  summary: "Project local graph metadata into a hosted workspace graph",
   usage: [
     "fide graph save [--workspace <workspace-id>] --graph <key> --type postgres",
     "fide graph save [--workspace <workspace-id>] --graph <key> --type sqlite",
@@ -206,8 +206,8 @@ export const graphSaveCommand = defineCommand({
     "fide graph save --workspace <workspace-id> --graph combined-graph-postgres --type postgres",
   ],
   notes: [
-    "This command updates hosted workspace graph metadata.",
     "If no explicit graph definition is provided, `--graph <key>` first looks for a local project graph with the same key in `.fide/settings.json`.",
+    "Hosted graph writes are one-way projections of shared graph fields from the local project into the selected workspace.",
     "Local connection details stay in project `.fide/settings.json` and are not saved to the workspace.",
     "Use `--dry-run` to preview whether the hosted graph metadata would change before writing it.",
     "Pass `--file` or `--stdin` to provide the full hosted graph metadata object instead of individual flags.",
@@ -224,9 +224,9 @@ export const graphQueryCommand = defineCommand({
   params: [],
   output: {},
   notes: [
-    "Use `run` for ad hoc SQL or saved-query execution.",
     "Mixed query commands default to local project queries.",
     "Graph query commands only target hosted state when `--workspace` is present.",
+    "The sync agent watches `.fide/queries/`, but query sync is not implemented yet.",
     "Pass `--workspace <workspace-id>` explicitly, or pass bare `--workspace` when `FIDE_WORKSPACE_ID` is already set.",
   ],
 });
@@ -275,8 +275,7 @@ export const graphQueryRunCommand = defineCommand({
     "fide graph query run --workspace --graph primary --name recentStatements",
   ],
   notes: [
-    "Without `--workspace`, `--name <query-name>` runs a local project saved query.",
-    "With `--workspace`, `--name <query-name>` runs a hosted workspace saved query.",
+    "Saved-query execution only targets hosted state when `--workspace` is present; otherwise it resolves against local project queries.",
     "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
   ],
 });
@@ -312,8 +311,7 @@ export const graphQueryListCommand = defineCommand({
     "fide graph query list --workspace",
   ],
   notes: [
-    "Without `--workspace`, lists local project query summaries.",
-    "With `--workspace`, lists hosted workspace query summaries.",
+    "Listing targets hosted state only when `--workspace` is present; otherwise it reads local project query summaries.",
     "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
     "List output is intentionally compact and returns the query identity fields needed to choose one query.",
     "Use `fide graph query get --graph <key> --name <query-name>` to read the full query text for a selected result.",
@@ -351,8 +349,7 @@ export const graphQueryGetCommand = defineCommand({
     "fide graph query get --workspace --graph primary --name recentStatements",
   ],
   notes: [
-    "Without `--workspace`, reads one full local project query.",
-    "With `--workspace`, reads one full hosted workspace query.",
+    "Reads hosted state only when `--workspace` is present; otherwise it reads the local project query definition.",
     "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
     "Use `fide graph query list` first when you need to discover the available graph/name pairs.",
   ],
@@ -402,8 +399,7 @@ export const graphQuerySaveCommand = defineCommand({
     "fide graph query save --workspace --graph primary --name recentStatements 'select * from statements limit 10'",
   ],
   notes: [
-    "Without `--workspace`, saves into the current project's `.fide/queries/<graph>/` directory.",
-    "With `--workspace`, saves into the hosted workspace query list.",
+    "Writes to hosted state only when `--workspace` is present; otherwise it saves into the current project's `.fide/queries/<graph>/` directory.",
     "When `FIDE_WORKSPACE_ID` is set, pass bare `--workspace` to use that hosted workspace on purpose.",
     "Use `--dry-run` to preview whether a hosted workspace query write would change shared state before saving it.",
   ],

@@ -29,10 +29,6 @@ type SyncServerMessage = {
 };
 
 type ProjectSettingsRecord = {
-  workspace?: {
-    id?: string;
-    name?: string;
-  };
   graphs?: Record<string, {
     type?: "postgres" | "sqlite" | "fide-jsonl";
     recipe?: unknown;
@@ -107,16 +103,6 @@ function parseSyncMessage(raw: unknown): SyncServerMessage {
   } catch {
     return { type: "raw", raw };
   }
-}
-
-function readWorkspaceNameFromProjectSettings(settingsPath: string): { workspaceId: string | null; workspaceName: string | null } {
-  const settings = readJsonFile<ProjectSettingsRecord>(settingsPath);
-  const workspaceId = typeof settings?.workspace?.id === "string" ? settings.workspace.id.trim() : null;
-  const workspaceName = typeof settings?.workspace?.name === "string" ? settings.workspace.name.trim() : null;
-  return {
-    workspaceId: workspaceId && workspaceId.length > 0 ? workspaceId : null,
-    workspaceName: workspaceName && workspaceName.length > 0 ? workspaceName : null,
-  };
 }
 
 function readHostedGraphsFromProjectSettings(settingsPath: string): Map<string, HostedWorkspaceGraphInput> {
@@ -236,8 +222,7 @@ async function runDetachedStart(flags: Map<string, string | boolean>, useJson: b
   const cliEntryPath = resolveCliEntryPath();
   const syncDir = resolveSyncDir();
   mkdirSync(syncDir, { recursive: true });
-  const stdoutFd = openSync(resolve(syncDir, "stdout.log"), "a");
-  const stderrFd = openSync(resolve(syncDir, "stderr.log"), "a");
+  const logFd = openSync(resolve(syncDir, "sync.log"), "w");
   const fide = resolveFideContext(process.cwd());
 
   const child = spawn(
@@ -253,7 +238,7 @@ async function runDetachedStart(flags: Map<string, string | boolean>, useJson: b
     {
       cwd: process.cwd(),
       detached: true,
-      stdio: ["ignore", stdoutFd, stderrFd],
+      stdio: ["ignore", logFd, logFd],
       env: {
         ...process.env,
         ...(auth.accountId ? { FIDE_ACCOUNT_ID: auth.accountId } : {}),
@@ -303,44 +288,6 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
   const projectSettingsPath = join(fide.fideDir, "settings.json");
   const projectQueriesPath = join(fide.fideDir, "queries");
   let watcher: FSWatcher | null = null;
-  let lastSyncedWorkspaceName: string | null = null;
-
-  const syncWorkspaceName = async () => {
-    const { workspaceId: projectWorkspaceId, workspaceName } = readWorkspaceNameFromProjectSettings(projectSettingsPath);
-    logSyncRunner("workspace-name.check", {
-      projectSettingsPath,
-      projectWorkspaceId,
-      expectedWorkspaceId: workspace.workspaceId,
-      workspaceName,
-      lastSyncedWorkspaceName,
-    });
-    if (!workspaceName || !projectWorkspaceId || projectWorkspaceId !== workspace.workspaceId) {
-      logSyncRunner("workspace-name.skip", {
-        reason: "missing_or_mismatched_workspace",
-      });
-      return;
-    }
-    if (workspaceName === lastSyncedWorkspaceName) {
-      logSyncRunner("workspace-name.skip", {
-        reason: "unchanged",
-        workspaceName,
-      });
-      return;
-    }
-    logSyncRunner("workspace-name.update.start", {
-      workspaceId: workspace.workspaceId,
-      workspaceName,
-    });
-    const updated = await workspaceApi.updateWorkspace({
-      workspaceId: workspace.workspaceId,
-      name: workspaceName,
-    });
-    lastSyncedWorkspaceName = updated.name;
-    logSyncRunner("workspace-name.update.ok", {
-      workspaceId: updated.id,
-      workspaceName: updated.name,
-    });
-  };
 
   const syncProjectGraphs = async () => {
     const localGraphs = readHostedGraphsFromProjectSettings(projectSettingsPath);
@@ -399,17 +346,6 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
 
   const syncProjectState = async (path: string) => {
     const errors: string[] = [];
-
-    try {
-      await syncWorkspaceName();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      errors.push(message);
-      logSyncRunner("workspace-name.update.error", {
-        path,
-        error: message,
-      });
-    }
 
     try {
       await syncProjectGraphs();
