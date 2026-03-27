@@ -15,18 +15,17 @@ export const queryListCommand = defineCommand({
   command: "fide query list",
   outputType: "QueryListOutput",
   summary: "List local project query summaries",
-  usage: ["fide query list", "fide query list --graph <key>"],
-  paramOrder: ["graph", "fide-dir", "pretty"],
+  usage: ["fide query list", "fide query list --graph-key <key>"],
+  paramOrder: ["graph-key", "pretty"],
   params: {
-    graph: { kind: "string", description: "Optional graph key filter", valueLabel: "<key>" },
-    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
+    "graph-key": { kind: "string", description: "Optional graph key filter", valueLabel: "<key>" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
-  examples: ["fide query list", "fide query list --graph primary"],
+  examples: ["fide query list", "fide query list --graph-key primary"],
   notes: [
-    "Lists query definitions from the current project's `.fide/queries/` directory.",
+    "Lists query definitions from the current project's `.fide/graphs/<graphKey>/queries/` directories.",
     "The query list is local-first source of truth and does not read hosted state.",
-    "Use `fide query get --graph <key> --name <query-name>` to read the full query text for a selected result.",
+    "Use `fide query get --file .fide/graphs/<graphKey>/queries/<query>.sql` to read the full query text for a selected result.",
   ],
 });
 
@@ -56,7 +55,7 @@ export async function runQueryList(args: string[]): Promise<number> {
     throw new Error("`fide query list` only supports project `.fide` directories.");
   }
 
-  const graphKeyRaw = flags.get("graph");
+  const graphKeyRaw = flags.get("graph-key");
   const graphKey = typeof graphKeyRaw === "string" ? assertGraphKey(graphKeyRaw) : null;
   const queries = (await readLocalQueries(graphTarget.root))
     .filter((query) => !graphKey || query.graphKey === graphKey)

@@ -4,10 +4,9 @@ import { authLogoutCommand } from "./auth/logout.js";
 import { authWhoamiCommand } from "./auth/whoami.js";
 import { docsCommand } from "./docs.js";
 import { pluginInstallCommand } from "./plugin/install.js";
-import { graphBuildCommand } from "./graph/build.js";
+import { graphConnectCommand } from "./graph/connect.js";
 import { graphGetCommand } from "./graph/get.js";
 import { graphListCommand } from "./graph/list.js";
-import { graphSaveCommand } from "./graph/save.js";
 import { graphStatusCommand } from "./graph/status.js";
 import { queryGetCommand } from "./query/get.js";
 import { queryListCommand } from "./query/list.js";
@@ -17,6 +16,7 @@ import { schemaCommand } from "./schema/command.js";
 import { startCommand } from "./start.js";
 import { statementsDraftCommand } from "./statements/draft.js";
 import { statementsGuideCommand } from "./statements/guide.js";
+import { statementsLoadCommand } from "./statements/load.js";
 import { statementsWriteCommand } from "./statements/write.js";
 import { statusCommand } from "./status.js";
 import { stopCommand } from "./stop.js";
@@ -43,12 +43,12 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   querySaveCommand,
   statementsWriteCommand,
   statementsDraftCommand,
+  statementsLoadCommand,
   statementsGuideCommand,
   graphStatusCommand,
   graphListCommand,
   graphGetCommand,
-  graphSaveCommand,
-  graphBuildCommand,
+  graphConnectCommand,
   schemaCommand,
 ] as const;
 

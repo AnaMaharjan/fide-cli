@@ -1,8 +1,7 @@
-import { runGraphBuild } from "./build.js";
+import { runGraphConnectCommand } from "./connect.js";
 import { runGraphGet } from "./get.js";
 import { graphCommandHelp } from "./help.js";
 import { runGraphList } from "./list.js";
-import { runGraphSaveCommand } from "./save.js";
 import { runGraphStatus } from "./status.js";
 
 /**
@@ -26,12 +25,8 @@ export async function runGraphCommand(command: string | undefined, args: string[
     return runGraphGet(args);
   }
 
-  if (command === "save") {
-    return runGraphSaveCommand(args);
-  }
-
-  if (command === "build") {
-    return runGraphBuild(args);
+  if (command === "connect") {
+    return runGraphConnectCommand(args);
   }
 
   console.error(`Unknown graph command: ${command}`);

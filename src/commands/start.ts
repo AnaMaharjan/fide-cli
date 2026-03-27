@@ -32,7 +32,8 @@ import {
   updateSyncSession,
   writeSyncSession,
 } from "../util/workspace/sync-session.js";
-import { readJsonFile, resolveFideContext } from "../util/project/fide-dir.js";
+import { resolveFideContext } from "../util/project/fide-dir.js";
+import { listLocalProjectGraphs } from "../util/project/graph-config.js";
 export const startCommand = defineCommand({
   surface: "start",
   command: "fide start",
@@ -48,11 +49,10 @@ export const startCommand = defineCommand({
     "Sync URL resolution order: --sync-url, FIDE_SYNC_BASE_URL, then derived from the resolved API base URL.",
     "API base URL resolution uses --api-base-url where supported, then FIDE_API_BASE_URL, then the default API base URL.",
     "Workspace targeting resolves from the current project's .fide/settings.json.",
-    "Project targeting resolves from the current project's .fide/settings.json.",
     "Starts a detached local sync agent and returns immediately.",
-    "Current sync behavior is one-way: project .fide/settings.json is the source of truth for hosted graph metadata.",
-    "Graph sync projects only shared graph fields upstream; local connection settings stay local.",
-    "Local query files under .fide/queries/ are also synced one-way into the selected workspace.",
+    "Current sync behavior is one-way: project .fide/graphs/<graphKey>/config.json files are the source of truth for hosted graph metadata.",
+    "Graph sync projects only shared graph type upstream; local connection settings stay local.",
+    "Local query files under .fide/graphs/<graphKey>/queries/ are also synced one-way into the selected workspace.",
   ],
 });
 
@@ -73,10 +73,6 @@ export type StartOutput = {
 type SyncServerMessage = {
   type?: string;
   [key: string]: unknown;
-};
-
-type ProjectSettingsRecord = {
-  graphs?: Record<string, LocalProjectGraphRecord>;
 };
 
 type HostedWorkspaceQueryInput = {
@@ -150,9 +146,11 @@ function parseSyncMessage(raw: unknown): SyncServerMessage {
   }
 }
 
-function readHostedGraphsFromProjectSettings(settingsPath: string): Map<string, HostedWorkspaceGraphInput> {
-  const settings = readJsonFile<ProjectSettingsRecord>(settingsPath);
-  return projectLocalGraphsToHostedGraphs(settings?.graphs);
+function readHostedGraphsFromProject(root: string): Map<string, HostedWorkspaceGraphInput> {
+  const localGraphs = Object.fromEntries(
+    listLocalProjectGraphs(root).graphs.map(({ graphKey, graph }) => [graphKey, graph] as const),
+  ) as Record<string, LocalProjectGraphRecord>;
+  return projectLocalGraphsToHostedGraphs(localGraphs);
 }
 
 function readHostedQueriesFromProject(root: string): Promise<Map<string, HostedWorkspaceQueryInput>> {
@@ -319,12 +317,11 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
     accessToken: auth.accessToken,
   });
   const fide = resolveFideContext(process.cwd());
-  const projectSettingsPath = join(fide.fideDir, "settings.json");
-  const projectQueriesPath = join(fide.fideDir, "queries");
+  const projectGraphsPath = join(fide.fideDir, "graphs");
   let watcher: FSWatcher | null = null;
 
   const syncProjectGraphs = async () => {
-    const localGraphs = readHostedGraphsFromProjectSettings(projectSettingsPath);
+    const localGraphs = readHostedGraphsFromProject(fide.root);
     const remoteGraphs = await workspaceApi.listWorkspaceGraphs(workspace.workspaceId);
     const operations = planHostedWorkspaceGraphSync({
       localGraphs,
@@ -332,7 +329,7 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
     });
 
     logSyncRunner("graphs.sync.start", {
-      projectSettingsPath,
+      graphsDir: join(fide.fideDir, "graphs"),
       workspaceId: workspace.workspaceId,
       localGraphKeys: Array.from(localGraphs.keys()),
       remoteGraphKeys: remoteGraphs.map((graph) => graph.graphKey),
@@ -347,9 +344,16 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
         continue;
       }
       if (operation.status === "remote_only") {
-        logSyncRunner("graphs.sync.skip", {
+        logSyncRunner("graphs.sync.delete", {
           graphKey: operation.graphKey,
-          reason: "remote_only",
+          reason: "missing_local",
+        });
+        await workspaceApi.deleteWorkspaceGraph({
+          workspaceId: workspace.workspaceId,
+          graphKey: operation.graphKey,
+        });
+        logSyncRunner("graphs.sync.delete.ok", {
+          graphKey: operation.graphKey,
         });
         continue;
       }
@@ -377,7 +381,7 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
     });
 
     logSyncRunner("queries.sync.start", {
-      projectQueriesPath,
+      projectGraphsPath,
       workspaceId: workspace.workspaceId,
       localQueries: Array.from(localQueries.values()).map((query) => `${query.graphKey}/${query.name}`),
       remoteQueries: remoteQueryList.queries.map((query) => `${query.graphKey}/${query.name}`),
@@ -439,9 +443,17 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
       if (localQueries.has(`${remoteQuery.graphKey}:${remoteQuery.name}`)) {
         continue;
       }
-      logSyncRunner("queries.sync.skip", {
+      logSyncRunner("queries.sync.delete", {
         query: queryId,
-        reason: "remote_only",
+        reason: "missing_local",
+      });
+      await workspaceApi.deleteGraphQuery({
+        workspaceId: workspace.workspaceId,
+        graphKey: remoteQuery.graphKey,
+        name: remoteQuery.name,
+      });
+      logSyncRunner("queries.sync.delete.ok", {
+        query: queryId,
       });
     }
   };
@@ -490,10 +502,9 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
   const startProjectWatcher = async () => {
     if (watcher) return;
     logSyncRunner("watcher.start", {
-      projectSettingsPath,
-      projectQueriesPath,
+      projectGraphsPath,
     });
-    watcher = chokidar.watch([projectSettingsPath, projectQueriesPath], {
+    watcher = chokidar.watch([projectGraphsPath], {
       ignoreInitial: true,
       awaitWriteFinish: {
         stabilityThreshold: 200,
@@ -503,27 +514,33 @@ export async function runSyncRunnerCommand(args: string[]): Promise<number> {
 
     watcher.on("change", async (path: string) => {
       logSyncRunner("watcher.change", { path });
-      if (path === projectSettingsPath) {
-        await syncProjectState(path);
-        return;
-      }
-      if (path.startsWith(projectQueriesPath)) {
+      if (path.startsWith(projectGraphsPath)) {
         await syncProjectState(path);
       }
     });
 
     watcher.on("add", async (path: string) => {
       logSyncRunner("watcher.add", { path });
-      if (path === projectSettingsPath) {
-        await syncProjectState(path);
-        return;
-      }
-      if (path.startsWith(projectQueriesPath)) {
+      if (path.startsWith(projectGraphsPath)) {
         await syncProjectState(path);
       }
     });
 
-    await syncProjectState(projectSettingsPath);
+    watcher.on("unlink", async (path: string) => {
+      logSyncRunner("watcher.unlink", { path });
+      if (path.startsWith(projectGraphsPath)) {
+        await syncProjectState(path);
+      }
+    });
+
+    watcher.on("unlinkDir", async (path: string) => {
+      logSyncRunner("watcher.unlinkDir", { path });
+      if (path.startsWith(projectGraphsPath)) {
+        await syncProjectState(path);
+      }
+    });
+
+    await syncProjectState(projectGraphsPath);
   };
 
   const waitForEnd = new Promise<number>((resolve, reject) => {

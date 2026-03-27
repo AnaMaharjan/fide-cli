@@ -15,8 +15,9 @@ import {
   getLocalFideWarnings,
   readLocalQueries,
   renderLocalQueryFileWithDescriptionLine,
+  requireQueryFilePath,
   resolveGraphTarget,
-  resolveQueriesDir,
+  resolveQueryFileSelector,
   resolveQuerySaveInput,
   shouldUseJsonOutput,
 } from "./shared.js";
@@ -27,25 +28,22 @@ export const querySaveCommand = defineCommand({
   outputType: "QuerySaveOutput",
   summary: "Save a local project query",
   usage: [
-    "fide query save --graph <key> --name <query-name> <query>",
-    "fide query save --graph <key> --name <query-name> --file <query.sql>",
+    "fide query save --file .fide/graphs/<graph-key>/queries/<query>.sql <query>",
+    "fide query save --file .fide/graphs/<graph-key>/queries/<query>.sql --stdin",
   ],
-  paramOrder: ["graph", "name", "description", "fide-dir", "file", "stdin", "pretty"],
+  paramOrder: ["file", "description", "stdin", "pretty"],
   params: {
-    graph: { kind: "string", required: true, description: "Graph key targeted by this query", valueLabel: "<key>" },
-    name: { kind: "string", required: true, description: "Saved query name", valueLabel: "<query-name>" },
+    file: { kind: "string", required: true, description: "Saved query file path", valueLabel: "<query.sql>" },
     description: { kind: "string", description: "Optional query description", valueLabel: "<text>" },
-    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
-    file: { kind: "string", description: "Read SQL from a file", valueLabel: "<query.sql>" },
     stdin: { kind: "boolean", description: "Read SQL from stdin" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
-    "fide query save --graph primary --name recentStatements 'select * from statements limit 10'",
-    "fide query save --graph primary --name recentStatements --description 'Recent statement sample'",
+    "fide query save --file .fide/graphs/primary/queries/recentStatements.sql 'select * from statements limit 10'",
+    "fide query save --file .fide/graphs/primary/queries/recentStatements.sql --description 'Recent statement sample'",
   ],
   notes: [
-    "Saves into the current project's `.fide/queries/<graph>/` directory.",
+    "Saves into the current project's `.fide/graphs/<graphKey>/queries/` directory.",
     "If SQL is omitted and the query already exists, the existing SQL body is preserved so you can update metadata like `--description` only.",
     "Use `fide start` to sync the local query definition into the selected workspace.",
   ],
@@ -90,17 +88,15 @@ export async function runQuerySave(args: string[]): Promise<number> {
 
   const { parsed, sql, fileDescription } = await resolveQuerySaveInput(args);
   const flags = parsed.flags;
-  const graphKey = readCommandStringFlag(querySaveCommand, parsed, "graph");
-  const name = readCommandStringFlag(querySaveCommand, parsed, "name");
+  const filePath = requireQueryFilePath(flags);
   const descriptionUpdate = resolveQuerySaveDescriptionInput(parsed, fileDescription);
-  if (!graphKey || !name) {
-    throw new Error("Query save command metadata failed to resolve required flags.");
-  }
 
   const graphTarget = resolveGraphTarget(flags);
   if (graphTarget.type !== "local") {
     throw new Error("`fide query save` only supports project `.fide` directories.");
   }
+
+  const { graphKey, name } = resolveQueryFileSelector(graphTarget.root, filePath);
 
   const existingQueries = await readLocalQueries(graphTarget.root);
   const existingQuery = existingQueries.find((entry) => entry.graphKey === graphKey && entry.name === name) ?? null;
@@ -114,7 +110,7 @@ export async function runQuerySave(args: string[]): Promise<number> {
     return 1;
   }
 
-  const outPath = resolve(resolveQueriesDir(graphTarget.root), graphKey, `${name}.sql`);
+  const outPath = resolve(filePath);
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, renderLocalQueryFileWithDescriptionLine(
     resolvedSql,

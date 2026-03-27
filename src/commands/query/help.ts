@@ -27,16 +27,16 @@ export function queryCommandHelp(): string {
           title: "Workflows",
           items: [
             "  fide query list",
-            "  fide query get --graph primary --name recentStatements",
-            "  fide query save --graph primary --name recentStatements 'select * from statements limit 10'",
-            "  fide query run --graph primary 'select * from statements limit 10'",
-            "  fide query run --graph primary --name recentStatements",
+            "  fide query get --file .fide/graphs/primary/queries/recentStatements.sql",
+            "  fide query save --file .fide/graphs/primary/queries/recentStatements.sql 'select * from statements limit 10'",
+            "  fide query run --graph-key primary 'select * from statements limit 10'",
+            "  fide query run --file .fide/graphs/primary/queries/recentStatements.sql",
           ],
         },
         {
           title: "Notes",
           items: [
-            "  - `query list|get|save` are local-first source-of-truth commands for `.fide/queries/`.",
+            "  - `query list|get|save` are local-first source-of-truth commands for `.fide/graphs/<graphKey>/queries/`.",
             "  - `query run` executes against local graph/query state.",
             "  - Query files are watched by `fide start` and synced into the workspace.",
           ],

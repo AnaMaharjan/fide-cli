@@ -223,34 +223,6 @@ function formatGraphStatus(payload: PrettyRenderable): string {
   return lines.join("\n");
 }
 
-function formatGraphBuild(payload: PrettyRenderable): string {
-  const lines: string[] = ["Graph Build"];
-  const graphKey = typeof payload.key === "string" ? payload.key : null;
-  const graphStoreType = typeof payload.graphStoreType === "string" ? payload.graphStoreType : null;
-  const mode = typeof payload.mode === "string" ? payload.mode : null;
-  const schema = typeof payload.schema === "string" ? payload.schema : null;
-  const file = typeof payload.file === "string" ? payload.file : null;
-  const queryCount = typeof payload.queryCount === "number" ? payload.queryCount : null;
-  const statementCount = typeof payload.statementCount === "number" ? payload.statementCount : null;
-  const statementsAdded = typeof payload.statementsAdded === "number" ? payload.statementsAdded : null;
-  const stepCount = typeof payload.stepCount === "number" ? payload.stepCount : null;
-  const lastRunAt = typeof payload.lastRunAt === "string" ? payload.lastRunAt : null;
-  const warnings = Array.isArray(payload.warnings) ? (payload.warnings as string[]) : [];
-
-  if (graphKey) lines.push(`  graph: ${graphKey}`);
-  if (mode) lines.push(`  mode: ${mode}`);
-  if (graphStoreType) lines.push(`  target: ${graphStoreType}`);
-  if (schema) lines.push(`  schema: ${schema}`);
-  if (file) lines.push(`  file: ${file}`);
-  if (typeof statementsAdded === "number") lines.push(`  statements added: ${statementsAdded}`);
-  if (typeof statementCount === "number") lines.push(`  statements: ${statementCount}`);
-  if (typeof queryCount === "number") lines.push(`  queries: ${queryCount}`);
-  if (typeof stepCount === "number") lines.push(`  steps: ${stepCount}`);
-  if (lastRunAt) lines.push(`  last run: ${lastRunAt}`);
-  if (warnings.length > 0) lines.push(...warnings.map((warning) => `  warning: ${warning}`));
-  return lines.join("\n");
-}
-
 function formatWorkspaceList(payload: PrettyRenderable): string {
   const workspaces = Array.isArray(payload.workspaces) ? (payload.workspaces as Array<{
     id: string;
@@ -354,8 +326,6 @@ export function formatPretty(scope: string, payload: PrettyRenderable): string |
       return formatTopLevelStatus(payload);
     case "graph-status.v1":
       return formatGraphStatus(payload);
-    case "graph-build.v1":
-      return formatGraphBuild(payload);
     case "workspace-list.v1":
       return formatWorkspaceList(payload);
     case "workspace-get.v1":

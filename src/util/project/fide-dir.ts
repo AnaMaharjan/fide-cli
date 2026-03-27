@@ -133,6 +133,14 @@ export function resolveSettingsPath(root: string = process.cwd()): string {
   return resolve(resolveFideDir(root), "settings.json");
 }
 
+export function resolveGraphsDir(root: string = process.cwd()): string {
+  return resolve(resolveFideDir(root), "graphs");
+}
+
+export function resolveGraphConfigPath(graphKey: string, root: string = process.cwd()): string {
+  return resolve(resolveGraphsDir(root), graphKey, "config.json");
+}
+
 export function readJsonFile<T>(path: string): T | null {
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as T;

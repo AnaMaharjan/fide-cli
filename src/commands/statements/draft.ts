@@ -25,13 +25,12 @@ export const statementsDraftCommand = defineCommand({
   outputType: "StatementsDraftOutput",
   summary: "Create a markdown statement draft in a local project",
   usage: [
-    "fide statements draft [--fide-dir <path>] --name <draft-name> <json>",
-    "fide statements draft [--fide-dir <path>] --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
-    "fide statements draft [--fide-dir <path>] --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
+    "fide statements draft --name <draft-name> <json>",
+    "fide statements draft --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
+    "fide statements draft --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
   ],
-  paramOrder: ["fide-dir", "name", "path", "description", "file", "stdin", "format", "no-normalize", "pretty"],
+  paramOrder: ["name", "path", "description", "file", "stdin", "format", "no-normalize", "pretty"],
   params: {
-    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
     name: { kind: "string", required: true, description: "Draft file name without .md", valueLabel: "<draft-name>" },
     path: { kind: "string", description: "Optional subdirectory under .fide/drafts/statements", valueLabel: "<draft-path>" },
     description: { kind: "string", description: "Optional draft description frontmatter", valueLabel: "<text>" },

@@ -18,6 +18,11 @@ import {
 
 let statementsInputBooleanKeysCache: ReadonlySet<string> | undefined;
 
+function rejectDeprecatedFideDir(flags: Map<string, string | boolean>, command: string): void {
+  if (!flags.has("fide-dir")) return;
+  throw new Error(`\`${command}\` no longer supports \`--fide-dir\`. Run the command from the target project root or set \`FIDE_DIR\` in the environment.`);
+}
+
 async function statementsInputParseBooleanKeys(): Promise<ReadonlySet<string>> {
   if (!statementsInputBooleanKeysCache) {
     const [{ statementsWriteCommand }, { statementsDraftCommand }] = await Promise.all([
@@ -124,6 +129,7 @@ export async function resolveLocalStatementsBatchOrExit(
 
   const { parsed, statementInputs, batch } = await resolveStatementsBatch(argsOrFlags);
   const flags = parsed.flags;
+  rejectDeprecatedFideDir(flags, command.command);
 
   if (statementInputs.length === 0) {
     console.error(`Missing input for \`${command.command}\`. Use \`--stdin\`, \`--file <path>\`, or pass JSON inline.`);

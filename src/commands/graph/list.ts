@@ -1,4 +1,3 @@
-import type { FideSettings } from "@chris-test/graph";
 import { parseArgs, hasFlag, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -8,8 +7,7 @@ import {
 } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../../util/project/fide-dir.js";
-import type { LocalProjectGraphRecord } from "@chris-test/workspace";
+import { listLocalProjectGraphs } from "../../util/project/graph-config.js";
 
 export const graphListCommand = defineCommand({
   surface: "graph.list",
@@ -23,7 +21,7 @@ export const graphListCommand = defineCommand({
   },
   examples: ["fide graph list"],
   notes: [
-    "Lists graph definitions from the current project's `.fide/settings.json`.",
+    "Lists graph definitions from the current project's `.fide/graphs/` directory.",
   ],
 });
 
@@ -34,26 +32,6 @@ export type GraphListOutput = {
   root: string;
   graphs: Array<Record<string, unknown>>;
 };
-
-function readGraphs(settings: Record<string, unknown>): Record<string, LocalProjectGraphRecord> {
-  const raw = settings.graphs;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  return raw as Record<string, LocalProjectGraphRecord>;
-}
-
-function listLocalProjectGraphs(root: string = process.cwd()): {
-  root: string;
-  graphs: Array<{ graphKey: string; graph: LocalProjectGraphRecord }>;
-} {
-  const settingsPath = resolveSettingsPath(root);
-  const settings = readJsonFile<FideSettings>(settingsPath);
-  const graphs = readGraphs((settings ?? {}) as Record<string, unknown>);
-  const fide = resolveFideContext(root);
-  return {
-    root: fide.root,
-    graphs: Object.entries(graphs).map(([graphKey, graph]) => ({ graphKey, graph })),
-  };
-}
 
 export async function runGraphList(args: string[]): Promise<number> {
   const { flags } = parseArgs(args, { booleanKeys: GRAPH_LIST_PARSE_KEYS });

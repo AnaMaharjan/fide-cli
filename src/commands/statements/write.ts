@@ -19,13 +19,12 @@ export const statementsWriteCommand = defineCommand({
   outputType: "StatementsWriteOutput",
   summary: "Write canonical statement batches into a local project",
   usage: [
-    "fide statements write [--fide-dir <path>] <json>",
-    "fide statements write [--fide-dir <path>] --file <inputs> [--format <json|jsonl|fsd>]",
-    "fide statements write [--fide-dir <path>] --stdin [--format <json|jsonl|fsd>]",
+    "fide statements write <json>",
+    "fide statements write --file <inputs> [--format <json|jsonl|fsd>]",
+    "fide statements write --stdin [--format <json|jsonl|fsd>]",
   ],
-  paramOrder: ["fide-dir", "file", "stdin", "format", "no-normalize", "pretty"],
+  paramOrder: ["file", "stdin", "format", "no-normalize", "pretty"],
   params: {
-    "fide-dir": { kind: "string", description: "Local .fide directory override", valueLabel: "<path>" },
     file: { kind: "string", description: "Read statement inputs from a file", valueLabel: "<inputs>" },
     stdin: { kind: "boolean", description: "Read statement inputs from stdin" },
     format: { kind: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },

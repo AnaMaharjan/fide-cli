@@ -229,11 +229,20 @@ function extractPositionalArguments(usageLines, schemas) {
   const argumentsByName = new Map();
   const schemaParams = schemas.flatMap((schema) => schema?.params ?? []);
   const usageCount = usageLines.length || 1;
+  const flagNamesWithValues = schemaParams
+    .map((param) => param?.name)
+    .filter((name) => typeof name === "string" && !["boolean"].includes(String(schemaParams.find((param) => param?.name === name)?.type ?? "")))
+    .map((name) => `--${name}`);
 
   for (const line of usageLines) {
-    for (const match of line.matchAll(/<([^>]+)>/g)) {
+    let normalizedLine = line;
+    for (const flagName of flagNamesWithValues) {
+      normalizedLine = normalizedLine.replace(new RegExp(`(${flagName.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")})\\s+\\S+`, "g"), "$1");
+    }
+
+    for (const match of normalizedLine.matchAll(/<([^>]+)>/g)) {
       const rawName = match[1];
-      const before = line.slice(0, match.index).trimEnd();
+      const before = normalizedLine.slice(0, match.index).trimEnd();
       if (/--[a-z0-9-]+$/i.test(before)) continue;
 
       const normalizedRawName = normalizeName(rawName);

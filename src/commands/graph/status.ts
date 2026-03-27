@@ -25,18 +25,16 @@ export const graphStatusCommand = defineCommand({
   summary: "Inspect local graph state and configured runtime status",
   usage: [
     "fide graph status",
-    "fide graph status --fide-dir <path>",
-    "fide graph status --graph <key>",
+    "fide graph status --graph-key <key>",
   ],
-  paramOrder: ["fide-dir", "graph", "pretty"],
+  paramOrder: ["graph-key", "pretty"],
   params: {
-    "fide-dir": { kind: "string", description: "Optional local .fide directory override", valueLabel: "<path>" },
-    graph: { kind: "string", description: "Configured graph key", valueLabel: "<key>" },
+    "graph-key": { kind: "string", description: "Configured graph key", valueLabel: "<key>" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   notes: [
-    "With no selector, also returns local .fide status.",
-    "Use `--graph <key>` to narrow the graph status to one configured graph.",
+    "With no selector, also returns local `.fide` status.",
+    "Use `--graph-key <key>` to inspect one configured graph.",
   ],
 });
 
@@ -49,7 +47,7 @@ export type GraphStatusOutput = {
   graphs: unknown[];
 };
 
-function nextCommands(key: string | null, recipe: unknown, graphStoreType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
+function nextCommands(key: string | null, graphStoreType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
   if (graphStoreType === "fide-jsonl") {
     return {
@@ -57,15 +55,10 @@ function nextCommands(key: string | null, recipe: unknown, graphStoreType?: "pos
       writeCommand: "fide statements write ...",
     };
   }
-  const next: Record<string, string> = {
+  return {
     queryHelpCommand: "fide query run -h",
-    queryCommand: `fide query run --graph ${key} ...`,
+    queryCommand: `fide query run --graph-key ${key} ...`,
   };
-  if (Array.isArray(recipe) && recipe.length > 0) {
-    next.buildHelpCommand = "fide graph build -h";
-    next.buildCommand = `fide graph build --graph ${key}`;
-  }
-  return next;
 }
 
 async function getGraphStatus(target: ReturnType<typeof resolveStoreTarget>) {
@@ -78,10 +71,7 @@ async function getGraphStatus(target: ReturnType<typeof resolveStoreTarget>) {
       configured: true,
       reachable: inspection.reachable,
       dir: target.dir,
-      recipe: target.recipe,
-      lastRunAt: target.runState?.metadata?.lastRunAt,
-      lastRunStatementsAdded: target.runState?.metadata?.lastRunStatementsAdded,
-      next: nextCommands(target.key, target.recipe, "fide-jsonl"),
+      next: nextCommands(target.key, "fide-jsonl"),
       missing: inspection.missing,
       error: inspection.error,
     };
@@ -90,7 +80,7 @@ async function getGraphStatus(target: ReturnType<typeof resolveStoreTarget>) {
   const inspection = await inspectGraphStore(target);
   return {
     ...inspection,
-    next: nextCommands(target.key, target.recipe, target.type),
+    next: nextCommands(target.key, target.type),
   };
 }
 
@@ -104,7 +94,7 @@ async function getRuntimeStatusOverview() {
       graphStoreType: detailed.graphStoreType,
       warnings: "warnings" in detailed ? detailed.warnings : undefined,
       next: {
-        statusCommand: `fide graph status --graph ${key}`,
+        statusCommand: `fide graph status --graph-key ${key}`,
         ...(("graphStoreType" in detailed && detailed.graphStoreType === "fide-jsonl")
           ? {
               writeHelpCommand: "fide statements write -h",
@@ -112,14 +102,8 @@ async function getRuntimeStatusOverview() {
             }
           : {
               queryHelpCommand: "fide query run -h",
-              queryCommand: `fide query run --graph ${key} ...`,
+              queryCommand: `fide query run --graph-key ${key} ...`,
             }),
-        ...(Array.isArray((detailed as { recipe?: unknown }).recipe) && (detailed as { recipe?: unknown[] }).recipe!.length > 0 && detailed.graphStoreType !== "fide-jsonl"
-          ? {
-              buildHelpCommand: "fide graph build -h",
-              buildCommand: `fide graph build --graph ${key}`,
-            }
-          : {}),
       },
     };
   }));
@@ -141,11 +125,9 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
     throw new Error("`graph status` does not accept positional arguments.");
   }
 
-  const graphKey = typeof flags.get("graph") === "string" ? assertGraphKey(String(flags.get("graph"))) : null;
-  const hasFideDir = flags.has("fide-dir");
-
-  if (graphKey && hasFideDir) {
-    throw new Error("`--fide-dir` only applies to local status. Omit it when targeting a configured store.");
+  const graphKey = typeof flags.get("graph-key") === "string" ? assertGraphKey(String(flags.get("graph-key"))) : null;
+  if (flags.has("fide-dir")) {
+    throw new Error("`--fide-dir` is no longer supported. Run this command from the target project root or set `FIDE_DIR` in the environment.");
   }
 
   if (graphKey) {

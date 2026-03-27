@@ -1,6 +1,7 @@
 import { statementsHelp } from "./help.js";
 import { runStatementsDraft } from "./draft.js";
 import { runStatementsGuide } from "./guide.js";
+import { runStatementsLoad } from "./load.js";
 import { runStatementsWrite } from "./write.js";
 
 export async function runStatementsCommand(args: string[]): Promise<number> {
@@ -16,6 +17,10 @@ export async function runStatementsCommand(args: string[]): Promise<number> {
 
   if (command === "draft") {
     return runStatementsDraft(rest);
+  }
+
+  if (command === "load") {
+    return runStatementsLoad(rest);
   }
 
   if (command === "guide") {

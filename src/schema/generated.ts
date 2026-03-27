@@ -67,16 +67,17 @@ export const GENERATED_TYPE_SCHEMAS = {
       }
     }
   },
-  "graph.build.output": {
-    "command": "fide schema --surface graph.build.output",
+  "graph.connect.output": {
+    "command": "fide schema --surface graph.connect.output",
     "format": "ts-type.v0",
-    "typeName": "GraphBuildOutput",
-    "source": "src/commands/graph/build.ts",
+    "typeName": "GraphConnectOutput",
+    "source": "src/commands/graph/connect.ts",
     "schema": {
       "type": "object",
       "required": [
         "ok",
-        "scope"
+        "scope",
+        "command"
       ],
       "properties": {
         "ok": {
@@ -88,7 +89,21 @@ export const GENERATED_TYPE_SCHEMAS = {
         "scope": {
           "type": "string",
           "enum": [
-            "graph-build.v1"
+            "graph-connect-local.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide graph connect"
+          ]
+        },
+        "next": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {}
+            }
           ]
         }
       }
@@ -155,48 +170,6 @@ export const GENERATED_TYPE_SCHEMAS = {
             "type": "object",
             "properties": {}
           }
-        }
-      }
-    }
-  },
-  "graph.save.output": {
-    "command": "fide schema --surface graph.save.output",
-    "format": "ts-type.v0",
-    "typeName": "GraphSaveOutput",
-    "source": "src/commands/graph/save.ts",
-    "schema": {
-      "type": "object",
-      "required": [
-        "ok",
-        "scope",
-        "command"
-      ],
-      "properties": {
-        "ok": {
-          "type": "boolean",
-          "enum": [
-            true
-          ]
-        },
-        "scope": {
-          "type": "string",
-          "enum": [
-            "graph-save-local.v1"
-          ]
-        },
-        "command": {
-          "type": "string",
-          "enum": [
-            "fide graph save"
-          ]
-        },
-        "next": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {}
-            }
-          ]
         }
       }
     }
@@ -931,6 +904,94 @@ export const GENERATED_TYPE_SCHEMAS = {
           "type": "array",
           "items": {
             "type": "unknown"
+          }
+        }
+      }
+    }
+  },
+  "statements.load.output": {
+    "command": "fide schema --surface statements.load.output",
+    "format": "ts-type.v0",
+    "typeName": "StatementsLoadOutput",
+    "source": "src/commands/statements/load.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command",
+        "graphKey",
+        "graphStoreType",
+        "statementsDir",
+        "fileCount",
+        "statementCount",
+        "warnings"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "statements-load.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide statements load"
+          ]
+        },
+        "graphKey": {
+          "type": "string"
+        },
+        "graphStoreType": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "postgres"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "sqlite"
+              ]
+            }
+          ]
+        },
+        "statementsDir": {
+          "type": "string"
+        },
+        "fileCount": {
+          "type": "number"
+        },
+        "statementCount": {
+          "type": "number"
+        },
+        "fromDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "toDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }

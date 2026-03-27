@@ -35,8 +35,6 @@ export type WorkspaceSummary = {
 export type WorkspaceGraph = {
   graphKey: string;
   type: "postgres" | "sqlite" | "fide-jsonl";
-  recipe?: unknown;
-  metadata?: unknown;
   createdAt: string;
   updatedAt: string;
 };
@@ -313,6 +311,21 @@ export function createAuthApiClient(options: AuthClientOptions) {
         },
       );
       return parseApiResponse<{ query: GraphQuery }>(response, "graph-query-save-workspace.v1");
+    },
+
+    async deleteGraphQuery(input: {
+      workspaceId: string;
+      graphKey: string;
+      name: string;
+    }): Promise<{ ok: boolean }> {
+      const response = await fetch(
+        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
+      return parseApiResponse<{ ok: boolean }>(response, "graph-query-delete-workspace.v1");
     },
 
     async runGraphQuery(input: {
