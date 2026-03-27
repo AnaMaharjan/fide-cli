@@ -9,7 +9,6 @@ import {
 import { printJson, writeUtf8 } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { executeGraphQuery } from "../../util/project/graph-runtime/query.js";
-import { parseTransportSelector, resolveTransportFilePath } from "../../util/transport/selectors.js";
 import {
   assertLocalQueryableStore,
   getLocalFideWarnings,
@@ -28,28 +27,56 @@ export const queryLoadCommand = defineCommand({
   outputType: "QueryLoadOutput",
   summary: "Load query output from a graph",
   usage: [
-    "fide query load --graph-key <key> <query> --to file:./rows.json",
-    "fide query load --file .fide/graphs/<graph-key>/queries/<query>.sql --to file:./rows.json",
-    "fide query load --graph-key <key> --stdin --to file:./rows.json",
+    "fide query load --graph-key <key> <query> --to-fide-path results/rows.json",
+    "fide query load --file .fide/graphs/<graph-key>/queries/<query> --to-fide-path results/rows.json",
+    "fide query load --graph-key <key> --stdin --to-project-path reports/rows.json",
   ],
-  paramOrder: ["graph-key", "file", "stdin", "to", "pretty"],
+  paramOrder: ["graph-key", "file", "stdin", "to-fide-path", "to-project-path", "pretty"],
   params: {
     "graph-key": { kind: "string", description: "Graph key for inline query input", valueLabel: "<key>" },
-    file: { kind: "string", description: "Read query input from a saved query file path", valueLabel: "<query.sql>" },
+    file: { kind: "string", description: "Read query input from a saved query file path", valueLabel: "<query>" },
     stdin: { kind: "boolean", description: "Read query input from stdin" },
-    to: { kind: "string", required: true, description: "Load destination selector", valueLabel: "<type:value>" },
+    "to-fide-path": { kind: "string", description: "Write query output relative to the active .fide directory", valueLabel: "<path>" },
+    "to-project-path": { kind: "string", description: "Write query output relative to the project root", valueLabel: "<path>" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
+  values: [
+    {
+      label: "<query>",
+      value: "string",
+      suggested: '".fide/graphs/<graph-key>/queries/<query>.sql"',
+    },
+    {
+      label: "<path>",
+      value: "string",
+      children: [
+        {
+          label: "format inference",
+          value: ['".json"', '".jsonl"', '".csv"'],
+        },
+        {
+          label: "with `to-fide-path`",
+          value: '"results/rows.json"',
+          suggested: '"resolved inside the active .fide directory"',
+        },
+        {
+          label: "with `to-project-path`",
+          value: '"reports/rows.json"',
+          suggested: '"resolved from the project root"',
+        },
+      ],
+    },
+  ],
   examples: [
-    "fide query load --graph-key primary 'select * from statements limit 10' --to file:./rows.json",
-    "fide query load --graph-key primary 'select * from statements limit 10' --to file:./rows.jsonl",
-    "fide query load --graph-key primary 'select * from statements limit 10' --to file:./rows.csv",
-    "fide query load --file .fide/graphs/primary/queries/recentStatements.sql --to file:./rows.json",
+    "fide query load --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
+    "fide query load --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.jsonl",
+    "fide query load --graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
+    "fide query load --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.json",
   ],
   notes: [
     "Saved-query execution resolves from local query files under `.fide/graphs/<graphKey>/queries/`.",
-    "Use `--to <type:value>` to select the load destination. `file:<path>` is supported now; `graph:<graphKey>` is reserved for a later materialized-load path.",
     "File output format is inferred from the destination extension: `.json`, `.jsonl`, or `.csv`. Unknown or missing extensions default to JSON.",
+    "Use exactly one of `--to-fide-path` or `--to-project-path`.",
     "Query load writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
   ],
 });
@@ -70,6 +97,32 @@ export type QueryLoadOutput = {
 };
 
 type QueryLoadFileFormat = "json" | "jsonl" | "csv";
+
+function resolveQueryLoadDestination(
+  projectRoot: string,
+  fideDir: string,
+  toFidePath: string | null,
+  toProjectPath: string | null,
+): { destination: string; outPath: string } {
+  if (toFidePath && toProjectPath) {
+    throw new Error("Use exactly one of --to-fide-path <path> or --to-project-path <path>.");
+  }
+  if (!toFidePath && !toProjectPath) {
+    throw new Error("Missing required destination. Use --to-fide-path <path> or --to-project-path <path>.");
+  }
+
+  if (toFidePath) {
+    return {
+      destination: toFidePath,
+      outPath: resolve(fideDir, toFidePath),
+    };
+  }
+
+  return {
+    destination: toProjectPath as string,
+    outPath: resolve(projectRoot, toProjectPath as string),
+  };
+}
 
 function inferQueryLoadFileFormat(path: string): QueryLoadFileFormat {
   const extension = extname(path).toLowerCase();
@@ -133,11 +186,8 @@ export async function runQueryLoad(args: string[]): Promise<number> {
   await resolveGraphQueryScope(flags);
   const localTarget = resolveGraphTarget(flags);
   const filePath = typeof flags.get("file") === "string" ? String(flags.get("file")) : null;
-  const toRaw = typeof flags.get("to") === "string" ? String(flags.get("to")) : null;
-  if (!toRaw) {
-    throw new Error("Missing required flag: --to <type:value>.");
-  }
-  const destination = parseTransportSelector(toRaw, { flagName: "--to", allowedTypes: ["file", "graph"] });
+  const toFidePath = typeof flags.get("to-fide-path") === "string" ? String(flags.get("to-fide-path")) : null;
+  const toProjectPath = typeof flags.get("to-project-path") === "string" ? String(flags.get("to-project-path")) : null;
   const graphKey = filePath
     ? resolveQueryFileSelector(localTarget.root, filePath).graphKey
     : requireGraphKey(flags);
@@ -152,13 +202,10 @@ export async function runQueryLoad(args: string[]): Promise<number> {
     resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]])),
     flags,
   );
-  if (destination.type === "graph") {
-    throw new Error("`fide query load --to graph:<graph-key>` is not implemented yet. Use `--to file:<path>` for now.");
-  }
 
-  const fileFormat = inferQueryLoadFileFormat(destination.value);
   const fideDir = resolve(localTarget.root, ".fide");
-  const outPath = resolveTransportFilePath(fideDir, destination.value);
+  const { destination, outPath } = resolveQueryLoadDestination(localTarget.root, fideDir, toFidePath, toProjectPath);
+  const fileFormat = inferQueryLoadFileFormat(outPath);
   const result = await executeGraphQuery({
     target,
     sql,
@@ -171,7 +218,7 @@ export async function runQueryLoad(args: string[]): Promise<number> {
     scope: QUERY_LOAD_SCOPE,
     command: "fide query load",
     targetScope: "local",
-    destination: toRaw,
+    destination,
     graphKey,
     rowCount,
     outPath,

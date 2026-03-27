@@ -57,7 +57,7 @@ function nextCommands(key: string | null, graphStoreType?: "postgres" | "sqlite"
   }
   return {
     queryHelpCommand: "fide query load -h",
-    queryCommand: `fide query load --graph-key ${key} ... --to file:./rows.json`,
+    queryCommand: `fide query load --graph-key ${key} ... --to-fide-path results/rows.json`,
   };
 }
 
@@ -248,7 +248,7 @@ async function getRuntimeStatusOverview() {
             }
           : {
               queryHelpCommand: "fide query load -h",
-              queryCommand: `fide query load --graph-key ${key} ... --to file:./rows.json`,
+              queryCommand: `fide query load --graph-key ${key} ... --to-fide-path results/rows.json`,
             }),
       },
     };

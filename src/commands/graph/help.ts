@@ -33,7 +33,7 @@ export function graphCommandHelp(): string {
           "  fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"project-path\":\"tmp/local-graph.sqlite\"}'",
           "  fide graph connect --graph-key primary --dry-run",
           "  fide graph status",
-          "  fide query load --graph-key primary 'select * from statements limit 10' --to file:./rows.json",
+          "  fide query load --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
           "  fide query save --file .fide/graphs/sqlite/queries/recentStatements.sql 'select * from statements limit 10'",
           "  fide statements draft --name research-notes --file inputs.json",
           "  fide statements guide --entity NetworkResource",
