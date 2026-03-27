@@ -115,6 +115,11 @@ function chunkArray<T>(items: readonly T[], size: number): T[][] {
   return chunks;
 }
 
+function printStatementsLoadProgress(enabled: boolean, message: string): void {
+  if (!enabled) return;
+  process.stderr.write(`${message}\n`);
+}
+
 export async function runStatementsLoad(args: string[] = []): Promise<number> {
   const parsed = parseArgs(args, { booleanKeys: STATEMENTS_LOAD_PARSE_KEYS });
   if (hasFlag(parsed.flags, "help") || hasFlag(parsed.flags, "-h")) {
@@ -145,16 +150,30 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     throw new Error("`--from-date` must be on or before `--to-date`.");
   }
 
+  const showProgress = true;
+  printStatementsLoadProgress(showProgress, `Resolving graph "${graphKey}"...`);
+
   const graphTarget = resolveGraphTarget(parsed.flags);
   const statementsDir = resolve(graphTarget.root, ".fide", "statements");
-  const candidates = await listStatementBatchCandidates(statementsDir, { fromDate, toDate });
+  printStatementsLoadProgress(showProgress, `Connecting to graph "${graphKey}"...`);
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
-
   if (target.type === "fide-jsonl") {
     throw new Error("`fide statements load` only supports sqlite and postgres graphs.");
   }
+  if (target.type === "sqlite") {
+    printStatementsLoadProgress(showProgress, `Connected to sqlite graph at ${target.file}`);
+  } else if (target.databaseUrl) {
+    printStatementsLoadProgress(showProgress, `Connected to postgres graph schema ${target.schema}`);
+  } else {
+    printStatementsLoadProgress(showProgress, `Postgres graph "${graphKey}" requires a resolved database URL before loading.`);
+  }
+
+  printStatementsLoadProgress(showProgress, `Scanning local statement batches in ${statementsDir}...`);
+  const candidates = await listStatementBatchCandidates(statementsDir, { fromDate, toDate });
+  printStatementsLoadProgress(showProgress, `Found ${candidates.length} candidate batch file(s).`);
 
   const existingRoots = new Set<string>();
+  printStatementsLoadProgress(showProgress, `Checking existing roots in batches of ${rootBatchCount}...`);
   for (const chunk of chunkArray(candidates, rootBatchCount)) {
     const foundRoots = await queryExistingRoots(
       target.type === "sqlite"
@@ -168,15 +187,31 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
   }
 
   const pendingCandidates = candidates.filter((candidate) => !existingRoots.has(candidate.root));
+  printStatementsLoadProgress(
+    showProgress,
+    `Skipping ${existingRoots.size} existing batch root(s); loading ${pendingCandidates.length} batch file(s).`,
+  );
   let statementCount = 0;
   if (pendingCandidates.length > 0) {
     if (target.type === "sqlite") {
-      for (const candidate of pendingCandidates) {
+      for (const [index, candidate] of pendingCandidates.entries()) {
+        printStatementsLoadProgress(
+          showProgress,
+          `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
+        );
+        printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
         const raw = await readFile(candidate.file, "utf8");
+        printStatementsLoadProgress(showProgress, "  parsing statements");
         const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+        printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
         const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+        printStatementsLoadProgress(
+          showProgress,
+          `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
+        );
         const result = await loadStatementBatchToSqlite(target.file, rows);
         statementCount += result.statementCount;
+        printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
       }
     } else {
       if (!target.databaseUrl) {
@@ -184,19 +219,32 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
         );
       }
-      for (const candidate of pendingCandidates) {
+      for (const [index, candidate] of pendingCandidates.entries()) {
+        printStatementsLoadProgress(
+          showProgress,
+          `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
+        );
+        printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
         const raw = await readFile(candidate.file, "utf8");
+        printStatementsLoadProgress(showProgress, "  parsing statements");
         const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+        printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
         const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+        printStatementsLoadProgress(
+          showProgress,
+          `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
+        );
         const result = await loadStatementBatchToPostgres({
           databaseUrl: target.databaseUrl,
           schema: target.schema,
           rows,
         });
         statementCount += result.statementCount;
+        printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
       }
     }
   }
+  printStatementsLoadProgress(showProgress, `Completed load into graph "${graphKey}".`);
 
   const payload: StatementsLoadOutput = {
     ok: true,

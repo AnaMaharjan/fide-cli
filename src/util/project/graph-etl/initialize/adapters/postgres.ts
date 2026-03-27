@@ -84,7 +84,13 @@ $$;`,
   CONSTRAINT ${quoteIdent("chk_object_protocol_self_sourced")} CHECK (
     (${quoteIdent(statements.columns.objectType.name)} = '00' AND ${quoteIdent(statements.columns.objectReferenceType.name)} = '00') OR
     (${quoteIdent(statements.columns.objectType.name)} <> '00' AND ${quoteIdent(statements.columns.objectReferenceType.name)} <> '00')
-  )
+  ),
+  CONSTRAINT ${quoteIdent("fk_statements_subject_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.subjectFingerprint.name)})
+    REFERENCES ${qualifyTable(options.schemaName, referenceIdentifiers.name)} (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)}),
+  CONSTRAINT ${quoteIdent("fk_statements_predicate_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.predicateFingerprint.name)})
+    REFERENCES ${qualifyTable(options.schemaName, referenceIdentifiers.name)} (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)}),
+  CONSTRAINT ${quoteIdent("fk_statements_object_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.objectFingerprint.name)})
+    REFERENCES ${qualifyTable(options.schemaName, referenceIdentifiers.name)} (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)})
 );`,
     `COMMENT ON TABLE ${qualifyTable(options.schemaName, referenceIdentifiers.name)} IS '${referenceIdentifiers.description.replaceAll("'", "''")}';`,
     `COMMENT ON TABLE ${qualifyTable(options.schemaName, statements.name)} IS '${statements.description.replaceAll("'", "''")}';`,
@@ -108,7 +114,11 @@ $$;`,
     createStatements.push(`CREATE TABLE IF NOT EXISTS ${qualifyTable(options.schemaName, statementRoots.name)} (
   ${quoteIdent(statementRoots.columns.root.name)} TEXT NOT NULL,
   ${quoteIdent(statementRoots.columns.statementFingerprint.name)} CHAR(36) NOT NULL,
-  PRIMARY KEY (${quoteIdent(statementRoots.columns.root.name)}, ${quoteIdent(statementRoots.columns.statementFingerprint.name)})
+  PRIMARY KEY (${quoteIdent(statementRoots.columns.root.name)}, ${quoteIdent(statementRoots.columns.statementFingerprint.name)}),
+  CONSTRAINT ${quoteIdent("fk_statement_roots_root")} FOREIGN KEY (${quoteIdent(statementRoots.columns.root.name)})
+    REFERENCES ${qualifyTable(options.schemaName, roots.name)} (${quoteIdent(roots.columns.root.name)}),
+  CONSTRAINT ${quoteIdent("fk_statement_roots_statement_fingerprint")} FOREIGN KEY (${quoteIdent(statementRoots.columns.statementFingerprint.name)})
+    REFERENCES ${qualifyTable(options.schemaName, statements.name)} (${quoteIdent(statements.columns.statementFingerprint.name)})
 );`);
     createStatements.push(
       `COMMENT ON TABLE ${qualifyTable(options.schemaName, statementRoots.name)} IS '${statementRoots.description.replaceAll("'", "''")}';`,

@@ -16,6 +16,14 @@ function qualify(schema: string, table: string): string {
   return `${quoteIdent(schema)}.${quoteIdent(table)}`;
 }
 
+function chunkArray<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 export async function loadStatementBatchToPostgres(
   input: {
     databaseUrl: string;
@@ -26,6 +34,7 @@ export async function loadStatementBatchToPostgres(
   const client = createPgClient(input.databaseUrl, { suppressNotices: true });
   const storage = createStatementGraphStorageSchema();
   const { referenceIdentifiers, statements, roots, statementRoots } = storage.tables;
+  const insertChunkSize = 500;
 
   try {
     return await client.begin(async (tx) => {
@@ -39,18 +48,35 @@ export async function loadStatementBatchToPostgres(
         return { insertedRoot: false, statementCount: 0 };
       }
 
-      for (const row of input.rows.referenceIdentifiers) {
+      for (const chunk of chunkArray(input.rows.referenceIdentifiers, insertChunkSize)) {
+        const values = chunk
+          .map((row) => `(${quoteLiteral(row.identifierFingerprint)}, ${quoteLiteral(row.referenceIdentifier)})`)
+          .join(",\n");
         await tx.unsafe(
           `INSERT INTO ${qualify(input.schema, referenceIdentifiers.name)} (
              ${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)},
              ${quoteIdent(referenceIdentifiers.columns.referenceIdentifier.name)}
-           ) VALUES (${quoteLiteral(row.identifierFingerprint)}, ${quoteLiteral(row.referenceIdentifier)})
+           ) VALUES ${values}
            ON CONFLICT (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)})
            DO UPDATE SET ${quoteIdent(referenceIdentifiers.columns.referenceIdentifier.name)} = EXCLUDED.${quoteIdent(referenceIdentifiers.columns.referenceIdentifier.name)};`,
         );
       }
 
-      for (const row of input.rows.statements) {
+      for (const chunk of chunkArray(input.rows.statements, insertChunkSize)) {
+        const values = chunk
+          .map((row) =>
+            `(
+              ${quoteLiteral(row.statementFingerprint)},
+              ${quoteLiteral(row.subjectType)},
+              ${quoteLiteral(row.subjectReferenceType)},
+              ${quoteLiteral(row.subjectFingerprint)},
+              ${quoteLiteral(row.predicateFingerprint)},
+              ${quoteLiteral(row.objectType)},
+              ${quoteLiteral(row.objectReferenceType)},
+              ${quoteLiteral(row.objectFingerprint)}
+            )`.replace(/\s+/g, " ").trim(),
+          )
+          .join(",\n");
         await tx.unsafe(
           `INSERT INTO ${qualify(input.schema, statements.name)} (
              ${quoteIdent(statements.columns.statementFingerprint.name)},
@@ -61,26 +87,20 @@ export async function loadStatementBatchToPostgres(
              ${quoteIdent(statements.columns.objectType.name)},
              ${quoteIdent(statements.columns.objectReferenceType.name)},
              ${quoteIdent(statements.columns.objectFingerprint.name)}
-           ) VALUES (
-             ${quoteLiteral(row.statementFingerprint)},
-             ${quoteLiteral(row.subjectType)},
-             ${quoteLiteral(row.subjectReferenceType)},
-             ${quoteLiteral(row.subjectFingerprint)},
-             ${quoteLiteral(row.predicateFingerprint)},
-             ${quoteLiteral(row.objectType)},
-             ${quoteLiteral(row.objectReferenceType)},
-             ${quoteLiteral(row.objectFingerprint)}
-           )
+           ) VALUES ${values}
            ON CONFLICT (${quoteIdent(statements.columns.statementFingerprint.name)}) DO NOTHING;`,
         );
       }
 
-      for (const row of input.rows.statementRoots) {
+      for (const chunk of chunkArray(input.rows.statementRoots, insertChunkSize)) {
+        const values = chunk
+          .map((row) => `(${quoteLiteral(row.root)}, ${quoteLiteral(row.statementFingerprint)})`)
+          .join(",\n");
         await tx.unsafe(
           `INSERT INTO ${qualify(input.schema, statementRoots.name)} (
              ${quoteIdent(statementRoots.columns.root.name)},
              ${quoteIdent(statementRoots.columns.statementFingerprint.name)}
-           ) VALUES (${quoteLiteral(row.root)}, ${quoteLiteral(row.statementFingerprint)})
+           ) VALUES ${values}
            ON CONFLICT (
              ${quoteIdent(statementRoots.columns.root.name)},
              ${quoteIdent(statementRoots.columns.statementFingerprint.name)}
