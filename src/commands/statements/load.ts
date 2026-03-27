@@ -1,8 +1,8 @@
-import { readdir, readFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
-import { mkdir } from "node:fs/promises";
-import { type Statement, parseGraphStatementBatchJsonl, resolveGraphTarget, resolveStoreTarget } from "@chris-test/graph";
-import { createDbBundle, ensureSqliteGraphSchema, ingestStatementsToSqlite, ingestStatementsWithDb } from "@chris-test/graph-storage";
+// fide statements load --graph-key primary_sb_test
+
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { parseGraphStatementBatchJsonl, resolveGraphTarget, resolveStoreTarget } from "@chris-test/graph";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -13,6 +13,11 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
+import { listStatementBatchCandidates } from "../../util/project/graph-etl/extract/listStatementBatches.js";
+import { loadStatementBatchToPostgres } from "../../util/project/graph-etl/load/adapters/postgres.js";
+import { loadStatementBatchToSqlite } from "../../util/project/graph-etl/load/adapters/sqlite.js";
+import { queryExistingRoots } from "../../util/project/graph-etl/load/queryExistingRoots.js";
+import { transformStatementBatchToGraphRows } from "../../util/project/graph-etl/transform/statementBatchToGraphRows.js";
 import { getLocalFideWarnings } from "../query/shared.js";
 
 export const statementsLoadCommand = defineCommand({
@@ -23,8 +28,9 @@ export const statementsLoadCommand = defineCommand({
   usage: [
     "fide statements load --graph-key <graph-key>",
     "fide statements load --graph-key <graph-key> --from-date 2026-03-01 --to-date 2026-03-31",
+    "fide statements load --graph-key <graph-key> --root-batch-count 250",
   ],
-  paramOrder: ["graph-key", "from-date", "to-date", "pretty"],
+  paramOrder: ["graph-key", "from-date", "to-date", "root-batch-count", "pretty"],
   params: {
     "graph-key": {
       kind: "string",
@@ -42,15 +48,22 @@ export const statementsLoadCommand = defineCommand({
       description: "End date for local statement batches to load",
       valueLabel: "<YYYY-MM-DD>",
     },
+    "root-batch-count": {
+      kind: "string",
+      description: "Batch size for root dedup queries before parsing files",
+      valueLabel: "<count>",
+    },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
     "fide statements load --graph-key primary",
     "fide statements load --graph-key primary --from-date 2026-03-01 --to-date 2026-03-31",
+    "fide statements load --graph-key primary --root-batch-count 250",
   ],
   notes: [
     "Loads canonical local statements from this project's `.fide/statements/` into the target graph.",
     "Date filters are inclusive and apply to the dated local statement batch layout.",
+    "Batch roots are checked in chunks before parsing files so already-loaded batches can be skipped efficiently.",
   ],
 });
 
@@ -64,8 +77,11 @@ export type StatementsLoadOutput = {
   graphKey: string;
   graphStoreType: "postgres" | "sqlite";
   statementsDir: string;
-  fileCount: number;
+  candidateFileCount: number;
+  loadedFileCount: number;
+  skippedRootCount: number;
   statementCount: number;
+  rootBatchCount: number;
   fromDate?: string;
   toDate?: string;
   warnings: string[];
@@ -79,57 +95,24 @@ function normalizeDateFlag(value: string | undefined, flag: "--from-date" | "--t
   return value;
 }
 
-function extractBatchDate(statementsDir: string, file: string): string | null {
-  const rel = relative(statementsDir, file).replaceAll("\\", "/");
-  const match = /^(\d{4})\/(\d{2})\/(\d{2})\//.exec(rel);
-  if (!match) return null;
-  return `${match[1]}-${match[2]}-${match[3]}`;
+function normalizeRootBatchCount(value: string | undefined): number {
+  if (!value) return 100;
+  if (!/^\d+$/.test(value)) {
+    throw new Error("Invalid --root-batch-count value: expected a positive integer.");
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error("Invalid --root-batch-count value: expected a positive integer.");
+  }
+  return parsed;
 }
 
-async function listStatementBatchFiles(statementsDir: string): Promise<string[]> {
-  const entries = await readdir(statementsDir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const fullPath = join(statementsDir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await listStatementBatchFiles(fullPath));
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith(".jsonl")) {
-      files.push(fullPath);
-    }
+function chunkArray<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
   }
-  return files.sort();
-}
-
-async function readCanonicalStatements(
-  statementsDir: string,
-  options: { fromDate?: string; toDate?: string },
-): Promise<{ files: string[]; statements: Statement[] }> {
-  const allFiles = await listStatementBatchFiles(statementsDir);
-  const filteredFiles = allFiles.filter((file) => {
-    const batchDate = extractBatchDate(statementsDir, file);
-    if (options.fromDate && batchDate && batchDate < options.fromDate) return false;
-    if (options.toDate && batchDate && batchDate > options.toDate) return false;
-    return true;
-  });
-
-  const statementsById = new Map<string, Statement>();
-  for (const file of filteredFiles) {
-    const raw = await readFile(file, "utf8");
-    const parsed = await parseGraphStatementBatchJsonl(raw);
-    for (const statement of parsed.statements) {
-      if (!statement.statementFideId) {
-        throw new Error(`Invalid local statement batch: missing statementFideId in ${file}`);
-      }
-      statementsById.set(statement.statementFideId, statement);
-    }
-  }
-
-  return {
-    files: filteredFiles,
-    statements: Array.from(statementsById.values()),
-  };
+  return chunks;
 }
 
 export async function runStatementsLoad(args: string[] = []): Promise<number> {
@@ -150,6 +133,11 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     typeof parsed.flags.get("to-date") === "string" ? String(parsed.flags.get("to-date")) : undefined,
     "--to-date",
   );
+  const rootBatchCount = normalizeRootBatchCount(
+    typeof parsed.flags.get("root-batch-count") === "string"
+      ? String(parsed.flags.get("root-batch-count"))
+      : undefined,
+  );
   if (!graphKey) {
     throw new Error("Missing required flag: --graph-key <graph-key>.");
   }
@@ -159,30 +147,54 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
 
   const graphTarget = resolveGraphTarget(parsed.flags);
   const statementsDir = resolve(graphTarget.root, ".fide", "statements");
-  const { files, statements } = await readCanonicalStatements(statementsDir, { fromDate, toDate });
+  const candidates = await listStatementBatchCandidates(statementsDir, { fromDate, toDate });
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
 
   if (target.type === "fide-jsonl") {
     throw new Error("`fide statements load` only supports sqlite and postgres graphs.");
   }
 
-  let statementCount = 0;
-  if (target.type === "sqlite") {
-    await mkdir(dirname(target.file), { recursive: true });
-    await ensureSqliteGraphSchema(target.file);
-    statementCount = await ingestStatementsToSqlite(target.file, statements);
-  } else {
-    if (!target.databaseUrl) {
-      throw new Error(
-        `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
-      );
+  const existingRoots = new Set<string>();
+  for (const chunk of chunkArray(candidates, rootBatchCount)) {
+    const foundRoots = await queryExistingRoots(
+      target.type === "sqlite"
+        ? { type: "sqlite", file: target.file }
+        : { type: "postgres", databaseUrl: target.databaseUrl, schema: target.schema },
+      chunk.map((candidate) => candidate.root),
+    );
+    for (const root of foundRoots) {
+      existingRoots.add(root);
     }
-    const bundle = createDbBundle(target.databaseUrl, { searchPath: target.schema });
-    try {
-      const result = await ingestStatementsWithDb(bundle.db, { statements });
-      statementCount = result.statementCount;
-    } finally {
-      await bundle.client.end({ timeout: 1 });
+  }
+
+  const pendingCandidates = candidates.filter((candidate) => !existingRoots.has(candidate.root));
+  let statementCount = 0;
+  if (pendingCandidates.length > 0) {
+    if (target.type === "sqlite") {
+      for (const candidate of pendingCandidates) {
+        const raw = await readFile(candidate.file, "utf8");
+        const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+        const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+        const result = await loadStatementBatchToSqlite(target.file, rows);
+        statementCount += result.statementCount;
+      }
+    } else {
+      if (!target.databaseUrl) {
+        throw new Error(
+          `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
+        );
+      }
+      for (const candidate of pendingCandidates) {
+        const raw = await readFile(candidate.file, "utf8");
+        const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+        const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+        const result = await loadStatementBatchToPostgres({
+          databaseUrl: target.databaseUrl,
+          schema: target.schema,
+          rows,
+        });
+        statementCount += result.statementCount;
+      }
     }
   }
 
@@ -193,8 +205,11 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     graphKey,
     graphStoreType: target.type,
     statementsDir,
-    fileCount: files.length,
+    candidateFileCount: candidates.length,
+    loadedFileCount: pendingCandidates.length,
+    skippedRootCount: existingRoots.size,
     statementCount,
+    rootBatchCount,
     ...(fromDate ? { fromDate } : {}),
     ...(toDate ? { toDate } : {}),
     warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),

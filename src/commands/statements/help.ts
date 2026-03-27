@@ -37,7 +37,7 @@ export function statementsHelp(): string {
         items: [
           "  - `statements write` writes canonical JSONL batches into the local project `.fide` directory.",
           "  - `statements draft` creates or updates a local markdown draft from the same statement batch.",
-          "  - `statements load` is the planned surface for loading local statements into a configured graph.",
+          "  - `statements load` loads local canonical statement batches into an initialized graph and skips batches whose roots already exist.",
           "  - `statements guide` shows the statement-shape guidance and allowed entity types agents need while authoring statements.",
           "  - These commands are local-only and do not target hosted workspace state directly.",
         ],

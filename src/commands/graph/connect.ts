@@ -1,13 +1,12 @@
-// fide graph connect --graph-key primary_sb_test --connection '{"type":"postgres","url":"TEST_SB_URL","schema":"fide_graph"}' --initialize --initialize-options '{"include_root_tables":true, "dangerously_overwrite":true}'
+// fide graph connect --graph-key primary_sb_test --connection '{"type":"postgres","url":"TEST_SB_URL","schema":"fide_graph"}' --initialize --initialize-options '{"dangerously_overwrite":true}'
 
-// fide graph connect --graph-key sqlite-test --connection '{"type":"sqlite","fide-path":"graphs/sqlite-test/graph.sqlite"}' --initialize --initialize-options '{"include_root_tables":true}'
+// fide graph connect --graph-key sqlite-test --connection '{"type":"sqlite","fide-path":"graphs/sqlite-test/graph.sqlite"}' --initialize
 
-// fide graph connect --graph-key sqlite-test-local --connection '{"type":"sqlite","project-path":".tmp/sqlite-test-local/graph.sqlite"}' --initialize --initialize-options '{"include_root_tables":true}'
+// fide graph connect --graph-key sqlite-test-local --connection '{"type":"sqlite","project-path":".tmp/sqlite-test-local/graph.sqlite"}' --initialize
 
 
 import { resolve } from "node:path";
 import { resolveStoreTarget, validateGraphStoreConfig } from "@chris-test/graph";
-import { createPgClient } from "@chris-test/graph-storage";
 import { rm } from "node:fs/promises";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
@@ -28,6 +27,7 @@ import {
   type LocalProjectGraphRecord,
 } from "../../util/project/graph-config.js";
 import { resolveFideContext, resolveGraphConfigPath } from "../../util/project/fide-dir.js";
+import { createPgClient } from "../../util/project/graph-clients/postgres.js";
 
 export const graphConnectCommand = defineCommand({
   surface: "graph.connect",
@@ -71,7 +71,7 @@ export const graphConnectCommand = defineCommand({
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}'",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"project-path\":\"tmp/local-graph.sqlite\"}'",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize",
-    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize --initialize-options '{\"include_root_tables\":true}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize --initialize-options '{\"dangerously_overwrite\":true}'",
   ],
   values: [
     {
@@ -80,7 +80,7 @@ export const graphConnectCommand = defineCommand({
     },
     {
       label: "<initialize-options>",
-      value: '{"include_root_tables"?: boolean, "dangerously_overwrite"?: boolean}',
+      value: '{"dangerously_overwrite"?: boolean}',
     },
     {
       label: '<connection-json-type> = "postgres"',
@@ -163,7 +163,6 @@ type GraphConnectResultState = "created" | "updated" | "unchanged";
 const POSTGRES_SSLMODE_VALUES = ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] as const;
 type PostgresSslMode = (typeof POSTGRES_SSLMODE_VALUES)[number];
 type GraphInitializeOptions = {
-  include_root_tables?: boolean;
   dangerously_overwrite?: boolean;
 };
 
@@ -217,19 +216,12 @@ function resolveInitializeOptions(raw: string | null): GraphInitializeOptions {
   }
   const options = parsed as Record<string, unknown>;
   if (
-    options.include_root_tables !== undefined
-    && typeof options.include_root_tables !== "boolean"
-  ) {
-    throw new Error("`include_root_tables` in --initialize-options must be a boolean when provided.");
-  }
-  if (
     options.dangerously_overwrite !== undefined
     && typeof options.dangerously_overwrite !== "boolean"
   ) {
     throw new Error("`dangerously_overwrite` in --initialize-options must be a boolean when provided.");
   }
   return {
-    ...(typeof options.include_root_tables === "boolean" ? { include_root_tables: options.include_root_tables } : {}),
     ...(typeof options.dangerously_overwrite === "boolean" ? { dangerously_overwrite: options.dangerously_overwrite } : {}),
   };
 }
@@ -433,14 +425,6 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
       }
       await initializeSqliteGraphStorage({
         file: sqliteFile,
-        storage: initializeOptions.include_root_tables
-          ? {
-              tables: {
-                roots: { optional: false },
-                statementRoots: { optional: false },
-              },
-            }
-          : undefined,
       });
       initialized = { type: "sqlite", file: sqliteFile };
     } else if (connection && typeof connection === "object" && !Array.isArray(connection) && connection.type === "postgres") {
@@ -455,14 +439,6 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
       }
       const adapter = createPostgresGraphStorageAdapter({
         schemaName: target.schema,
-        storage: initializeOptions.include_root_tables
-          ? {
-              tables: {
-                roots: { optional: false },
-                statementRoots: { optional: false },
-              },
-            }
-          : undefined,
       });
       const client = createPgClient(target.databaseUrl, { suppressNotices: true });
       try {

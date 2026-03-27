@@ -8,7 +8,7 @@ import {
 } from "../../util/command/command-metadata.js";
 import { printJson, writeUtf8 } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { executeGraphQuery } from "../../util/project/graph-query.js";
+import { executeGraphQuery } from "../../util/project/graph-runtime/query.js";
 import { parseTransportSelector, resolveTransportFilePath } from "../../util/transport/selectors.js";
 import {
   assertLocalQueryableStore,

@@ -26,6 +26,25 @@ function loadEnvFiles(root: string): void {
   }
 }
 
+function loadFideAndProjectEnvFiles(fideDir: string): void {
+  const fideRoot = dirname(fideDir);
+  const envPaths = [
+    resolve(fideDir, ".env"),
+    resolve(fideDir, ".env.local"),
+    resolve(fideRoot, ".env"),
+    resolve(fideRoot, ".env.local"),
+  ];
+
+  for (const envPath of envPaths) {
+    if (!existsSync(envPath)) continue;
+    try {
+      process.loadEnvFile(envPath);
+    } catch {
+      // Ignore malformed env files; explicit process.env still wins.
+    }
+  }
+}
+
 function resolveEnvFideDirWithoutLoading(root: string): string | null {
   const configured = process.env.FIDE_DIR;
   if (!configured) return null;
@@ -59,10 +78,7 @@ export function ensureFideEnvLoaded(): void {
   const resolvedFideDir = resolveEnvFideDirWithoutLoading(cwd)
     ?? findNearestFideDir(cwd)
     ?? resolve(cwd, ".fide");
-  const resolvedFideRoot = dirname(resolvedFideDir);
-  if (resolvedFideRoot !== resolve(cwd)) {
-    loadEnvFiles(resolvedFideRoot);
-  }
+  loadFideAndProjectEnvFiles(resolvedFideDir);
 }
 
 function resolveEnvSourcePath(root: string): string | null {

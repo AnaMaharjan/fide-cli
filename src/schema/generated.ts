@@ -964,8 +964,11 @@ export const GENERATED_TYPE_SCHEMAS = {
         "graphKey",
         "graphStoreType",
         "statementsDir",
-        "fileCount",
+        "candidateFileCount",
+        "loadedFileCount",
+        "skippedRootCount",
         "statementCount",
+        "rootBatchCount",
         "warnings"
       ],
       "properties": {
@@ -1009,10 +1012,19 @@ export const GENERATED_TYPE_SCHEMAS = {
         "statementsDir": {
           "type": "string"
         },
-        "fileCount": {
+        "candidateFileCount": {
+          "type": "number"
+        },
+        "loadedFileCount": {
+          "type": "number"
+        },
+        "skippedRootCount": {
           "type": "number"
         },
         "statementCount": {
+          "type": "number"
+        },
+        "rootBatchCount": {
           "type": "number"
         },
         "fromDate": {

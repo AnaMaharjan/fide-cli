@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { inspectSqliteGraph, createPgClient } from "@chris-test/graph-storage";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -11,6 +10,8 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
+import { createPgClient } from "../../util/project/graph-clients/postgres.js";
+import { inspectSqliteGraph } from "../../util/project/graph-clients/sqlite.js";
 import {
   getLocalFideWarnings,
   inspectFideJsonlStore,

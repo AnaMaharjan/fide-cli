@@ -136,8 +136,7 @@ export function createStatementGraphStorageSchema(
       },
       roots: {
         name: "roots",
-        description: "Optional batch roots associated with loaded statement sets.",
-        optional: true,
+        description: "Batch roots associated with loaded statement sets.",
         columns: {
           root: {
             name: "root",
@@ -151,8 +150,7 @@ export function createStatementGraphStorageSchema(
       },
       statementRoots: {
         name: "statement_roots",
-        description: "Optional association table between statements and batch roots.",
-        optional: true,
+        description: "Association table between statements and batch roots.",
         columns: {
           root: {
             name: "root",
