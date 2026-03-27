@@ -90,8 +90,8 @@ export async function resolveAuthSettings(
 
 export async function resolveApiBaseUrl(
   explicitBaseUrl?: string | null,
-  flags: Map<string, string | boolean> = new Map(),
-  root: string = process.cwd(),
+  _flags: Map<string, string | boolean> = new Map(),
+  _root: string = process.cwd(),
 ): Promise<string> {
   const flagBaseUrl = explicitBaseUrl?.trim();
   if (flagBaseUrl) {

@@ -47,39 +47,10 @@ export type GraphQuery = {
   query: string;
 };
 
-export type GraphQueryLoadResult = GraphQuery & {
-  graphStoreKey: string;
-  sqlPreview: string;
-  rowCount: number;
-  truncated: boolean;
-  rows: unknown[];
-};
-
 export type GraphQuerySummary = {
   graphKey: string;
   name: string;
   description: string | null;
-};
-
-export type WorkspaceMember = {
-  accountId: string;
-  userType?: "human" | "agent" | null;
-  managementMode?: "self" | "workspace" | "controller" | null;
-  managingWorkspaceId?: string | null;
-  createdAt: string;
-  roles: string[];
-  permissions: string[];
-};
-
-export type WorkspaceMemberMutation = {
-  ok: boolean;
-  workspaceId: string;
-  selectorType?: "account_id" | "human_email";
-  resultType?: "member_added" | "invitation_created";
-  accountId: string | null;
-  email?: string | null;
-  addedExistingUser?: boolean;
-  roleKey: string;
 };
 
 type AuthClientOptions = {
@@ -163,14 +134,6 @@ export function createAuthApiClient(options: AuthClientOptions) {
       return parseApiResponse<{ request: AgentAuthRequestSummary; agentLoginUrl: string }>(response, "auth-agent-request-create.v1");
     },
 
-    async getAgentAuthRequest(requestId: string): Promise<{ request: AgentAuthRequestSummary }> {
-      const response = await fetch(`${baseUrl}/v1/agent-auth/requests/${encodeURIComponent(requestId)}`, {
-        method: "GET",
-        headers,
-      });
-      return parseApiResponse<{ request: AgentAuthRequestSummary }>(response, "auth-agent-request-get.v1");
-    },
-
     async exchangeAgentAuthRequest(input: {
       requestId: string;
       exchangeCode: string;
@@ -213,32 +176,12 @@ export function createAuthApiClient(options: AuthClientOptions) {
       return parseApiResponse<WorkspaceSummary>(response, "workspace-get.v1");
     },
 
-    async updateWorkspace(input: {
-      workspaceId: string;
-      name: string;
-    }): Promise<WorkspaceSummary> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ name: input.name }),
-      });
-      return parseApiResponse<WorkspaceSummary>(response, "workspace-update.v1");
-    },
-
     async listWorkspaceGraphs(workspaceId: string): Promise<WorkspaceGraph[]> {
       const response = await fetch(`${baseUrl}/v1/workspaces/${workspaceId}/graphs`, {
         method: "GET",
         headers,
       });
       return parseApiResponse<WorkspaceGraph[]>(response, "graph-list.v1");
-    },
-
-    async getWorkspaceGraph(workspaceId: string, graphKey: string): Promise<WorkspaceGraph> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${workspaceId}/graphs/${encodeURIComponent(graphKey)}`, {
-        method: "GET",
-        headers,
-      });
-      return parseApiResponse<WorkspaceGraph>(response, "graph-get.v1");
     },
 
     async saveWorkspaceGraph(input: {
@@ -328,74 +271,5 @@ export function createAuthApiClient(options: AuthClientOptions) {
       return parseApiResponse<{ ok: boolean }>(response, "graph-query-delete-workspace.v1");
     },
 
-    async runGraphQuery(input: {
-      workspaceId: string;
-      graphKey: string;
-      name: string;
-      limit?: number;
-    }): Promise<GraphQueryLoadResult> {
-      const response = await fetch(
-        `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}/run`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            ...(typeof input.limit === "number" ? { limit: input.limit } : {}),
-          }),
-        },
-      );
-      return parseApiResponse<GraphQueryLoadResult>(response, "graph-query-load-workspace.v1");
-    },
-
-    async listWorkspaceMembers(id: string): Promise<{ members: WorkspaceMember[] }> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${id}/members`, {
-        method: "GET",
-        headers,
-      });
-      return parseApiResponse<{ members: WorkspaceMember[] }>(response, "workspace-members.v1");
-    },
-
-    async addWorkspaceMember(input: {
-      workspaceId: string;
-      accountId?: string;
-      email?: string;
-      roleKey: string;
-    }): Promise<WorkspaceMemberMutation> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          ...(input.accountId ? { accountId: input.accountId } : {}),
-          ...(input.email ? { email: input.email } : {}),
-          roleKey: input.roleKey,
-        }),
-      });
-      return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-members-add.v1");
-    },
-
-    async grantWorkspaceRole(input: {
-      workspaceId: string;
-      accountId: string;
-      roleKey: string;
-    }): Promise<WorkspaceMemberMutation> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.accountId}/roles`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ roleKey: input.roleKey }),
-      });
-      return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-roles-grant.v1");
-    },
-
-    async revokeWorkspaceRole(input: {
-      workspaceId: string;
-      accountId: string;
-      roleKey: string;
-    }): Promise<WorkspaceMemberMutation> {
-      const response = await fetch(`${baseUrl}/v1/workspaces/${input.workspaceId}/members/${input.accountId}/roles/${encodeURIComponent(input.roleKey)}`, {
-        method: "DELETE",
-        headers,
-      });
-      return parseApiResponse<WorkspaceMemberMutation>(response, "workspace-roles-revoke.v1");
-    },
   };
 }

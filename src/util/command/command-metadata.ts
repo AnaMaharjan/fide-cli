@@ -72,7 +72,7 @@ function orderedParamKeys(command: CommandDefinition): string[] {
   return Object.keys(command.params).sort();
 }
 
-function formatValueLabel(name: string, spec: ParamSpec): string {
+function formatValueLabel(_name: string, spec: ParamSpec): string {
   if (spec.kind === "boolean") return "";
   if ("valueLabel" in spec && spec.valueLabel) return ` ${spec.valueLabel}`;
   if (spec.kind === "string" && spec.enum?.length) return ` <${spec.enum.join("|")}>`;

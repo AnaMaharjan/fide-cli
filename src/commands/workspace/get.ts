@@ -1,4 +1,4 @@
-import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
+import { parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
   defineCommand,

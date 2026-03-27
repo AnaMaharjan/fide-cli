@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { getLocalFideWarnings, resolveGraphTarget } from "@chris-test/graph";
+import { getLocalFideWarnings } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,

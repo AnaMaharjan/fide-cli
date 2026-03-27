@@ -21,47 +21,6 @@ function scopeToTitle(scope: string): string {
   return scope.replace(/[-.]/g, " ");
 }
 
-const ENTITY_TYPES = [
-  "Statement",
-  "Person",
-  "Organization",
-  "SoftwareAgent",
-  "NetworkResource",
-  "PlatformAccount",
-  "CryptographicAccount",
-  "CreativeWork",
-  "Concept",
-  "Place",
-  "Event",
-  "Action",
-  "PhysicalObject",
-  "TextLiteral",
-  "IntegerLiteral",
-  "DecimalLiteral",
-  "BoolLiteral",
-  "DateLiteral",
-  "TimeLiteral",
-  "DateTimeLiteral",
-  "DurationLiteral",
-  "URILiteral",
-  "JSONLiteral",
-] as const;
-
-const REFERENCE_TYPES = [
-  "Statement",
-  "NetworkResource",
-  "TextLiteral",
-  "IntegerLiteral",
-  "DecimalLiteral",
-  "BoolLiteral",
-  "DateLiteral",
-  "TimeLiteral",
-  "DateTimeLiteral",
-  "DurationLiteral",
-  "URILiteral",
-  "JSONLiteral",
-] as const;
-
 function statementsGuideNext(path = "/vocabulary"): Record<string, string> {
   return {
     guideCommand: "fide statements guide",
