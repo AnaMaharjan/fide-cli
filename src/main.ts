@@ -74,7 +74,7 @@ function helpText(): string {
             "  fide statements write '<json>'",
             "  fide graph list",
             "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
-            "  fide query run --graph-key primary 'select * from statements limit 10'",
+            "  fide query load --graph-key primary 'select * from statements limit 10' --to file:./rows.json",
             "  fide workspace list",
           ],
         },

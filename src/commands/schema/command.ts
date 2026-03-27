@@ -21,7 +21,7 @@ export const schemaCommand = defineCommand({
     "fide schema",
     "fide schema --surface status",
     "fide schema --surface graph.statement-input",
-    "fide schema --surface query.run",
+    "fide schema --surface query.load",
     "fide schema --surface query.save.output",
   ],
   notes: [

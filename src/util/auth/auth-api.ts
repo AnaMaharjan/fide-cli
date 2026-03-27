@@ -47,7 +47,7 @@ export type GraphQuery = {
   query: string;
 };
 
-export type GraphQueryRunResult = GraphQuery & {
+export type GraphQueryLoadResult = GraphQuery & {
   graphStoreKey: string;
   sqlPreview: string;
   rowCount: number;
@@ -333,7 +333,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
       graphKey: string;
       name: string;
       limit?: number;
-    }): Promise<GraphQueryRunResult> {
+    }): Promise<GraphQueryLoadResult> {
       const response = await fetch(
         `${baseUrl}/v1/workspaces/${input.workspaceId}/queries/${encodeURIComponent(input.graphKey)}/${encodeURIComponent(input.name)}/run`,
         {
@@ -344,7 +344,7 @@ export function createAuthApiClient(options: AuthClientOptions) {
           }),
         },
       );
-      return parseApiResponse<GraphQueryRunResult>(response, "graph-query-run-workspace.v1");
+      return parseApiResponse<GraphQueryLoadResult>(response, "graph-query-load-workspace.v1");
     },
 
     async listWorkspaceMembers(id: string): Promise<{ members: WorkspaceMember[] }> {

@@ -518,32 +518,69 @@ export const GENERATED_TYPE_SCHEMAS = {
       }
     }
   },
-  "query.run.output": {
-    "command": "fide schema --surface query.run.output",
+  "query.load.output": {
+    "command": "fide schema --surface query.load.output",
     "format": "ts-type.v0",
-    "typeName": "QueryRunOutput",
-    "source": "src/commands/query/run.ts",
+    "typeName": "QueryLoadOutput",
+    "source": "src/commands/query/load.ts",
     "schema": {
       "type": "object",
       "required": [
-        "targetScope"
+        "ok",
+        "scope",
+        "command",
+        "targetScope",
+        "destination",
+        "graphKey",
+        "rowCount",
+        "warnings"
       ],
       "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "graph-query-load-local.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide query load"
+          ]
+        },
         "targetScope": {
           "type": "string",
           "enum": [
             "local"
           ]
         },
-        "warnings": {
+        "destination": {
+          "type": "string"
+        },
+        "graphKey": {
+          "type": "string"
+        },
+        "rowCount": {
+          "type": "number"
+        },
+        "outPath": {
           "anyOf": [
             {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+              "type": "string"
             }
           ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }
@@ -559,6 +596,7 @@ export const GENERATED_TYPE_SCHEMAS = {
         "ok",
         "targetScope",
         "mode",
+        "dryRun",
         "graphKey",
         "name",
         "outPath",
@@ -582,6 +620,9 @@ export const GENERATED_TYPE_SCHEMAS = {
           "enum": [
             "query"
           ]
+        },
+        "dryRun": {
+          "type": "boolean"
         },
         "graphKey": {
           "type": "string"

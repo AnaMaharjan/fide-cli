@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 let envLoaded = false;
+let envResolutionRoot: string | null = null;
 
 export type FideDirResolution = {
   fideDir: string;
@@ -28,9 +29,10 @@ function loadEnvFiles(root: string): void {
 function resolveEnvFideDirWithoutLoading(root: string): string | null {
   const configured = process.env.FIDE_DIR;
   if (!configured) return null;
+  const resolutionRoot = envResolutionRoot ?? resolve(root);
   return configured.startsWith("/")
     ? configured
-    : resolve(root, configured);
+    : resolve(resolutionRoot, configured);
 }
 
 function findNearestFideDir(root: string): string | null {
@@ -51,6 +53,7 @@ export function ensureFideEnvLoaded(): void {
   envLoaded = true;
 
   const cwd = process.cwd();
+  envResolutionRoot = resolve(cwd);
   loadEnvFiles(cwd);
 
   const resolvedFideDir = resolveEnvFideDirWithoutLoading(cwd)

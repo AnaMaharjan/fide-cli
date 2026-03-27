@@ -26,13 +26,13 @@ function rejectDeprecatedFideDir(flags: Map<string, string | boolean>, command: 
 
 async function querySqlParseBooleanKeys(): Promise<ReadonlySet<string>> {
   if (!querySqlParseBooleanKeysCache) {
-    const [{ querySaveCommand }, { queryRunCommand }] = await Promise.all([
+    const [{ querySaveCommand }, { queryLoadCommand }] = await Promise.all([
       import("./save.js"),
-      import("./run.js"),
+      import("./load.js"),
     ]);
     querySqlParseBooleanKeysCache = mergeBooleanKeySets(
       booleanKeysFromCommand(querySaveCommand),
-      booleanKeysFromCommand(queryRunCommand),
+      booleanKeysFromCommand(queryLoadCommand),
     );
   }
   return querySqlParseBooleanKeysCache;
@@ -100,10 +100,16 @@ export async function resolveQuerySaveInput(args: string[]): Promise<{
   fileDescription: string | null;
 }> {
   const parsed = parseArgs(args, { booleanKeys: await querySqlParseBooleanKeys() });
-  const resolved = await resolveQuerySql(args);
+  const flags = parsed.flags;
+  const useStdin = hasFlag(flags, "stdin");
+  const stdinAvailable = process.stdin.isTTY === false;
+  const inlineSql = parsed.positionals.join(" ").trim();
+  const sql = useStdin || (stdinAvailable && inlineSql.length === 0)
+    ? await readStdinUtf8()
+    : inlineSql;
   return {
-    parsed: resolved.parsed,
-    sql: resolved.sql,
+    parsed,
+    sql,
     fileDescription: null,
   };
 }
@@ -131,9 +137,9 @@ export function assertLocalQueryCommand(flags: Map<string, string | boolean>, co
 }
 
 export async function resolveGraphQueryScope(flags: Map<string, string | boolean>): Promise<GraphQueryScope> {
-  rejectDeprecatedFideDir(flags, "fide query run");
+  rejectDeprecatedFideDir(flags, "fide query load");
   if (flags.has("workspace")) {
-    throw new Error("`fide query run` no longer supports hosted query execution. Run against the local project graph/query state.");
+    throw new Error("`fide query load` no longer supports hosted query execution. Run against the local project graph/query state.");
   }
   return { targetScope: "local" };
 }

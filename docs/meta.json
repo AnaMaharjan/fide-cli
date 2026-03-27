@@ -25,7 +25,7 @@
     "--- Query ---",
     "query-get",
     "query-list",
-    "query-run",
+    "query-load",
     "query-save",
     "--- Statements ---",
     "statements-draft",

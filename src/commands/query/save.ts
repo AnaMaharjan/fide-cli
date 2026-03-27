@@ -31,20 +31,23 @@ export const querySaveCommand = defineCommand({
     "fide query save --file .fide/graphs/<graph-key>/queries/<query>.sql <query>",
     "fide query save --file .fide/graphs/<graph-key>/queries/<query>.sql --stdin",
   ],
-  paramOrder: ["file", "description", "stdin", "pretty"],
+  paramOrder: ["file", "description", "stdin", "dry-run", "pretty"],
   params: {
     file: { kind: "string", required: true, description: "Saved query file path", valueLabel: "<query.sql>" },
     description: { kind: "string", description: "Optional query description", valueLabel: "<text>" },
     stdin: { kind: "boolean", description: "Read SQL from stdin" },
+    "dry-run": { kind: "boolean", description: "Show the local write without saving the query file" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
     "fide query save --file .fide/graphs/primary/queries/recentStatements.sql 'select * from statements limit 10'",
     "fide query save --file .fide/graphs/primary/queries/recentStatements.sql --description 'Recent statement sample'",
+    "fide query save --file .fide/graphs/primary/queries/recentStatements.sql --dry-run",
   ],
   notes: [
     "Saves into the current project's `.fide/graphs/<graphKey>/queries/` directory.",
     "If SQL is omitted and the query already exists, the existing SQL body is preserved so you can update metadata like `--description` only.",
+    "Use `--dry-run` to preview the resolved local write without saving the query file.",
     "Use `fide start` to sync the local query definition into the selected workspace.",
   ],
 });
@@ -55,6 +58,7 @@ export type QuerySaveOutput = {
   ok: true;
   targetScope: "local";
   mode: "query";
+  dryRun: boolean;
   graphKey: string;
   name: string;
   outPath: string;
@@ -104,6 +108,7 @@ export async function runQuerySave(args: string[]): Promise<number> {
   const description = descriptionUpdate.mode === "set"
     ? descriptionUpdate.value
     : existingQuery?.description ?? null;
+  const dryRun = hasFlag(flags, "dry-run");
   if (!resolvedSql.trim()) {
     console.error("Missing SQL for `fide query save`. Use `--stdin`, `--file <path>`, pass SQL inline, or target an existing saved query.");
     console.error(renderCommandHelp(querySaveCommand));
@@ -111,16 +116,19 @@ export async function runQuerySave(args: string[]): Promise<number> {
   }
 
   const outPath = resolve(filePath);
-  await mkdir(resolve(outPath, ".."), { recursive: true });
-  await writeUtf8(outPath, renderLocalQueryFileWithDescriptionLine(
-    resolvedSql,
-    description ?? null,
-  ));
+  if (!dryRun) {
+    await mkdir(resolve(outPath, ".."), { recursive: true });
+    await writeUtf8(outPath, renderLocalQueryFileWithDescriptionLine(
+      resolvedSql,
+      description ?? null,
+    ));
+  }
 
   const payload: QuerySaveOutput = {
     ok: true,
     targetScope: "local",
     mode: "query",
+    dryRun,
     graphKey,
     name,
     outPath,

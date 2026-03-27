@@ -10,7 +10,7 @@ import { graphListCommand } from "./graph/list.js";
 import { graphStatusCommand } from "./graph/status.js";
 import { queryGetCommand } from "./query/get.js";
 import { queryListCommand } from "./query/list.js";
-import { queryRunCommand } from "./query/run.js";
+import { queryLoadCommand } from "./query/load.js";
 import { querySaveCommand } from "./query/save.js";
 import { schemaCommand } from "./schema/command.js";
 import { startCommand } from "./start.js";
@@ -37,7 +37,7 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   pluginInstallCommand,
   workspaceListCommand,
   workspaceGetCommand,
-  queryRunCommand,
+  queryLoadCommand,
   queryListCommand,
   queryGetCommand,
   querySaveCommand,
