@@ -1,7 +1,5 @@
-import { executeGraphQuery, querySqliteResolvedStatements } from "@chris-test/graph-db";
 import { extname, resolve } from "node:path";
 import { parseArgs } from "../../util/command/args.js";
-import { formatGraphStatementBatchJsonl, type GraphStatementWire } from "@chris-test/graph";
 import {
   booleanKeysFromCommand,
   defineCommand,
@@ -10,10 +8,10 @@ import {
 } from "../../util/command/command-metadata.js";
 import { printJson, writeUtf8 } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
+import { executeGraphQuery } from "../../util/project/graph-query.js";
 import { parseTransportSelector, resolveTransportFilePath } from "../../util/transport/selectors.js";
 import {
   assertLocalQueryableStore,
-  createCliStructuredError,
   getLocalFideWarnings,
   resolveQueryFileSelector,
   requireGraphKey,
@@ -52,6 +50,7 @@ export const queryLoadCommand = defineCommand({
     "Saved-query execution resolves from local query files under `.fide/graphs/<graphKey>/queries/`.",
     "Use `--to <type:value>` to select the load destination. `file:<path>` is supported now; `graph:<graphKey>` is reserved for a later materialized-load path.",
     "File output format is inferred from the destination extension: `.json`, `.jsonl`, or `.csv`. Unknown or missing extensions default to JSON.",
+    "Query load writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
   ],
 });
 
@@ -123,34 +122,6 @@ function formatQueryLoadFileContent(
   return `${lines.join("\n")}\n`;
 }
 
-function buildFideId(typeChar: string, referenceChar: string, fingerprint: string): `did:fide:0x${string}` {
-  return `did:fide:0x${typeChar}${referenceChar}${fingerprint}`;
-}
-
-function toGraphStatementWires(
-  rows: Array<{
-    subject_type: string;
-    subject_reference_type: string;
-    subject_fingerprint: string;
-    predicate_fingerprint: string;
-    object_type: string;
-    object_reference_type: string;
-    object_fingerprint: string;
-    subject_reference_identifier: string;
-    predicate_reference_identifier: string;
-    object_reference_identifier: string;
-  }>,
-): GraphStatementWire[] {
-  return rows.map((row) => ({
-    s: buildFideId(row.subject_type, row.subject_reference_type, row.subject_fingerprint),
-    sr: row.subject_reference_identifier,
-    p: buildFideId("31", "20", row.predicate_fingerprint),
-    pr: row.predicate_reference_identifier,
-    o: buildFideId(row.object_type, row.object_reference_type, row.object_fingerprint),
-    or: row.object_reference_identifier,
-  }));
-}
-
 export async function runQueryLoad(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args, { booleanKeys: QUERY_LOAD_PARSE_KEYS });
   if (initialParsed.flags.has("help") || initialParsed.flags.has("-h")) {
@@ -188,33 +159,12 @@ export async function runQueryLoad(args: string[]): Promise<number> {
   const fileFormat = inferQueryLoadFileFormat(destination.value);
   const fideDir = resolve(localTarget.root, ".fide");
   const outPath = resolveTransportFilePath(fideDir, destination.value);
-  let rowCount = 0;
-
-  if (fileFormat === "jsonl") {
-    if (target.type !== "sqlite") {
-      throw new Error("`fide query load --to file:*.jsonl` currently supports sqlite statement queries only.");
-    }
-    try {
-      const resolvedRows = await querySqliteResolvedStatements(target.file, sql);
-      const statementWires = toGraphStatementWires(resolvedRows);
-      rowCount = statementWires.length;
-      await writeUtf8(outPath, formatGraphStatementBatchJsonl(statementWires));
-    } catch {
-      throw createCliStructuredError(
-        "`fide query load --to file:*.jsonl` expects a statement-shaped sqlite query selecting from `statements` rows.",
-        {
-          hint: "Use a query like `select * from statements ...` when exporting statement JSONL. For aggregate or arbitrary row output, use `.json` or `.csv` instead.",
-        },
-      );
-    }
-  } else {
-    const result = await executeGraphQuery({
-      target,
-      sql,
-    });
-    rowCount = result.rowCount;
-    await writeUtf8(outPath, formatQueryLoadFileContent(fileFormat, result.rows));
-  }
+  const result = await executeGraphQuery({
+    target,
+    sql,
+  });
+  const rowCount = result.rowCount;
+  await writeUtf8(outPath, formatQueryLoadFileContent(fileFormat, result.rows));
 
   const payload: QueryLoadOutput = {
     ok: true,

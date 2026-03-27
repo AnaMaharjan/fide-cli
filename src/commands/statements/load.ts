@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { type Statement, parseGraphStatementBatchJsonl, resolveGraphTarget, resolveStoreTarget } from "@chris-test/graph";
-import { createDbBundle, ensureSqliteGraphSchema, ingestStatementsToSqlite, ingestStatementsWithDb } from "@chris-test/graph-db";
+import { createDbBundle, ensureSqliteGraphSchema, ingestStatementsToSqlite, ingestStatementsWithDb } from "@chris-test/graph-storage";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,

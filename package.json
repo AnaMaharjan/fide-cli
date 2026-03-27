@@ -30,7 +30,7 @@
   "dependencies": {
     "@chris-test/db": "workspace:*",
     "@chris-test/graph": "workspace:*",
-    "@chris-test/graph-db": "workspace:*",
+    "@chris-test/graph-storage": "workspace:*",
     "@chris-test/workspace": "workspace:*",
     "chokidar": "^5.0.0"
   },

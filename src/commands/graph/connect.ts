@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { validateGraphStoreConfig } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
@@ -10,6 +11,7 @@ import { printJson } from "../../util/command/io.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { okResponse } from "../../util/command/response.js";
+import { initializeSqliteGraphStorage } from "../../util/project/graph-etl/initialize/adapters/sqlite.js";
 import {
   readLocalProjectGraph,
   writeLocalProjectGraph,
@@ -28,23 +30,27 @@ export const graphConnectCommand = defineCommand({
   paramOrder: [
     "graph-key",
     "connection",
+    "initialize",
     "dry-run",
     "pretty",
   ],
   params: {
     "graph-key": { kind: "string", required: true, description: "Graph key", valueLabel: "<key>" },
     connection: { kind: "string", description: "Connection JSON for this graph type", valueLabel: "'<json>'" },
+    initialize: { kind: "boolean", description: "Initialize connected graph storage after writing config" },
     "dry-run": { kind: "boolean", description: "Show the local create or update without writing config.json" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
     "fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}' --initialize",
   ],
   notes: [
     "Writes a graph definition into `.fide/graphs/<graphKey>/config.json` in this project.",
     "Postgres `--connection` expects JSON like `{\"type\":\"postgres\",\"url\":\"ENV_OR_URL\",\"schema\":\"fide_graph\"}`.",
     "Sqlite `--connection` expects JSON like `{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}`.",
+    "Use `--initialize` to create storage structures for the connected graph. Sqlite initialization is supported now.",
     "If the graph key already exists, this command updates it in place.",
     "Use `fide start` to sync local graph metadata from this project into the bound workspace.",
   ],
@@ -226,6 +232,7 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
 
   const useJson = shouldUseJsonOutput(flags);
   const dryRun = hasFlag(flags, "dry-run");
+  const initialize = hasFlag(flags, "initialize");
   const fide = resolveFideContext(process.cwd());
   const configPath = resolveGraphConfigPath(graphKey, process.cwd());
   const previous = readLocalProjectGraph(graphKey);
@@ -237,8 +244,22 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
     await writeLocalProjectGraph(graphKey, graph);
   }
 
+  let initialized: { type: "sqlite"; file: string } | null = null;
+  if (initialize && !dryRun) {
+    if (graph.connection.type === "sqlite") {
+      const sqliteFile = graph.connection.path.startsWith("/")
+        ? graph.connection.path
+        : resolve(fide.root, graph.connection.path);
+      await initializeSqliteGraphStorage({ file: sqliteFile });
+      initialized = { type: "sqlite", file: sqliteFile };
+    } else {
+      throw new Error("`fide graph connect --initialize` currently supports sqlite graphs only.");
+    }
+  }
+
   const payload = okResponse(GRAPH_CONNECT_SCOPE, {
     dryRun,
+    initialize,
     targetScope: "local",
     root: fide.root,
     fideDir: fide.fideDir,
@@ -246,11 +267,15 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
     graphKey,
     result,
     graph,
+    ...(initialized ? { initialized } : {}),
   }, {
     command: "fide graph connect",
     next: dryRun
       ? { apply: `fide graph connect --graph-key ${graphKey}` }
-      : { sync: "fide start" },
+      : {
+          ...(initialized ? {} : { initialize: `fide graph connect --graph-key ${graphKey} --initialize` }),
+          sync: "fide start",
+        },
   });
 
   if (useJson) {
