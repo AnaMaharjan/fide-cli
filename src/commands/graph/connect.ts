@@ -1,9 +1,6 @@
 // fide graph connect --graph-key primary_sb_test --connection '{"type":"postgres","url":"TEST_SB_URL","schema":"fide_graph"}' --initialize --initialize-options '{"dangerously_overwrite":true}'
 
-// fide graph connect --graph-key sqlite-test --connection '{"type":"sqlite","fide-path":"graphs/sqlite-test/graph.sqlite"}' --initialize
-
-// fide graph connect --graph-key sqlite-test-local --connection '{"type":"sqlite","project-path":".tmp/sqlite-test-local/graph.sqlite"}' --initialize
-
+// fide graph connect --graph-key sqlite-test --connection '{"type":"sqlite","fide-path":"graphs/sqlite-test/graph.sqlite"}' --initialize '{"dangerously_overwrite":true}'
 
 import { resolve } from "node:path";
 import { resolveStoreTarget, validateGraphStoreConfig } from "@chris-test/graph";

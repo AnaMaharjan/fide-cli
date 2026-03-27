@@ -1,4 +1,7 @@
 // fide statements load --graph-key primary_sb_test
+// fide statements load --graph-key sqlite-test
+
+
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
