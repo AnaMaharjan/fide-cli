@@ -2,7 +2,7 @@
 
 // fide graph connect --graph-key sqlite-test --connection '{"type":"sqlite","fide-path":"graphs/sqlite-test/graph.sqlite"}' --initialize --initialize-options '{"include_root_tables":true}'
 
-
+// fide graph connect --graph-key sqlite-test-local --connection '{"type":"sqlite","project-path":".tmp/sqlite-test-local/graph.sqlite"}' --initialize --initialize-options '{"include_root_tables":true}'
 
 
 import { resolve } from "node:path";
@@ -69,7 +69,7 @@ export const graphConnectCommand = defineCommand({
   examples: [
     "fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}'",
-    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\"./tmp/local-graph.sqlite\"}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"project-path\":\"tmp/local-graph.sqlite\"}'",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize --initialize-options '{\"include_root_tables\":true}'",
   ],
@@ -120,7 +120,7 @@ export const graphConnectCommand = defineCommand({
       children: [
         {
           label: "<connection-json-value>",
-          requires: "one of: `fide-path` or `path`, ending in `.sqlite`",
+          requires: "one of: `fide-path` or `project-path`, ending in `.sqlite`",
           children: [
             {
               label: "fide-path",
@@ -128,9 +128,9 @@ export const graphConnectCommand = defineCommand({
               suggested: '"/graphs/<graph-key>/graph.sqlite"',
             },
             {
-              label: "path",
+              label: "project-path",
               value: "string",
-              suggested: '"./fide-graphs/<graph-key>/graph.sqlite"',
+              suggested: '"fide-graphs/<graph-key>/graph.sqlite"',
             },
           ],
         },
@@ -141,7 +141,7 @@ export const graphConnectCommand = defineCommand({
   notes: [
     "Writes a graph definition into `.fide/graphs/<graphKey>/config.json` in this project.",
     "`fide-path` resolves relative to the active `.fide` directory.",
-    "`path` resolves like a normal filesystem path and is relative to the command working directory when not absolute.",
+    "`project-path` resolves relative to the project root and is stable regardless of where the command is launched.",
     "`--initialize-options` is only used when `--initialize` is present.",
     "If the graph key already exists, this command updates it in place.",
     "Use `fide start` to sync local graph metadata from this project into the bound workspace.",
@@ -304,11 +304,11 @@ function resolvePostgresConnection(
 function resolveSqliteConnection(
   connectionInput: unknown,
   existingConnection: unknown,
-): { type: "sqlite"; "fide-path"?: string; path?: string } {
+): { type: "sqlite"; "fide-path"?: string; "project-path"?: string } {
   const nextConnection = connectionInput ?? existingConnection ?? null;
   if (!nextConnection || typeof nextConnection !== "object" || Array.isArray(nextConnection)) {
     throw new Error(
-      "Sqlite graphs require --connection '{\"fide-path\":\"...\"}' or '{\"path\":\"...\"}' when creating or updating without an existing connection object.",
+      "Sqlite graphs require --connection '{\"fide-path\":\"...\"}' or '{\"project-path\":\"...\"}' when creating or updating without an existing connection object.",
     );
   }
   const connection = nextConnection as Record<string, unknown>;
@@ -316,14 +316,14 @@ function resolveSqliteConnection(
     throw new Error("Sqlite graph connection JSON must include `type: \"sqlite\"` when `type` is provided.");
   }
   const fidePath = typeof connection["fide-path"] === "string" ? connection["fide-path"] : null;
-  const path = typeof connection.path === "string" ? connection.path : null;
-  if ((!fidePath || fidePath.trim().length === 0) && (!path || path.trim().length === 0)) {
-    throw new Error("Sqlite graph connection JSON must include a non-empty `fide-path` or `path` string.");
+  const projectPath = typeof connection["project-path"] === "string" ? connection["project-path"] : null;
+  if ((!fidePath || fidePath.trim().length === 0) && (!projectPath || projectPath.trim().length === 0)) {
+    throw new Error("Sqlite graph connection JSON must include a non-empty `fide-path` or `project-path` string.");
   }
   return {
     type: "sqlite",
     ...(fidePath && fidePath.trim().length > 0 ? { "fide-path": fidePath } : {}),
-    ...(path && path.trim().length > 0 ? { path } : {}),
+    ...(projectPath && projectPath.trim().length > 0 ? { "project-path": projectPath } : {}),
   };
 }
 
@@ -420,13 +420,13 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
         ? (connection["fide-path"].startsWith("/")
           ? connection["fide-path"]
           : resolve(fide.fideDir, connection["fide-path"]))
-        : (typeof connection.path === "string"
-          ? (connection.path.startsWith("/")
-            ? connection.path
-            : resolve(process.cwd(), connection.path))
+        : (typeof connection["project-path"] === "string"
+          ? (connection["project-path"].startsWith("/")
+            ? connection["project-path"]
+            : resolve(fide.root, connection["project-path"]))
           : null);
       if (!sqliteFile) {
-        throw new Error("Sqlite graph connection is missing both `fide-path` and `path`.");
+        throw new Error("Sqlite graph connection is missing both `fide-path` and `project-path`.");
       }
       if (initializeOptions.dangerously_overwrite) {
         await rm(sqliteFile, { force: true });
