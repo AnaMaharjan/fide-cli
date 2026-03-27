@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/command/help.js";
+import { renderHelp } from "../../util/command/help/index.js";
 import { queryGetCommand } from "./get.js";
 import { queryListCommand } from "./list.js";
 import { queryLoadCommand } from "./load.js";

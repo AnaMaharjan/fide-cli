@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/command/help.js";
+import { renderHelp } from "../../util/command/help/index.js";
 
 export function authCommandHelp(): string {
   return renderHelp({

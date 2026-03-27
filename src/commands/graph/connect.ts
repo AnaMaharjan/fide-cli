@@ -1,5 +1,8 @@
+// fide graph connect --graph-key primary_sb_test --connection '{"type":"postgres","url":"TEST_SB_URL","schema":"fide_graph"}' --initialize
+
 import { resolve } from "node:path";
-import { validateGraphStoreConfig } from "@chris-test/graph";
+import { resolveStoreTarget, validateGraphStoreConfig } from "@chris-test/graph";
+import { createPgClient } from "@chris-test/graph-storage";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -11,6 +14,7 @@ import { printJson } from "../../util/command/io.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { okResponse } from "../../util/command/response.js";
+import { createPostgresGraphStorageAdapter } from "../../util/project/graph-etl/initialize/adapters/postgres.js";
 import { initializeSqliteGraphStorage } from "../../util/project/graph-etl/initialize/adapters/sqlite.js";
 import {
   readLocalProjectGraph,
@@ -25,7 +29,7 @@ export const graphConnectCommand = defineCommand({
   outputType: "GraphConnectOutput",
   summary: "Create or update a graph connection in this project",
   usage: [
-    "fide graph connect --graph-key <key> --connection '<json>'",
+    "fide graph connect --graph-key <graph-key> --connection <connection-json>",
   ],
   paramOrder: [
     "graph-key",
@@ -35,22 +39,92 @@ export const graphConnectCommand = defineCommand({
     "pretty",
   ],
   params: {
-    "graph-key": { kind: "string", required: true, description: "Graph key", valueLabel: "<key>" },
-    connection: { kind: "string", description: "Connection JSON for this graph type", valueLabel: "'<json>'" },
+    "graph-key": {
+      kind: "string",
+      required: true,
+      valueLabel: "<graph-key>",
+      description: "Graph key for this connection definition",
+    },
+    connection: {
+      kind: "string",
+      valueLabel: "<connection-json>",
+      description: "Connection JSON for this graph",
+    },
     initialize: { kind: "boolean", description: "Initialize connected graph storage after writing config" },
     "dry-run": { kind: "boolean", description: "Show the local create or update without writing config.json" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
     "fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
-    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}'",
-    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}' --initialize",
+    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\"./tmp/local-graph.sqlite\"}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize",
   ],
+  values: [
+    {
+      label: "<connection-json>",
+      value: '{"type":<connection-json-type>, <connection-json-value>}',
+    },
+    {
+      label: '<connection-json-type> = "postgres"',
+      children: [
+        {
+          label: "<connection-json-value>",
+          requires: "`url` or parts",
+          children: [
+            {
+              label: "with `url`",
+              children: [
+                { label: "url", value: "string", suggested: '"ENV_VAR_NAME or postgres://..."', isRequired: true },
+                { label: "schema", value: "string", suggested: '"fide_graph"', isRequired: true },
+              ],
+            },
+            {
+              label: "with parts",
+              children: [
+                { label: "host", value: "string", isRequired: true },
+                { label: "database", value: "string", isRequired: true },
+                { label: "schema", value: "string", suggested: '"fide_graph"', isRequired: true },
+                { label: "port", value: "number" },
+                { label: "user", value: "string" },
+                { label: "password", value: "string", suggested: '"ENV_VAR_VALUE"' },
+                {
+                  label: "sslmode",
+                  value: ['"disable"', '"allow"', '"prefer"', '"require"', '"verify-ca"', '"verify-full"'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      label: '<connection-json-type> = "sqlite"',
+      children: [
+        {
+          label: "<connection-json-value>",
+          requires: "one of: `fide-path` or `path`, ending in `.sqlite`",
+          children: [
+            {
+              label: "fide-path",
+              value: "string",
+              suggested: '"/graphs/<graph-key>/graph.sqlite"',
+            },
+            {
+              label: "path",
+              value: "string",
+              suggested: '"./fide-graphs/<graph-key>/graph.sqlite"',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+
   notes: [
     "Writes a graph definition into `.fide/graphs/<graphKey>/config.json` in this project.",
-    "Postgres `--connection` expects JSON like `{\"type\":\"postgres\",\"url\":\"ENV_OR_URL\",\"schema\":\"fide_graph\"}`.",
-    "Sqlite `--connection` expects JSON like `{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}`.",
-    "Use `--initialize` to create storage structures for the connected graph. Sqlite initialization is supported now.",
+    "`fide-path` resolves relative to the active `.fide` directory.",
+    "`path` resolves like a normal filesystem path and is relative to the command working directory when not absolute.",
     "If the graph key already exists, this command updates it in place.",
     "Use `fide start` to sync local graph metadata from this project into the bound workspace.",
   ],
@@ -68,6 +142,8 @@ export type GraphConnectOutput = {
 };
 
 type GraphConnectResultState = "created" | "updated" | "unchanged";
+const POSTGRES_SSLMODE_VALUES = ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] as const;
+type PostgresSslMode = (typeof POSTGRES_SSLMODE_VALUES)[number];
 
 function canonicalizeValue(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -114,11 +190,21 @@ function parseJsonFlag(raw: string | null, flagName: string): unknown {
 function resolvePostgresConnection(
   connectionInput: unknown,
   existingConnection: unknown,
-): { type: "postgres"; url?: string; schema: string } {
+): {
+  type: "postgres";
+  url?: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
+  sslmode?: PostgresSslMode;
+  schema: string;
+} {
   const nextConnection = connectionInput ?? existingConnection;
   if (!nextConnection || typeof nextConnection !== "object" || Array.isArray(nextConnection)) {
     throw new Error(
-      "Postgres graphs require --connection '{\"url\":\"...\",\"schema\":\"...\"}' when creating or updating without an existing connection object.",
+      "Postgres graphs require --connection JSON with `schema` plus either `url` or postgres connection parts when creating or updating without an existing connection object.",
     );
   }
   const connection = nextConnection as Record<string, unknown>;
@@ -133,9 +219,37 @@ function resolvePostgresConnection(
   if (connection.url !== undefined && typeof connection.url !== "string") {
     throw new Error("Postgres graph connection `url` must be a string when provided.");
   }
+  for (const field of ["host", "database", "user", "password", "sslmode"] as const) {
+    const value = connection[field];
+    if (value !== undefined && typeof value !== "string") {
+      throw new Error(`Postgres graph connection \`${field}\` must be a string when provided.`);
+    }
+  }
+  const sslmode = typeof connection.sslmode === "string" ? connection.sslmode : undefined;
+  if (sslmode !== undefined && !POSTGRES_SSLMODE_VALUES.includes(sslmode as PostgresSslMode)) {
+    throw new Error(
+      `Postgres graph connection \`sslmode\` must be one of: ${POSTGRES_SSLMODE_VALUES.join(", ")}.`,
+    );
+  }
+  if (connection.port !== undefined && (typeof connection.port !== "number" || !Number.isFinite(connection.port))) {
+    throw new Error("Postgres graph connection `port` must be a number when provided.");
+  }
+
+  const hasUrl = typeof connection.url === "string" && connection.url.trim().length > 0;
+  const hasHost = typeof connection.host === "string" && connection.host.trim().length > 0;
+  const hasDatabase = typeof connection.database === "string" && connection.database.trim().length > 0;
+  if (!hasUrl && (!hasHost || !hasDatabase)) {
+    throw new Error("Postgres graph connection JSON must include either a non-empty `url` string or both non-empty `host` and `database` strings.");
+  }
   return {
     type: "postgres",
     ...(typeof connection.url === "string" ? { url: connection.url } : {}),
+    ...(typeof connection.host === "string" ? { host: connection.host } : {}),
+    ...(typeof connection.port === "number" ? { port: connection.port } : {}),
+    ...(typeof connection.database === "string" ? { database: connection.database } : {}),
+    ...(typeof connection.user === "string" ? { user: connection.user } : {}),
+    ...(typeof connection.password === "string" ? { password: connection.password } : {}),
+    ...(sslmode !== undefined ? { sslmode: sslmode as PostgresSslMode } : {}),
     schema: connection.schema,
   };
 }
@@ -143,21 +257,27 @@ function resolvePostgresConnection(
 function resolveSqliteConnection(
   connectionInput: unknown,
   existingConnection: unknown,
-): { type: "sqlite"; path: string } {
+): { type: "sqlite"; "fide-path"?: string; path?: string } {
   const nextConnection = connectionInput ?? existingConnection ?? null;
   if (!nextConnection || typeof nextConnection !== "object" || Array.isArray(nextConnection)) {
     throw new Error(
-      "Sqlite graphs require --connection '{\"path\":\"...\"}' when creating or updating without an existing connection object.",
+      "Sqlite graphs require --connection '{\"fide-path\":\"...\"}' or '{\"path\":\"...\"}' when creating or updating without an existing connection object.",
     );
   }
   const connection = nextConnection as Record<string, unknown>;
   if (connection.type !== undefined && connection.type !== "sqlite") {
     throw new Error("Sqlite graph connection JSON must include `type: \"sqlite\"` when `type` is provided.");
   }
-  if (typeof connection.path !== "string" || connection.path.trim().length === 0) {
-    throw new Error("Sqlite graph connection JSON must include a non-empty `path` string.");
+  const fidePath = typeof connection["fide-path"] === "string" ? connection["fide-path"] : null;
+  const path = typeof connection.path === "string" ? connection.path : null;
+  if ((!fidePath || fidePath.trim().length === 0) && (!path || path.trim().length === 0)) {
+    throw new Error("Sqlite graph connection JSON must include a non-empty `fide-path` or `path` string.");
   }
-  return { type: "sqlite", path: connection.path };
+  return {
+    type: "sqlite",
+    ...(fidePath && fidePath.trim().length > 0 ? { "fide-path": fidePath } : {}),
+    ...(path && path.trim().length > 0 ? { path } : {}),
+  };
 }
 
 async function readGraphInput(args: string[]): Promise<{
@@ -244,16 +364,46 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
     await writeLocalProjectGraph(graphKey, graph);
   }
 
-  let initialized: { type: "sqlite"; file: string } | null = null;
+  let initialized: { type: "sqlite"; file: string } | { type: "postgres"; schema: string } | null = null;
   if (initialize && !dryRun) {
-    if (graph.connection.type === "sqlite") {
-      const sqliteFile = graph.connection.path.startsWith("/")
-        ? graph.connection.path
-        : resolve(fide.root, graph.connection.path);
+    const connection = graph.connection;
+    if (connection && typeof connection === "object" && !Array.isArray(connection) && connection.type === "sqlite") {
+      const sqliteFile = typeof connection["fide-path"] === "string"
+        ? (connection["fide-path"].startsWith("/")
+          ? connection["fide-path"]
+          : resolve(fide.fideDir, connection["fide-path"]))
+        : (typeof connection.path === "string"
+          ? (connection.path.startsWith("/")
+            ? connection.path
+            : resolve(process.cwd(), connection.path))
+          : null);
+      if (!sqliteFile) {
+        throw new Error("Sqlite graph connection is missing both `fide-path` and `path`.");
+      }
       await initializeSqliteGraphStorage({ file: sqliteFile });
       initialized = { type: "sqlite", file: sqliteFile };
+    } else if (connection && typeof connection === "object" && !Array.isArray(connection) && connection.type === "postgres") {
+      const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
+      if (target.type !== "postgres") {
+        throw new Error(`Graph "${graphKey}" did not resolve to a postgres store after writing config.`);
+      }
+      if (!target.databaseUrl) {
+        throw new Error(
+          `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
+        );
+      }
+      const adapter = createPostgresGraphStorageAdapter({ schemaName: target.schema });
+      const client = createPgClient(target.databaseUrl, { suppressNotices: true });
+      try {
+        for (const statement of adapter.createStatements) {
+          await client.unsafe(statement);
+        }
+      } finally {
+        await client.end({ timeout: 1 });
+      }
+      initialized = { type: "postgres", schema: target.schema };
     } else {
-      throw new Error("`fide graph connect --initialize` currently supports sqlite graphs only.");
+      throw new Error("`fide graph connect --initialize` currently supports sqlite and postgres graphs only.");
     }
   }
 

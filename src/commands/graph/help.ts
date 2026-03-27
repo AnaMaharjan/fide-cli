@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/command/help.js";
+import { renderHelp } from "../../util/command/help/index.js";
 import { graphConnectCommand } from "./connect.js";
 import { graphGetCommand } from "./get.js";
 import { graphListCommand } from "./list.js";
@@ -29,7 +29,8 @@ export function graphCommandHelp(): string {
         items: [
           "  fide graph list",
           "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
-          "  fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\".fide/graph.sqlite\"}'",
+          "  fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}'",
+          "  fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"path\":\"./tmp/local-graph.sqlite\"}'",
           "  fide graph connect --graph-key primary --dry-run",
           "  fide graph status",
           "  fide query load --graph-key primary 'select * from statements limit 10' --to file:./rows.json",

@@ -33,7 +33,6 @@ export const pluginInstallCommand = defineCommand({
   ],
   notes: [
     "GitHub repo shorthand and Git URL sources are planned.",
-    "The plugin manifest id acts as the default installed id; use --id to override it.",
     "Only local-path installation is implemented right now.",
   ],
 });

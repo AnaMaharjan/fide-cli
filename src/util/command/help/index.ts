@@ -1,5 +1,16 @@
-type HelpSection = {
-  title: "Usage" | "Commands" | "Groups" | "Flags" | "Modes" | "Notes" | "Examples" | "Surfaces" | "Workflows" | "Target Resolution";
+export type HelpSection = {
+  title:
+    | "Usage"
+    | "Commands"
+    | "Groups"
+    | "Flags"
+    | "Modes"
+    | "Values"
+    | "Notes"
+    | "Examples"
+    | "Surfaces"
+    | "Workflows"
+    | "Target Resolution";
   items: string[];
 };
 
@@ -19,3 +30,5 @@ export function renderHelp(options: RenderHelpOptions): string {
 
   return lines.join("\n");
 }
+
+export { renderValueDefinitions, type HelpValueDefinition } from "./values.js";

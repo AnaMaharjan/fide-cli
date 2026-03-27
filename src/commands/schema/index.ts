@@ -1,6 +1,6 @@
 import { parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import { renderCommandHelp } from "../../util/command/command-metadata.js";
-import { renderHelp } from "../../util/command/help.js";
+import { renderHelp } from "../../util/command/help/index.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { errorResponse, okResponse } from "../../util/command/response.js";

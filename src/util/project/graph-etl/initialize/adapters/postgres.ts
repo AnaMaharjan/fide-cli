@@ -31,6 +31,10 @@ function qualifyType(schemaName: string, typeName: string): string {
   return `${quoteIdent(schemaName)}.${quoteIdent(typeName)}`;
 }
 
+function quoteSqlLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 const DEFAULT_ENTITY_TYPE_VALUES = Array.from(
   new Set(Object.values(FIDE_ENTITY_TYPES).map((spec) => spec.code)),
 ).sort();
@@ -51,10 +55,10 @@ BEGIN
     SELECT 1
     FROM pg_type t
     INNER JOIN pg_namespace n ON n.oid = t.typnamespace
-    WHERE t.typname = ${`'${entityTypeName.replaceAll("'", "''")}'`}
-      AND n.nspname = ${`'${options.schemaName.replaceAll("'", "''")}'`}
+    WHERE t.typname = ${quoteSqlLiteral(entityTypeName)}
+      AND n.nspname = ${quoteSqlLiteral(options.schemaName)}
   ) THEN
-    EXECUTE 'CREATE TYPE ${qualifiedEntityType} AS ENUM (${DEFAULT_ENTITY_TYPE_VALUES.map((value) => `'${value}'`).join(", ")});';
+    EXECUTE ${quoteSqlLiteral(`CREATE TYPE ${qualifiedEntityType} AS ENUM (${DEFAULT_ENTITY_TYPE_VALUES.map((value) => quoteSqlLiteral(value)).join(", ")});`)};
   END IF;
 END
 $$;`,

@@ -34,7 +34,6 @@ export const graphStatusCommand = defineCommand({
   },
   notes: [
     "With no selector, also returns local `.fide` status.",
-    "Use `--graph-key <key>` to inspect one configured graph.",
   ],
 });
 

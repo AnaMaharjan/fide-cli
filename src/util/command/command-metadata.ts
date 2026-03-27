@@ -1,4 +1,4 @@
-import { renderHelp } from "./help.js";
+import { renderHelp, renderValueDefinitions, type HelpValueDefinition } from "./help/index.js";
 import { getStringFlag, hasFlag, type ParsedArgs } from "./args.js";
 
 /** Flags that are always parsed as boolean when bare (no value). `--help` is not on every CommandDefinition but must parse correctly. */
@@ -40,6 +40,7 @@ export type CommandDefinition = {
   params: Record<string, ParamSpec>;
   /** Display / help order; defaults to sorted param keys. */
   paramOrder?: string[];
+  values?: readonly HelpValueDefinition[];
   notes?: string[];
   examples?: string[];
 };
@@ -112,6 +113,10 @@ export function renderCommandHelp(command: CommandDefinition): string {
             return spec ? formatFlagLine(key, spec, width) : "";
           })
           .filter(Boolean),
+      },
+      {
+        title: "Values",
+        items: renderValueDefinitions(command.values ?? []),
       },
       {
         title: "Examples",

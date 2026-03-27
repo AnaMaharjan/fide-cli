@@ -47,7 +47,6 @@ export const querySaveCommand = defineCommand({
   notes: [
     "Saves into the current project's `.fide/graphs/<graphKey>/queries/` directory.",
     "If SQL is omitted and the query already exists, the existing SQL body is preserved so you can update metadata like `--description` only.",
-    "Use `--dry-run` to preview the resolved local write without saving the query file.",
     "Use `fide start` to sync the local query definition into the selected workspace.",
   ],
 });

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderHelp } from "./util/command/help.js";
+import { renderHelp } from "./util/command/help/index.js";
 import { printCliError } from "./util/command/error.js";
 import { ensureFideEnvLoaded } from "./util/project/fide-dir.js";
 

@@ -1,4 +1,4 @@
-import { renderHelp } from "../../util/command/help.js";
+import { renderHelp } from "../../util/command/help/index.js";
 import { statementsDraftCommand } from "./draft.js";
 import { statementsGuideCommand } from "./guide.js";
 import { statementsLoadCommand } from "./load.js";
