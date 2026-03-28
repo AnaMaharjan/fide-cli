@@ -518,11 +518,11 @@ export const GENERATED_TYPE_SCHEMAS = {
       }
     }
   },
-  "query.load.output": {
-    "command": "fide schema --surface query.load.output",
+  "query.run.output": {
+    "command": "fide schema --surface query.run.output",
     "format": "ts-type.v0",
-    "typeName": "QueryLoadOutput",
-    "source": "src/commands/query/load.ts",
+    "typeName": "QueryRunOutput",
+    "source": "src/commands/query/run.ts",
     "schema": {
       "type": "object",
       "required": [
@@ -545,13 +545,13 @@ export const GENERATED_TYPE_SCHEMAS = {
         "scope": {
           "type": "string",
           "enum": [
-            "graph-query-load-local.v1"
+            "graph-query-run-local.v1"
           ]
         },
         "command": {
           "type": "string",
           "enum": [
-            "fide query load"
+            "fide query run"
           ]
         },
         "targetScope": {

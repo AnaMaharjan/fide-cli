@@ -21,15 +21,15 @@ import {
   shouldUseJsonOutput,
 } from "./shared.js";
 
-export const queryLoadCommand = defineCommand({
-  surface: "query.load",
-  command: "fide query load",
-  outputType: "QueryLoadOutput",
-  summary: "Load query output from a graph",
+export const queryRunCommand = defineCommand({
+  surface: "query.run",
+  command: "fide query run",
+  outputType: "QueryRunOutput",
+  summary: "Run a query against a graph and write the result",
   usage: [
-    "fide query load --graph-key <key> <query> --to-fide-path results/rows.json",
-    "fide query load --file .fide/graphs/<graph-key>/queries/<query> --to-fide-path results/rows.json",
-    "fide query load --graph-key <key> --stdin --to-project-path reports/rows.json",
+    "fide query run --graph-key <key> <query> --to-fide-path results/rows.json",
+    "fide query run --file .fide/graphs/<graph-key>/queries/<query> --to-fide-path results/rows.json",
+    "fide query run --graph-key <key> --stdin --to-project-path reports/rows.json",
   ],
   paramOrder: ["graph-key", "file", "stdin", "to-fide-path", "to-project-path", "pretty"],
   params: {
@@ -68,26 +68,26 @@ export const queryLoadCommand = defineCommand({
     },
   ],
   examples: [
-    "fide query load --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
-    "fide query load --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.jsonl",
-    "fide query load --graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
-    "fide query load --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.json",
+    "fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
+    "fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.jsonl",
+    "fide query run --graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
+    "fide query run --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.json",
   ],
   notes: [
     "Saved-query execution resolves from local query files under `.fide/graphs/<graphKey>/queries/`.",
     "File output format is inferred from the destination extension: `.json`, `.jsonl`, or `.csv`. Unknown or missing extensions default to JSON.",
     "Use exactly one of `--to-fide-path` or `--to-project-path`.",
-    "Query load writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
+    "Query run writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
   ],
 });
 
-const QUERY_LOAD_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(queryLoadCommand));
-const QUERY_LOAD_SCOPE = "graph-query-load-local.v1";
+const QUERY_RUN_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(queryRunCommand));
+const QUERY_RUN_SCOPE = "graph-query-run-local.v1";
 
-export type QueryLoadOutput = {
+export type QueryRunOutput = {
   ok: true;
-  scope: typeof QUERY_LOAD_SCOPE;
-  command: "fide query load";
+  scope: typeof QUERY_RUN_SCOPE;
+  command: "fide query run";
   targetScope: "local";
   destination: string;
   graphKey: string;
@@ -96,9 +96,9 @@ export type QueryLoadOutput = {
   warnings: string[];
 };
 
-type QueryLoadFileFormat = "json" | "jsonl" | "csv";
+type QueryRunFileFormat = "json" | "jsonl" | "csv";
 
-function resolveQueryLoadDestination(
+function resolveQueryRunDestination(
   projectRoot: string,
   fideDir: string,
   toFidePath: string | null,
@@ -124,7 +124,7 @@ function resolveQueryLoadDestination(
   };
 }
 
-function inferQueryLoadFileFormat(path: string): QueryLoadFileFormat {
+function inferQueryRunFileFormat(path: string): QueryRunFileFormat {
   const extension = extname(path).toLowerCase();
   if (extension === ".jsonl") return "jsonl";
   if (extension === ".csv") return "csv";
@@ -146,8 +146,8 @@ function escapeCsvField(value: unknown): string {
   return scalar;
 }
 
-function formatQueryLoadFileContent(
-  format: QueryLoadFileFormat,
+function formatQueryRunFileContent(
+  format: QueryRunFileFormat,
   rows: unknown[],
 ): string {
   if (format === "json") {
@@ -175,10 +175,10 @@ function formatQueryLoadFileContent(
   return `${lines.join("\n")}\n`;
 }
 
-export async function runQueryLoad(args: string[]): Promise<number> {
-  const initialParsed = parseArgs(args, { booleanKeys: QUERY_LOAD_PARSE_KEYS });
+export async function runQueryRun(args: string[]): Promise<number> {
+  const initialParsed = parseArgs(args, { booleanKeys: QUERY_RUN_PARSE_KEYS });
   if (initialParsed.flags.has("help") || initialParsed.flags.has("-h")) {
-    console.log(renderCommandHelp(queryLoadCommand));
+    console.log(renderCommandHelp(queryRunCommand));
     return 0;
   }
 
@@ -193,8 +193,8 @@ export async function runQueryLoad(args: string[]): Promise<number> {
     : requireGraphKey(flags);
   const { parsed: resolvedParsed, sql } = await resolveQuerySql(args);
   if (!sql.trim()) {
-    console.error("Missing query text for `fide query load`. Use `--stdin`, `--file <path>`, or pass the query inline.");
-    console.error(renderCommandHelp(queryLoadCommand));
+    console.error("Missing query text for `fide query run`. Use `--stdin`, `--file <path>`, or pass the query inline.");
+    console.error(renderCommandHelp(queryRunCommand));
     return 1;
   }
   const target = assertLocalQueryableStore(
@@ -204,19 +204,19 @@ export async function runQueryLoad(args: string[]): Promise<number> {
   );
 
   const fideDir = resolve(localTarget.root, ".fide");
-  const { destination, outPath } = resolveQueryLoadDestination(localTarget.root, fideDir, toFidePath, toProjectPath);
-  const fileFormat = inferQueryLoadFileFormat(outPath);
+  const { destination, outPath } = resolveQueryRunDestination(localTarget.root, fideDir, toFidePath, toProjectPath);
+  const fileFormat = inferQueryRunFileFormat(outPath);
   const result = await executeGraphQuery({
     target,
     sql,
   });
   const rowCount = result.rowCount;
-  await writeUtf8(outPath, formatQueryLoadFileContent(fileFormat, result.rows));
+  await writeUtf8(outPath, formatQueryRunFileContent(fileFormat, result.rows));
 
-  const payload: QueryLoadOutput = {
+  const payload: QueryRunOutput = {
     ok: true,
-    scope: QUERY_LOAD_SCOPE,
-    command: "fide query load",
+    scope: QUERY_RUN_SCOPE,
+    command: "fide query run",
     targetScope: "local",
     destination,
     graphKey,
@@ -227,7 +227,7 @@ export async function runQueryLoad(args: string[]): Promise<number> {
   if (shouldUseJsonOutput(resolvedParsed.flags)) {
     printJson(payload);
   } else {
-    console.log(formatPretty(QUERY_LOAD_SCOPE, payload));
+    console.log(formatPretty(QUERY_RUN_SCOPE, payload));
   }
   return 0;
 }

@@ -3,12 +3,12 @@ import { booleanKeysFromCommand, mergeBooleanKeySets, renderCommandHelp } from "
 import { queryGetCommand, runQueryGet } from "./get.js";
 import { queryCommandHelp } from "./help.js";
 import { queryListCommand, runQueryList } from "./list.js";
-import { runQueryLoad, queryLoadCommand } from "./load.js";
+import { runQueryRun, queryRunCommand } from "./run.js";
 import { runQuerySave } from "./save.js";
 import { querySaveCommand } from "./save.js";
 
 export const QUERY_ROUTER_BOOLEAN_KEYS = mergeBooleanKeySets(
-  booleanKeysFromCommand(queryLoadCommand),
+  booleanKeysFromCommand(queryRunCommand),
   booleanKeysFromCommand(queryListCommand),
   booleanKeysFromCommand(queryGetCommand),
   booleanKeysFromCommand(querySaveCommand),
@@ -16,8 +16,8 @@ export const QUERY_ROUTER_BOOLEAN_KEYS = mergeBooleanKeySets(
 
 function commandHelp(command: string): string {
   switch (command) {
-    case "load":
-      return renderCommandHelp(queryLoadCommand);
+    case "run":
+      return renderCommandHelp(queryRunCommand);
     case "list":
       return renderCommandHelp(queryListCommand);
     case "get":
@@ -43,8 +43,8 @@ export async function runQueryCommand(args: string[]): Promise<number> {
     return 0;
   }
 
-  if (command === "load") {
-    return runQueryLoad(rest);
+  if (command === "run") {
+    return runQueryRun(rest);
   }
   if (command === "list") {
     return runQueryList(rest);

@@ -20,13 +20,13 @@ function rejectDeprecatedFideDir(flags: Map<string, string | boolean>, command: 
 
 async function querySqlParseBooleanKeys(): Promise<ReadonlySet<string>> {
   if (!querySqlParseBooleanKeysCache) {
-    const [{ querySaveCommand }, { queryLoadCommand }] = await Promise.all([
+    const [{ querySaveCommand }, { queryRunCommand }] = await Promise.all([
       import("./save.js"),
-      import("./load.js"),
+      import("./run.js"),
     ]);
     querySqlParseBooleanKeysCache = mergeBooleanKeySets(
       booleanKeysFromCommand(querySaveCommand),
-      booleanKeysFromCommand(queryLoadCommand),
+      booleanKeysFromCommand(queryRunCommand),
     );
   }
   return querySqlParseBooleanKeysCache;
@@ -131,9 +131,9 @@ export function assertLocalQueryCommand(flags: Map<string, string | boolean>, co
 }
 
 export async function resolveGraphQueryScope(flags: Map<string, string | boolean>): Promise<GraphQueryScope> {
-  rejectDeprecatedFideDir(flags, "fide query load");
+  rejectDeprecatedFideDir(flags, "fide query run");
   if (flags.has("workspace")) {
-    throw new Error("`fide query load` no longer supports hosted query execution. Run against the local project graph/query state.");
+    throw new Error("`fide query run` no longer supports hosted query execution. Run against the local project graph/query state.");
   }
   return { targetScope: "local" };
 }
