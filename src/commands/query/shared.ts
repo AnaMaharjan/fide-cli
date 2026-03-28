@@ -3,16 +3,10 @@ import { readStdinUtf8 } from "../graph/shared.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import { booleanKeysFromCommand, mergeBooleanKeySets } from "../../util/command/command-metadata.js";
 import { readUtf8 } from "../../util/command/io.js";
-import {
-  getLocalFideWarnings,
-  type LocalQueryDefinition,
-  parseLocalQueryFilePath,
-  readLocalQueries,
-  resolveGraphTarget,
-  resolveQueriesDir,
-  resolveStoreTarget,
-} from "@chris-test/graph";
-import { resolveGraphConfigPath } from "../../util/project/fide-dir.js";
+import { resolveGraphConfigPath } from "../../lib/project/config/fide-dir.js";
+import { resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
+import { type LocalQueryDefinition, parseLocalQueryFilePath, readLocalQueries, resolveQueriesDir } from "../../lib/project/queries/local-query-files.js";
+import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { assertGraphKey, assertQueryName } from "../../util/ids/selectors.js";
 
 export type GraphQueryScope = { targetScope: "local" };

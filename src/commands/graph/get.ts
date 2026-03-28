@@ -8,8 +8,8 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { readLocalProjectGraph } from "../../util/project/graph-config.js";
-import { resolveFideContext } from "../../util/project/fide-dir.js";
+import { readLocalProjectGraph } from "../../lib/project/config/graph-config.js";
+import { resolveFideContext } from "../../lib/project/config/fide-dir.js";
 
 export const graphGetCommand = defineCommand({
   surface: "graph.get",

@@ -10,14 +10,12 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
-import { createPgClient } from "../../util/project/graph-clients/postgres.js";
-import { inspectSqliteGraph } from "../../util/project/graph-clients/sqlite.js";
+import { createPgClient } from "../../lib/graph/clients/postgres.js";
+import { inspectSqliteGraph } from "../../lib/graph/clients/sqlite.js";
+import { listConfiguredStoreTargetKeys, resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
+import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import {
-  getLocalFideWarnings,
   inspectFideJsonlStore,
-  listConfiguredStoreTargetKeys,
-  resolveGraphTarget,
-  resolveStoreTarget,
 } from "@chris-test/graph";
 export const graphStatusCommand = defineCommand({
   surface: "graph.status",

@@ -12,9 +12,9 @@ import {
   detectStatementsInputFormatFromFilePath,
   parseStatementInputsByFormat,
   parseStatementsInputFormat,
-  resolveGraphTarget,
   type StatementInput,
 } from "@chris-test/graph";
+import { resolveGraphTarget } from "../../lib/project/config/project-settings.js";
 
 let statementsInputBooleanKeysCache: ReadonlySet<string> | undefined;
 

@@ -15,7 +15,7 @@ import { DEFAULT_FIDE_API_BASE_URL, resolveApiBaseUrl, writeStoredAuthSettings }
 import { startAgentAuthLoopbackServer } from "../../util/auth/auth-loopback.js";
 import { openBrowser } from "../../util/auth/browser.js";
 import { assertAccountId } from "../../util/ids/public-ids.js";
-import { writeProjectPointerSettings } from "../../util/project/project-pointer.js";
+import { writeProjectPointerSettings } from "../../lib/project/config/project-pointer.js";
 export const authLoginCommand = defineCommand({
   surface: "login",
   command: "fide login",

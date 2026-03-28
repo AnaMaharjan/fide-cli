@@ -1,8 +1,8 @@
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { ensureFideEnvLoaded } from "../project/fide-dir.js";
-import { resolveProjectPointerSettings } from "../project/project-pointer.js";
+import { ensureFideEnvLoaded } from "../../lib/project/config/fide-dir.js";
+import { resolveProjectPointerSettings } from "../../lib/project/config/project-pointer.js";
 import { assertAccountId } from "../ids/public-ids.js";
 
 export type AccountSelectionSource = "env" | "project";

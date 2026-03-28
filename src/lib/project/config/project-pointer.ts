@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { assertAccountId, assertWorkspaceId } from "../ids/public-ids.js";
+import { assertAccountId, assertWorkspaceId } from "../../../util/ids/public-ids.js";
 import { resolveFideContext, resolveSettingsPath } from "./fide-dir.js";
 
 export type ProjectPointerSettings = {

@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
-import { resolveFideDir } from "../project/fide-dir.js";
+import { resolveFideDir } from "../../lib/project/config/fide-dir.js";
 
 export function resolvePluginsDir(root: string = process.cwd()): string {
   return join(resolveFideDir(root), "plugins");

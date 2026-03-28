@@ -5,7 +5,7 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { parseGraphStatementBatchJsonl, resolveGraphTarget, resolveStoreTarget } from "@chris-test/graph";
+import { parseGraphStatementBatchJsonl } from "@chris-test/graph";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -16,11 +16,12 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
-import { listStatementBatchCandidates } from "../../util/project/graph-etl/extract/listStatementBatches.js";
-import { loadStatementBatchToPostgres } from "../../util/project/graph-etl/load/adapters/postgres.js";
-import { loadStatementBatchToSqlite } from "../../util/project/graph-etl/load/adapters/sqlite.js";
-import { queryExistingRoots } from "../../util/project/graph-etl/load/queryExistingRoots.js";
-import { transformStatementBatchToGraphRows } from "../../util/project/graph-etl/transform/statementBatchToGraphRows.js";
+import { listStatementBatchCandidates } from "../../lib/graph/etl/extract/listStatementBatches.js";
+import { loadStatementBatchToPostgres } from "../../lib/graph/etl/load/adapters/postgres.js";
+import { loadStatementBatchToSqlite } from "../../lib/graph/etl/load/adapters/sqlite.js";
+import { queryExistingRoots } from "../../lib/graph/etl/load/queryExistingRoots.js";
+import { transformStatementBatchToGraphRows } from "../../lib/graph/etl/transform/statementBatchToGraphRows.js";
+import { resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
 import { getLocalFideWarnings } from "../query/shared.js";
 
 export const statementsLoadCommand = defineCommand({

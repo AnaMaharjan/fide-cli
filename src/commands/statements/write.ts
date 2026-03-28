@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { getLocalFideWarnings } from "@chris-test/graph";
+import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -9,7 +9,7 @@ import {
   renderCommandHelp,
 } from "../../util/command/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
-import { ymdUtc } from "../../util/project/path-date.js";
+import { ymdUtc } from "../../lib/project/path-date.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
 

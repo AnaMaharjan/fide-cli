@@ -7,7 +7,7 @@ import {
 } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { listLocalProjectGraphs } from "../../util/project/graph-config.js";
+import { listLocalProjectGraphs } from "../../lib/project/config/graph-config.js";
 
 export const graphListCommand = defineCommand({
   surface: "graph.list",

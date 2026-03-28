@@ -1,4 +1,4 @@
-import { resolveProjectPointerSettings } from "../project/project-pointer.js";
+import { resolveProjectPointerSettings } from "../../lib/project/config/project-pointer.js";
 import { assertWorkspaceId } from "../ids/public-ids.js";
 
 export type WorkspaceSelectionSource = "project";

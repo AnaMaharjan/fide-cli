@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import type { FideSettings } from "@chris-test/graph";
 import { parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -13,7 +12,8 @@ import { readStoredAuthSettings, resolveAuthSettings } from "../util/auth/auth-s
 import { printJson } from "../util/command/io.js";
 import { formatPretty } from "../util/command/pretty.js";
 import { okResponse } from "../util/command/response.js";
-import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../util/project/fide-dir.js";
+import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../lib/project/config/fide-dir.js";
+import type { FideSettings } from "../lib/project/config/project-settings.js";
 import { readLiveSyncSession } from "../util/workspace/sync-session.js";
 import { resolveWorkspaceSelection } from "../util/workspace/workspace-settings.js";
 

@@ -1,6 +1,6 @@
-import { type ResolvedGraphStore } from "@chris-test/graph";
-import { createPgClient } from "../graph-clients/postgres.js";
-import { executeSqliteQuery } from "../graph-clients/sqlite.js";
+import { createPgClient } from "../clients/postgres.js";
+import { executeSqliteQuery } from "../clients/sqlite.js";
+import type { ResolvedGraphStore } from "../../project/config/project-settings.js";
 
 function quoteIdent(value: string): string {
   return `"${value.replaceAll("\"", "\"\"")}"`;

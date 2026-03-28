@@ -3,7 +3,6 @@
 // fide graph connect --graph-key sqlite-test --connection '{"type":"sqlite","fide-path":"graphs/sqlite-test/graph.sqlite"}' --initialize '{"dangerously_overwrite":true}'
 
 import { resolve } from "node:path";
-import { resolveStoreTarget, validateGraphStoreConfig } from "@chris-test/graph";
 import { rm } from "node:fs/promises";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
@@ -16,15 +15,16 @@ import { printJson } from "../../util/command/io.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { okResponse } from "../../util/command/response.js";
-import { createPostgresGraphStorageAdapter } from "../../util/project/graph-etl/initialize/adapters/postgres.js";
-import { initializeSqliteGraphStorage } from "../../util/project/graph-etl/initialize/adapters/sqlite.js";
+import { createPostgresGraphStorageAdapter } from "../../lib/graph/etl/initialize/adapters/postgres.js";
+import { initializeSqliteGraphStorage } from "../../lib/graph/etl/initialize/adapters/sqlite.js";
 import {
   readLocalProjectGraph,
   writeLocalProjectGraph,
   type LocalProjectGraphRecord,
-} from "../../util/project/graph-config.js";
-import { resolveFideContext, resolveGraphConfigPath } from "../../util/project/fide-dir.js";
-import { createPgClient } from "../../util/project/graph-clients/postgres.js";
+} from "../../lib/project/config/graph-config.js";
+import { resolveFideContext, resolveGraphConfigPath } from "../../lib/project/config/fide-dir.js";
+import { resolveStoreTarget, validateGraphStoreConfig } from "../../lib/project/config/project-settings.js";
+import { createPgClient } from "../../lib/graph/clients/postgres.js";
 
 export const graphConnectCommand = defineCommand({
   surface: "graph.connect",

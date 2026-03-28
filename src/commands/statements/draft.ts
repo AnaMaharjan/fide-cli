@@ -1,12 +1,12 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  getLocalFideWarnings,
   STANDARD_CURIE_PREFIXES,
   statementDoc,
   type StatementInput,
   type FsdDraftFrontmatter,
 } from "@chris-test/graph";
+import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,

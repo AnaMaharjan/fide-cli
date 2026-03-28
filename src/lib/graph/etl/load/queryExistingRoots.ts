@@ -1,4 +1,4 @@
-import { createPgClient } from "../../graph-clients/postgres.js";
+import { createPgClient } from "../../clients/postgres.js";
 
 type StoreTarget =
   | { type: "sqlite"; file: string }

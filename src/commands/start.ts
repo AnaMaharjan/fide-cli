@@ -4,13 +4,12 @@ import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import chokidar, { type FSWatcher } from "chokidar";
-import { readLocalQueries, type LocalQueryDefinition } from "@chris-test/graph";
 import {
   planHostedWorkspaceGraphSync,
   projectLocalGraphsToHostedGraphs,
   type HostedWorkspaceGraphInput,
   type LocalProjectGraphRecord,
-} from "@chris-test/workspace";
+} from "../lib/project/config/graph-config.js";
 import { getStringFlag, parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -32,8 +31,9 @@ import {
   updateSyncSession,
   writeSyncSession,
 } from "../util/workspace/sync-session.js";
-import { resolveFideContext } from "../util/project/fide-dir.js";
-import { listLocalProjectGraphs } from "../util/project/graph-config.js";
+import { resolveFideContext } from "../lib/project/config/fide-dir.js";
+import { listLocalProjectGraphs } from "../lib/project/config/graph-config.js";
+import { readLocalQueries, type LocalQueryDefinition } from "../lib/project/queries/local-query-files.js";
 export const startCommand = defineCommand({
   surface: "start",
   command: "fide start",
