@@ -12,11 +12,9 @@ import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { createPgClient } from "../../lib/graph/clients/postgres.js";
 import { inspectSqliteGraph } from "../../lib/graph/clients/sqlite.js";
+import { inspectFideJsonlStore } from "../../lib/project/fide-jsonl.js";
 import { listConfiguredStoreTargetKeys, resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
-import {
-  inspectFideJsonlStore,
-} from "@chris-test/graph";
 export const graphStatusCommand = defineCommand({
   surface: "graph.status",
   command: "fide graph status",

@@ -8,13 +8,15 @@ import {
 import { readUtf8 } from "../../util/command/io.js";
 import {
   buildStatementsWithRoot,
-  detectStatementsInputFormat,
-  detectStatementsInputFormatFromFilePath,
-  parseStatementInputsByFormat,
-  parseStatementsInputFormat,
   type StatementInput,
 } from "@chris-test/graph";
 import { resolveGraphTarget } from "../../lib/project/config/project-settings.js";
+import {
+  detectStatementsInputFormat,
+  detectStatementsInputFormatFromFilePath,
+  parseStatementsInputFormat,
+} from "../../lib/statements/input/shared.js";
+import { parseStatementInputsByFormat } from "../../lib/statements/input/targets/parse-inputs.js";
 
 let statementsInputBooleanKeysCache: ReadonlySet<string> | undefined;
 

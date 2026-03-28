@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { readStdinUtf8 } from "../graph/shared.js";
+import { readStdinUtf8 } from "../statements/shared.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import { booleanKeysFromCommand, mergeBooleanKeySets } from "../../util/command/command-metadata.js";
 import { readUtf8 } from "../../util/command/io.js";
