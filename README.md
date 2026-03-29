@@ -10,7 +10,7 @@ Fide command-line interface.
 
 ## Scope
 
-- Protocol primitives come from `@chris-test/fcp`.
+- Protocol primitives come from `@fide-work/context-protocol`.
 - CLI remains user-facing and avoids direct DB/runtime coupling.
 - Runtime operations should flow through API contracts.
 
