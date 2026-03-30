@@ -25,15 +25,18 @@ export const statementsDraftCommand = defineCommand({
   summary: "Create a markdown statement draft in a local project",
   usage: [
     "fide statements draft --name <draft-name> <json>",
-    "fide statements draft --name <draft-name> --file <inputs> [--format <json|jsonl|fsd>]",
-    "fide statements draft --name <draft-name> --stdin [--format <json|jsonl|fsd>]",
+    "fide statements draft --name <draft-name> --stdin [--format <json|jsonl|fsd>] [--variables <json>]",
   ],
-  paramOrder: ["name", "path", "description", "file", "stdin", "format", "no-normalize", "pretty"],
+  paramOrder: ["name", "path", "description", "variables", "stdin", "format", "no-normalize", "pretty"],
   params: {
     name: { kind: "string", required: true, description: "Draft file name without .md", valueLabel: "<draft-name>" },
     path: { kind: "string", description: "Optional subdirectory under .fide/drafts/statements", valueLabel: "<draft-path>" },
     description: { kind: "string", description: "Optional draft description frontmatter", valueLabel: "<text>" },
-    file: { kind: "string", description: "Read statement inputs from a file", valueLabel: "<inputs>" },
+    variables: {
+      kind: "string",
+      description: "JSON object of reference identifier aliases for frontmatter, e.g. '{\"action-record\":\"https://...\"}'",
+      valueLabel: "<variables-json>",
+    },
     stdin: { kind: "boolean", description: "Read statement inputs from stdin" },
     format: { kind: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
     "no-normalize": { kind: "boolean", description: "Disable reference identifier normalization" },
@@ -42,8 +45,25 @@ export const statementsDraftCommand = defineCommand({
   notes: [
     "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
     "Reusing the same --name and --path updates the existing draft.",
+    "Reference identifier aliases from `--variables` are written under frontmatter `reference_identifiers:` using plain keys and can be used as `[@alias]`.",
     "Use `fide statements write` for canonical JSONL batches.",
     "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
+  ],
+  values: [
+    {
+      label: "<variables-json>",
+      value: '{"<alias>":"<absolute-reference-identifier>"}',
+    },
+    {
+      label: "<alias>",
+      value: 'string',
+      suggested: '"action-record"',
+    },
+    {
+      label: "<absolute-reference-identifier>",
+      value: 'string',
+      suggested: '"https://example.com/records/eval.md"',
+    },
   ],
 });
 
@@ -89,11 +109,51 @@ function inferUniformNodeDefaults(
   };
 }
 
+function parseVariablesFlag(raw: string | null): Record<string, string> | undefined {
+  if (!raw) return undefined;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(
+      `Invalid --variables value. Expected a JSON object.${error instanceof Error ? ` ${error.message}` : ""}`,
+    );
+  }
+
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+    throw new Error("Invalid --variables value. Expected a JSON object.");
+  }
+
+  const aliases: Record<string, string> = {};
+  for (const [rawKey, rawValue] of Object.entries(parsed)) {
+    if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+      throw new Error(`Invalid --variables value for ${JSON.stringify(rawKey)}. Expected a non-empty string.`);
+    }
+
+    const normalizedKey = rawKey.startsWith("@") ? rawKey.slice(1) : rawKey;
+    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(normalizedKey)) {
+      throw new Error(
+        `Invalid --variables key ${JSON.stringify(rawKey)}. Aliases must look like action-record and may not be numeric.`,
+      );
+    }
+    aliases[normalizedKey] = rawValue;
+  }
+
+  return aliases;
+}
+
 export async function runStatementsDraft(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args, { booleanKeys: STATEMENTS_DRAFT_PARSE_KEYS });
   if (hasFlag(initialParsed.flags, "help")) {
     console.log(draftHelp());
     return 0;
+  }
+  if (getStringFlag(initialParsed.flags, "file")) {
+    console.error("`fide statements draft` no longer supports `--file`.");
+    console.error("Pass JSON inline or use `--stdin` to draft new statements.");
+    console.error(draftHelp());
+    return 1;
   }
   const resolved = await resolveLocalStatementsBatchOrExit(args, statementsDraftCommand);
   if (!resolved) {
@@ -103,6 +163,7 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
   const draftName = getStringFlag(flags, "name");
   const draftPath = getStringFlag(flags, "path");
   const descriptionFlag = getStringFlag(flags, "description");
+  const variablesFlag = getStringFlag(flags, "variables");
   if (!draftName) {
     console.error("Missing required flag: --name <draft-name>.");
     console.error(draftHelp());
@@ -138,10 +199,18 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
     ? resolve(graphTarget.root, ".fide", "drafts", "statements", draftPath, `${draftName}.md`)
     : resolve(graphTarget.root, ".fide", "drafts", "statements", `${draftName}.md`);
   let existingFrontmatter: Partial<FsdDraftFrontmatter> = {};
+  let existingReferenceIdentifiers: Record<string, string> | undefined;
   try {
-    existingFrontmatter = statementDoc.parseStatementDraftFrontmatter(await readUtf8(outPath));
+    const existingContent = await readUtf8(outPath);
+    existingFrontmatter = statementDoc.parseStatementDraftFrontmatter(existingContent);
+    try {
+      existingReferenceIdentifiers = statementDoc.parseStatementDoc(existingContent).referenceIdentifiers;
+    } catch {
+      existingReferenceIdentifiers = undefined;
+    }
   } catch {
     existingFrontmatter = {};
+    existingReferenceIdentifiers = undefined;
   }
   const now = new Date().toISOString();
   const createdAtUTC = existingFrontmatter.createdAtUTC ?? now;
@@ -156,6 +225,7 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
     object: inferUniformNodeDefaults(normalizedInputs, "object"),
     predicate: draftDefaults.predicate,
   };
+  const referenceIdentifiers = parseVariablesFlag(variablesFlag) ?? existingReferenceIdentifiers;
   const output = statementDoc.formatStatementInputsAsStatementDraft(normalizedInputs, {
     frontmatter: {
       draftName,
@@ -168,6 +238,7 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
       updateCount,
     },
     defaults: inferredDefaults,
+    referenceIdentifiers,
   });
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
