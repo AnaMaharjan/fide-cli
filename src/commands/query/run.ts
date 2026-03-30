@@ -1,4 +1,6 @@
-import { extname, resolve } from "node:path";
+import { mkdir } from "node:fs/promises";
+import { basename, dirname, extname, resolve } from "node:path";
+import { writeSqliteTableFromRows } from "../../lib/graph/clients/sqlite.js";
 import { parseArgs } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -52,7 +54,7 @@ export const queryRunCommand = defineCommand({
       children: [
         {
           label: "format inference",
-          value: ['".json"', '".jsonl"', '".csv"'],
+          value: ['".json"', '".jsonl"', '".csv"', '".sqlite"'],
         },
         {
           label: "with `to-fide-path`",
@@ -75,7 +77,7 @@ export const queryRunCommand = defineCommand({
   ],
   notes: [
     "Saved-query execution resolves from local query files under `.fide/graphs/<graphKey>/queries/`.",
-    "File output format is inferred from the destination extension: `.json`, `.jsonl`, or `.csv`. Unknown or missing extensions default to JSON.",
+    "File output format is inferred from the destination extension: `.json`, `.jsonl`, `.csv`, or `.sqlite`. Unknown or missing extensions default to JSON.",
     "Use exactly one of `--to-fide-path` or `--to-project-path`.",
     "Query run writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
   ],
@@ -96,7 +98,7 @@ export type QueryRunOutput = {
   warnings: string[];
 };
 
-type QueryRunFileFormat = "json" | "jsonl" | "csv";
+type QueryRunFileFormat = "json" | "jsonl" | "csv" | "sqlite";
 
 function resolveQueryRunDestination(
   projectRoot: string,
@@ -126,6 +128,7 @@ function resolveQueryRunDestination(
 
 function inferQueryRunFileFormat(path: string): QueryRunFileFormat {
   const extension = extname(path).toLowerCase();
+  if (extension === ".sqlite") return "sqlite";
   if (extension === ".jsonl") return "jsonl";
   if (extension === ".csv") return "csv";
   return "json";
@@ -150,6 +153,9 @@ function formatQueryRunFileContent(
   format: QueryRunFileFormat,
   rows: unknown[],
 ): string {
+  if (format === "sqlite") {
+    throw new Error("SQLite output is written via a dedicated materialization path.");
+  }
   if (format === "json") {
     return `${JSON.stringify(rows, null, 2)}\n`;
   }
@@ -173,6 +179,13 @@ function formatQueryRunFileContent(
     ),
   ];
   return `${lines.join("\n")}\n`;
+}
+
+function resolveSqliteOutputTableName(filePath: string | null, outPath: string, graphRoot: string): string {
+  if (filePath) {
+    return resolveQueryFileSelector(graphRoot, filePath).name;
+  }
+  return basename(outPath, ".sqlite") || "query_result";
 }
 
 export async function runQueryRun(args: string[]): Promise<number> {
@@ -211,7 +224,13 @@ export async function runQueryRun(args: string[]): Promise<number> {
     sql,
   });
   const rowCount = result.rowCount;
-  await writeUtf8(outPath, formatQueryRunFileContent(fileFormat, result.rows));
+  if (fileFormat === "sqlite") {
+    const tableName = resolveSqliteOutputTableName(filePath, outPath, localTarget.root);
+    await mkdir(dirname(outPath), { recursive: true });
+    await writeSqliteTableFromRows(outPath, tableName, result.rows);
+  } else {
+    await writeUtf8(outPath, formatQueryRunFileContent(fileFormat, result.rows));
+  }
 
   const payload: QueryRunOutput = {
     ok: true,
