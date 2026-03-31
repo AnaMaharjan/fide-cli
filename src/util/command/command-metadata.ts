@@ -35,6 +35,7 @@ export type CommandDefinition = {
   command: string;
   summary: string;
   usage: string[];
+  omitUsageInHelp?: boolean;
   /** Exported TypeScript type alias name used to generate `<surface>.output`, when present. */
   outputType?: string;
   params: Record<string, ParamSpec>;
@@ -98,35 +99,41 @@ export function renderCommandHelp(command: CommandDefinition): string {
     const spec = command.params[key];
     return spec ? Math.max(max, formatFlagLabel(key, spec).length) : max;
   }, 0);
+  const sections: Parameters<typeof renderHelp>[0]["sections"] = [];
+
+  if (!command.omitUsageInHelp) {
+    sections.push({
+      title: "Usage",
+      items: command.usage.map((line) => `  ${line}`),
+    });
+  }
+
+  sections.push(
+    {
+      title: "Flags",
+      items: flagKeys
+        .map((key) => {
+          const spec = command.params[key];
+          return spec ? formatFlagLine(key, spec, width) : "";
+        })
+        .filter(Boolean),
+    },
+    {
+      title: "Values",
+      items: renderValueDefinitions(command.values ?? []),
+    },
+    {
+      title: "Examples",
+      items: (command.examples ?? []).map((line) => `  ${line}`),
+    },
+    {
+      title: "Notes",
+      items: (command.notes ?? []).map((line) => `  - ${line}`),
+    },
+  );
 
   return renderHelp({
-    sections: [
-      {
-        title: "Usage",
-        items: command.usage.map((line) => `  ${line}`),
-      },
-      {
-        title: "Flags",
-        items: flagKeys
-          .map((key) => {
-            const spec = command.params[key];
-            return spec ? formatFlagLine(key, spec, width) : "";
-          })
-          .filter(Boolean),
-      },
-      {
-        title: "Values",
-        items: renderValueDefinitions(command.values ?? []),
-      },
-      {
-        title: "Examples",
-        items: (command.examples ?? []).map((line) => `  ${line}`),
-      },
-      {
-        title: "Notes",
-        items: (command.notes ?? []).map((line) => `  - ${line}`),
-      },
-    ],
+    sections,
   });
 }
 

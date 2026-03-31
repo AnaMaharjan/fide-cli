@@ -28,6 +28,7 @@ export const queryRunCommand = defineCommand({
   command: "fide query run",
   outputType: "QueryRunOutput",
   summary: "Run a query against a graph and write the result",
+  omitUsageInHelp: true,
   usage: [
     "fide query run --graph-key <key> <query> --to-fide-path results/rows.json",
     "fide query run --file .fide/graphs/<graph-key>/queries/<query> --to-fide-path results/rows.json",
@@ -36,7 +37,7 @@ export const queryRunCommand = defineCommand({
   paramOrder: ["graph-key", "file", "stdin", "to-fide-path", "to-project-path", "pretty"],
   params: {
     "graph-key": { kind: "string", description: "Graph key for inline query input", valueLabel: "<key>" },
-    file: { kind: "string", description: "Read query input from a saved query file path", valueLabel: "<query>" },
+    file: { kind: "string", description: "Read query input from a saved query file path", valueLabel: "<query-file-path>" },
     stdin: { kind: "boolean", description: "Read query input from stdin" },
     "to-fide-path": { kind: "string", description: "Write query output relative to the active .fide directory", valueLabel: "<path>" },
     "to-project-path": { kind: "string", description: "Write query output relative to the project root", valueLabel: "<path>" },
@@ -71,9 +72,9 @@ export const queryRunCommand = defineCommand({
   ],
   examples: [
     "fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
-    "fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.jsonl",
     "fide query run --graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
-    "fide query run --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.json",
+    "fide query run --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.sqlite",
+    "fide query run --graph-key primary --stdin --to-project-path reports/rows.jsonl",
   ],
   notes: [
     "Saved-query execution resolves from local query files under `.fide/graphs/<graphKey>/queries/`.",
