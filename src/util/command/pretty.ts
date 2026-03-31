@@ -320,6 +320,24 @@ function formatStatementsGuide(payload: PrettyRenderable): string {
   return lines.join("\n");
 }
 
+function formatStatementsWriteLocal(payload: PrettyRenderable): string {
+  const root = typeof payload.root === "string" ? payload.root : "";
+  const statementCount = typeof payload.statementCount === "number" ? payload.statementCount : null;
+  const mode = typeof payload.mode === "string" ? payload.mode : "";
+  const outPath = typeof payload.outPath === "string" ? payload.outPath : "";
+  const warnings = Array.isArray(payload.warnings) ? payload.warnings as string[] : [];
+
+  const lines: string[] = [];
+  if (root) lines.push(`root: ${root}`);
+  if (statementCount !== null) lines.push(`statements: ${statementCount}`);
+  if (mode) lines.push(`mode: ${mode}`);
+  if (outPath) lines.push(`output: ${outPath}`);
+  if (warnings.length > 0) {
+    lines.push(`warnings: ${warnings.join(", ")}`);
+  }
+  return lines.join("\n");
+}
+
 export function formatPretty(scope: string, payload: PrettyRenderable): string | null {
   switch (scope) {
     case "status.v1":
@@ -334,6 +352,8 @@ export function formatPretty(scope: string, payload: PrettyRenderable): string |
       return formatWorkspaceMembers(payload);
     case "statements-guide.v1":
       return formatStatementsGuide(payload);
+    case "statements-write-local.v1":
+      return formatStatementsWriteLocal(payload);
     default:
       return renderGenericPretty(payload);
   }
