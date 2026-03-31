@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { basename, dirname, extname, resolve } from "node:path";
+import { basename, dirname, extname, relative, resolve, sep } from "node:path";
 import { writeSqliteTableFromRows } from "../../lib/graph/clients/sqlite.js";
 import { parseArgs } from "../../util/command/args.js";
 import {
@@ -8,7 +8,7 @@ import {
   mergeBooleanKeySets,
   renderCommandHelp,
 } from "../../util/command/command-metadata.js";
-import { printJson, writeUtf8 } from "../../util/command/io.js";
+import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { executeGraphQuery } from "../../lib/graph/runtime/query.js";
 import {
@@ -67,6 +67,11 @@ export const queryRunCommand = defineCommand({
           value: '"reports/rows.json"',
           suggested: '"resolved from the project root"',
         },
+        {
+          label: 'with `".sqlite"` output',
+          value: '"writes rows into a sqlite table"',
+          suggested: '"table name comes from the saved query file name, or from the output file name for inline queries"',
+        },
       ],
     },
   ],
@@ -74,11 +79,14 @@ export const queryRunCommand = defineCommand({
     "fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
     "fide query run --graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
     "fide query run --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.sqlite",
+    "fide query run --file .fide/graphs/sqlite-test/queries/resolution/evaluated/entity_anchors.sql --to-fide-path graphs/sqlite-test/query-results/queries.sqlite",
     "fide query run --graph-key primary --stdin --to-project-path reports/rows.jsonl",
   ],
   notes: [
-    "Saved-query execution resolves from local query files under `.fide/graphs/<graphKey>/queries/`.",
+    "Saved-query execution resolves from local query files under the active project's `.fide/graphs/<graphKey>/queries/`.",
+    "Run saved queries from the target project root so `--file .fide/...` resolves against the intended local `.fide` directory.",
     "File output format is inferred from the destination extension: `.json`, `.jsonl`, `.csv`, or `.sqlite`. Unknown or missing extensions default to JSON.",
+    "When the destination ends in `.sqlite`, query rows are materialized into a table. Saved queries use the query file name as the table name.",
     "Use exactly one of `--to-fide-path` or `--to-project-path`.",
     "Query run writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
   ],
@@ -100,6 +108,15 @@ export type QueryRunOutput = {
 };
 
 type QueryRunFileFormat = "json" | "jsonl" | "csv" | "sqlite";
+
+type QueryResultLeafMeta = {
+  writtenAtUTC: string;
+  rowCount: number;
+  sourceQueryPath?: string;
+};
+
+type QueryResultFileMeta = QueryResultLeafMeta | Record<string, QueryResultLeafMeta>;
+type QueryResultFolderMeta = Record<string, QueryResultFileMeta>;
 
 function resolveQueryRunDestination(
   projectRoot: string,
@@ -189,6 +206,53 @@ function resolveSqliteOutputTableName(filePath: string | null, outPath: string, 
   return basename(outPath, ".sqlite") || "query_result";
 }
 
+function toProjectRelativePath(projectRoot: string, filePath: string): string | null {
+  const relativePath = relative(projectRoot, filePath);
+  if (!relativePath || relativePath.startsWith(`..${sep}`) || relativePath === "..") {
+    return null;
+  }
+  return relativePath.split(sep).join("/");
+}
+
+function isQueryResultLeafMeta(value: QueryResultFileMeta | undefined): value is QueryResultLeafMeta {
+  return !!value && typeof value === "object" && "writtenAtUTC" in value && "rowCount" in value;
+}
+
+async function updateQueryResultMeta(
+  metaPath: string,
+  input: {
+    outputFileName: string;
+    tableName?: string;
+    writtenAtUTC: string;
+    rowCount: number;
+    sourceQueryPath?: string;
+  },
+): Promise<void> {
+  let meta: QueryResultFolderMeta = {};
+  try {
+    meta = JSON.parse(await readUtf8(metaPath)) as QueryResultFolderMeta;
+  } catch {
+    meta = {};
+  }
+
+  const leaf: QueryResultLeafMeta = {
+    writtenAtUTC: input.writtenAtUTC,
+    rowCount: input.rowCount,
+    ...(input.sourceQueryPath ? { sourceQueryPath: input.sourceQueryPath } : {}),
+  };
+
+  if (input.tableName) {
+    const existing = meta[input.outputFileName];
+    const next = !existing || isQueryResultLeafMeta(existing) ? {} : existing;
+    next[input.tableName] = leaf;
+    meta[input.outputFileName] = next;
+  } else {
+    meta[input.outputFileName] = leaf;
+  }
+
+  await writeUtf8(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
+}
+
 export async function runQueryRun(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args, { booleanKeys: QUERY_RUN_PARSE_KEYS });
   if (initialParsed.flags.has("help") || initialParsed.flags.has("-h")) {
@@ -225,12 +289,28 @@ export async function runQueryRun(args: string[]): Promise<number> {
     sql,
   });
   const rowCount = result.rowCount;
+  const writtenAtUTC = new Date().toISOString();
+  const sourceQueryPath = filePath ? toProjectRelativePath(localTarget.root, resolve(filePath)) ?? undefined : undefined;
+  const outputFileName = basename(outPath);
   if (fileFormat === "sqlite") {
     const tableName = resolveSqliteOutputTableName(filePath, outPath, localTarget.root);
     await mkdir(dirname(outPath), { recursive: true });
     await writeSqliteTableFromRows(outPath, tableName, result.rows);
+    await updateQueryResultMeta(resolve(dirname(outPath), "_meta.json"), {
+      outputFileName,
+      tableName,
+      writtenAtUTC,
+      rowCount,
+      sourceQueryPath,
+    });
   } else {
     await writeUtf8(outPath, formatQueryRunFileContent(fileFormat, result.rows));
+    await updateQueryResultMeta(resolve(dirname(outPath), "_meta.json"), {
+      outputFileName,
+      writtenAtUTC,
+      rowCount,
+      sourceQueryPath,
+    });
   }
 
   const payload: QueryRunOutput = {

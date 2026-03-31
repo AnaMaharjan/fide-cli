@@ -31,6 +31,7 @@ export function queryCommandHelp(): string {
             "  fide query save --file .fide/graphs/primary/queries/recentStatements.sql 'select * from statements limit 10'",
             "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
             "  fide query run --file .fide/graphs/primary/queries/recentStatements.sql --to-project-path reports/rows.json",
+            "  fide query run --file .fide/graphs/sqlite-test/queries/resolution/evaluated/entity_aliases.sql --to-fide-path graphs/sqlite-test/query-results/queries.sqlite",
           ],
         },
         {
@@ -38,6 +39,7 @@ export function queryCommandHelp(): string {
           items: [
             "  - `query list|get|save` are local-first source-of-truth commands for `.fide/graphs/<graphKey>/queries/`.",
             "  - `query run` executes against local graph/query state and writes the result to a file path.",
+            "  - `.sqlite` query output writes into a table named after the saved query file.",
             "  - Query files are watched by `fide start` and synced into the workspace.",
           ],
         },

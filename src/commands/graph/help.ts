@@ -35,7 +35,7 @@ export function graphCommandHelp(): string {
           "  fide graph status",
           "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
           "  fide query save --file .fide/graphs/sqlite/queries/recentStatements.sql 'select * from statements limit 10'",
-          "  fide statements draft --name research-notes --file inputs.json",
+          "  fide statements draft --stdin --name research-notes",
           "  fide statements guide --entity NetworkResource",
         ],
       },
