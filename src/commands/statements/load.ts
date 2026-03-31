@@ -178,16 +178,25 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
 
   const existingRoots = new Set<string>();
   printStatementsLoadProgress(showProgress, `Checking existing roots in batches of ${rootBatchCount}...`);
-  for (const chunk of chunkArray(candidates, rootBatchCount)) {
-    const foundRoots = await queryExistingRoots(
-      target.type === "sqlite"
-        ? { type: "sqlite", file: target.file }
-        : { type: "postgres", databaseUrl: target.databaseUrl, schema: target.schema },
-      chunk.map((candidate) => candidate.root),
-    );
-    for (const root of foundRoots) {
-      existingRoots.add(root);
+  try {
+    for (const chunk of chunkArray(candidates, rootBatchCount)) {
+      const foundRoots = await queryExistingRoots(
+        target.type === "sqlite"
+          ? { type: "sqlite", file: target.file }
+          : { type: "postgres", databaseUrl: target.databaseUrl, schema: target.schema },
+        chunk.map((candidate) => candidate.root),
+      );
+      for (const root of foundRoots) {
+        existingRoots.add(root);
+      }
     }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Initialize the graph first")) {
+      throw new Error(
+        `${error.message}\nRun \`fide graph connect --graph-key ${graphKey} --initialize\` for this graph, then retry \`fide statements load --graph-key ${graphKey}\`.`,
+      );
+    }
+    throw error;
   }
 
   const pendingCandidates = candidates.filter((candidate) => !existingRoots.has(candidate.root));
