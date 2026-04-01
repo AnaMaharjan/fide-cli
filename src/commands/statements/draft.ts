@@ -87,9 +87,9 @@ function draftHelp(): string {
 }
 
 const draftDefaults = {
-  predicate: {
-    supportedCuriePrefixes: Object.keys(STANDARD_CURIE_PREFIXES),
-    prefixes: STANDARD_CURIE_PREFIXES,
+  curiePrefixes: {
+    supported: Object.keys(STANDARD_CURIE_PREFIXES),
+    custom: STANDARD_CURIE_PREFIXES,
   },
 };
 
@@ -223,7 +223,6 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
   const inferredDefaults = {
     subject: inferUniformNodeDefaults(normalizedInputs, "subject"),
     object: inferUniformNodeDefaults(normalizedInputs, "object"),
-    predicate: draftDefaults.predicate,
   };
   const referenceIdentifiers = parseVariablesFlag(variablesFlag) ?? existingReferenceIdentifiers;
   const output = statementDoc.formatStatementInputsAsStatementDraft(normalizedInputs, {
@@ -238,6 +237,7 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
       updateCount,
     },
     defaults: inferredDefaults,
+    curiePrefixes: draftDefaults.curiePrefixes,
     referenceIdentifiers,
   });
   await mkdir(resolve(outPath, ".."), { recursive: true });
