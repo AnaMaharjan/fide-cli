@@ -15,13 +15,13 @@ import {
   assertLocalQueryableStore,
   getLocalFideWarnings,
   resolveQueryFileSelector,
-  requireGraphKey,
   resolveGraphQueryScope,
   resolveGraphTarget,
   resolveQuerySql,
   resolveStoreTarget,
   shouldUseJsonOutput,
 } from "./shared.js";
+import type { ResolvedSqliteGraphStore, ResolvedStoreTarget } from "../../lib/project/config/project-settings.js";
 
 export const queryRunCommand = defineCommand({
   surface: "query.run",
@@ -30,13 +30,15 @@ export const queryRunCommand = defineCommand({
   summary: "Run a query against a graph and write the result",
   omitUsageInHelp: true,
   usage: [
-    "fide query run --graph-key <key> <query> --to-fide-path results/rows.json",
-    "fide query run --file .fide/graphs/<graph-key>/queries/<query> --to-fide-path results/rows.json",
-    "fide query run --graph-key <key> --stdin --to-project-path reports/rows.json",
+    "fide query run --from-graph-key <key> <query> --to-fide-path results/rows.json",
+    "fide query run --from-graph-key <key> --file .fide/graphs/<graph-key>/queries/<query> --to-fide-path results/rows.json",
+    "fide query run --from-fide-path graphs/sqlite-test/query-results/queries.sqlite 'select * from entity_anchors_0' --to-project-path reports/rows.json",
   ],
-  paramOrder: ["graph-key", "file", "stdin", "to-fide-path", "to-project-path", "pretty"],
+  paramOrder: ["from-graph-key", "from-fide-path", "from-project-path", "file", "stdin", "to-fide-path", "to-project-path", "pretty"],
   params: {
-    "graph-key": { kind: "string", description: "Graph key for inline query input", valueLabel: "<key>" },
+    "from-graph-key": { kind: "string", description: "Run the query against a configured graph", valueLabel: "<key>" },
+    "from-fide-path": { kind: "string", description: "Run the query against a sqlite file relative to the active .fide directory", valueLabel: "<sqlite-path>" },
+    "from-project-path": { kind: "string", description: "Run the query against a sqlite file relative to the project root", valueLabel: "<sqlite-path>" },
     file: { kind: "string", description: "Read query input from a saved query file path", valueLabel: "<query-file-path>" },
     stdin: { kind: "boolean", description: "Read query input from stdin" },
     "to-fide-path": { kind: "string", description: "Write query output relative to the active .fide directory", valueLabel: "<path>" },
@@ -76,14 +78,16 @@ export const queryRunCommand = defineCommand({
     },
   ],
   examples: [
-    "fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
-    "fide query run --graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
-    "fide query run --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.sqlite",
-    "fide query run --file .fide/graphs/sqlite-test/queries/resolution/evaluated/entity_anchors.sql --to-fide-path graphs/sqlite-test/query-results/queries.sqlite",
-    "fide query run --graph-key primary --stdin --to-project-path reports/rows.jsonl",
+    "fide query run --from-graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
+    "fide query run --from-graph-key primary 'select * from statements limit 10' --to-project-path reports/rows.csv",
+    "fide query run --from-graph-key primary --file .fide/graphs/primary/queries/recentStatements.sql --to-fide-path results/rows.sqlite",
+    "fide query run --from-fide-path graphs/sqlite-test/query-results/queries.sqlite 'select * from entity_anchors_0 limit 10' --to-project-path reports/rows.json",
+    "fide query run --from-graph-key primary --stdin --to-project-path reports/rows.jsonl",
   ],
   notes: [
     "Saved-query execution resolves from local query files under the active project's `.fide/graphs/<graphKey>/queries/`.",
+    "Use exactly one of `--from-graph-key`, `--from-fide-path`, or `--from-project-path`.",
+    "Path-based input sources currently support only `.sqlite` files.",
     "Run saved queries from the target project root so `--file .fide/...` resolves against the intended local `.fide` directory.",
     "File output format is inferred from the destination extension: `.json`, `.jsonl`, `.csv`, or `.sqlite`. Unknown or missing extensions default to JSON.",
     "When the destination ends in `.sqlite`, query rows are materialized into a table. Saved queries use the query file name as the table name.",
@@ -100,8 +104,8 @@ export type QueryRunOutput = {
   scope: typeof QUERY_RUN_SCOPE;
   command: "fide query run";
   targetScope: "local";
+  source: string;
   destination: string;
-  graphKey: string;
   rowCount: number;
   outPath?: string;
   warnings: string[];
@@ -253,6 +257,64 @@ async function updateQueryResultMeta(
   await writeUtf8(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
 }
 
+function assertSqliteInputPath(kind: "--from-fide-path" | "--from-project-path", filePath: string): void {
+  if (extname(filePath).toLowerCase() !== ".sqlite") {
+    throw new Error(`Only .sqlite inputs are supported for ${kind} right now.`);
+  }
+}
+
+function resolveQueryRunSource(
+  flags: Map<string, string | boolean>,
+  projectRoot: string,
+  fideDir: string,
+): { source: string; target: Exclude<ResolvedStoreTarget, { type: "fide-jsonl" }> } {
+  const fromGraphKey = typeof flags.get("from-graph-key") === "string" ? String(flags.get("from-graph-key")) : null;
+  const fromFidePath = typeof flags.get("from-fide-path") === "string" ? String(flags.get("from-fide-path")) : null;
+  const fromProjectPath = typeof flags.get("from-project-path") === "string" ? String(flags.get("from-project-path")) : null;
+  const selectors = [fromGraphKey, fromFidePath, fromProjectPath].filter((value) => value !== null);
+  if (selectors.length !== 1) {
+    throw new Error("Use exactly one of --from-graph-key <key>, --from-fide-path <sqlite-path>, or --from-project-path <sqlite-path>.");
+  }
+
+  if (fromGraphKey) {
+    return {
+      source: `graph:${fromGraphKey}`,
+      target: assertLocalQueryableStore(
+        fromGraphKey,
+        resolveStoreTarget(new Map<string, string | boolean>([["graph", fromGraphKey]])),
+        flags,
+      ),
+    };
+  }
+
+  if (fromFidePath) {
+    assertSqliteInputPath("--from-fide-path", fromFidePath);
+    return {
+      source: `fide-path:${fromFidePath}`,
+      target: {
+        type: "sqlite",
+        key: null,
+        configuredFromSettings: false,
+        file: resolve(fideDir, fromFidePath),
+        gitignore: null,
+      } satisfies ResolvedSqliteGraphStore,
+    };
+  }
+
+  const projectPath = fromProjectPath as string;
+  assertSqliteInputPath("--from-project-path", projectPath);
+  return {
+    source: `project-path:${projectPath}`,
+    target: {
+      type: "sqlite",
+      key: null,
+      configuredFromSettings: false,
+      file: resolve(projectRoot, projectPath),
+      gitignore: null,
+    } satisfies ResolvedSqliteGraphStore,
+  };
+}
+
 export async function runQueryRun(args: string[]): Promise<number> {
   const initialParsed = parseArgs(args, { booleanKeys: QUERY_RUN_PARSE_KEYS });
   if (initialParsed.flags.has("help") || initialParsed.flags.has("-h")) {
@@ -266,22 +328,15 @@ export async function runQueryRun(args: string[]): Promise<number> {
   const filePath = typeof flags.get("file") === "string" ? String(flags.get("file")) : null;
   const toFidePath = typeof flags.get("to-fide-path") === "string" ? String(flags.get("to-fide-path")) : null;
   const toProjectPath = typeof flags.get("to-project-path") === "string" ? String(flags.get("to-project-path")) : null;
-  const graphKey = filePath
-    ? resolveQueryFileSelector(localTarget.root, filePath).graphKey
-    : requireGraphKey(flags);
   const { parsed: resolvedParsed, sql } = await resolveQuerySql(args);
   if (!sql.trim()) {
     console.error("Missing query text for `fide query run`. Use `--stdin`, `--file <path>`, or pass the query inline.");
     console.error(renderCommandHelp(queryRunCommand));
     return 1;
   }
-  const target = assertLocalQueryableStore(
-    graphKey,
-    resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]])),
-    flags,
-  );
 
   const fideDir = resolve(localTarget.root, ".fide");
+  const { source, target } = resolveQueryRunSource(flags, localTarget.root, fideDir);
   const { destination, outPath } = resolveQueryRunDestination(localTarget.root, fideDir, toFidePath, toProjectPath);
   const fileFormat = inferQueryRunFileFormat(outPath);
   const result = await executeGraphQuery({
@@ -318,8 +373,8 @@ export async function runQueryRun(args: string[]): Promise<number> {
     scope: QUERY_RUN_SCOPE,
     command: "fide query run",
     targetScope: "local",
+    source,
     destination,
-    graphKey,
     rowCount,
     outPath,
     warnings: getLocalFideWarnings(localTarget.root, { gitignore: localTarget.gitignore }),

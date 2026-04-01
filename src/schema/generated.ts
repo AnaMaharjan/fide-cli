@@ -530,8 +530,8 @@ export const GENERATED_TYPE_SCHEMAS = {
         "scope",
         "command",
         "targetScope",
+        "source",
         "destination",
-        "graphKey",
         "rowCount",
         "warnings"
       ],
@@ -560,10 +560,10 @@ export const GENERATED_TYPE_SCHEMAS = {
             "local"
           ]
         },
-        "destination": {
+        "source": {
           "type": "string"
         },
-        "graphKey": {
+        "destination": {
           "type": "string"
         },
         "rowCount": {
