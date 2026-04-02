@@ -1,5 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
+import { statementDoc } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
@@ -12,6 +13,13 @@ import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { ymdUtc } from "../../lib/project/path-date.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
+import { readJsonFile } from "../../lib/project/config/fide-dir.js";
+
+type WorkspaceSettings = {
+  workspace?: {
+    public_base_url?: string;
+  };
+};
 
 export const statementsWriteCommand = defineCommand({
   surface: "statements.write",
@@ -53,6 +61,10 @@ export type StatementsWriteOutput = {
 
 function resolveStatementsDir(root: string): string {
   return resolve(root, ".fide", "statements");
+}
+
+function resolveDeclaredEntitiesDir(root: string): string {
+  return resolve(root, ".fide", "records", "declared-entities");
 }
 
 type StatementsDayMeta = Record<string, {
@@ -184,6 +196,119 @@ function updateDraftWriteFrontmatter(content: string, writtenAtUTC: string, writ
   return content.replace(/^---\n[\s\S]*?\n---\n/, `---\n${nextLines.join("\n")}\n---\n`);
 }
 
+function formatDeclaredEntityRecord(params: {
+  name: string;
+  description: string;
+  writtenAtUTC: string;
+  referenceIdentifier: string;
+}): string {
+  return [
+    "---",
+    "type: fide-declared-entity",
+    `title: ${params.name}`,
+    `description: ${params.description}`,
+    `writtenAtUTC: ${params.writtenAtUTC}`,
+    `referenceIdentifier: ${params.referenceIdentifier}`,
+    "---",
+    "",
+    `# ${params.name}`,
+    "",
+    params.description,
+    "",
+  ].join("\n");
+}
+
+function resolveDeclaredEntityLocalPath(
+  projectRoot: string,
+  publicBaseUrl: string,
+  referenceIdentifier: string,
+): string {
+  let base: URL;
+  let ref: URL;
+  try {
+    base = new URL(publicBaseUrl);
+    ref = new URL(referenceIdentifier);
+  } catch {
+    throw new Error(`Declared entity reference must be a valid URL: ${referenceIdentifier}`);
+  }
+
+  if (base.origin !== ref.origin) {
+    throw new Error(
+      `Declared entity reference ${referenceIdentifier} does not match workspace public_base_url origin ${publicBaseUrl}.`,
+    );
+  }
+
+  const basePath = base.pathname.replace(/\/+$/u, "");
+  const refPath = ref.pathname;
+  if (!refPath.startsWith(`${basePath}/`)) {
+    throw new Error(
+      `Declared entity reference ${referenceIdentifier} is not under workspace public_base_url ${publicBaseUrl}.`,
+    );
+  }
+
+  const relativePublicPath = refPath.slice(basePath.length);
+  if (!relativePublicPath.startsWith("/.fide/records/declared-entities/")) {
+    throw new Error(
+      `Declared entity reference ${referenceIdentifier} must live under /.fide/records/declared-entities/.`,
+    );
+  }
+
+  return resolve(projectRoot, `.${relativePublicPath}`);
+}
+
+async function materializeDeclaredEntityRecords(
+  projectRoot: string,
+  filePath: string,
+  writtenAtUTC: string,
+): Promise<void> {
+  const raw = await readUtf8(filePath);
+  const parsed = statementDoc.parseStatementDoc(raw);
+  const entityDeclarations = parsed.entityDeclarations;
+  if (!entityDeclarations || Object.keys(entityDeclarations).length === 0) return;
+
+  const settings = readJsonFile<WorkspaceSettings>(resolve(projectRoot, ".fide", "settings.json"));
+  const publicBaseUrl = settings?.workspace?.public_base_url;
+  if (!publicBaseUrl) {
+    throw new Error(
+      "Draft includes entity_declarations, but workspace .fide/settings.json is missing workspace.public_base_url.",
+    );
+  }
+
+  const referenceIdentifiers = parsed.referenceIdentifiers ?? {};
+  await mkdir(resolveDeclaredEntitiesDir(projectRoot), { recursive: true });
+
+  for (const [alias, declaration] of Object.entries(entityDeclarations)) {
+    const referenceIdentifier = referenceIdentifiers[alias];
+    if (!referenceIdentifier) {
+      throw new Error(`entity_declarations.${alias} requires a matching reference_identifiers.${alias}.`);
+    }
+
+    const localPath = resolveDeclaredEntityLocalPath(projectRoot, publicBaseUrl, referenceIdentifier);
+    const content = formatDeclaredEntityRecord({
+      name: declaration.name,
+      description: declaration.description,
+      writtenAtUTC,
+      referenceIdentifier,
+    });
+
+    let existing: string | null = null;
+    try {
+      existing = await readUtf8(localPath);
+    } catch {
+      existing = null;
+    }
+
+    if (existing !== null && existing !== content) {
+      throw new Error(`Declared entity record already exists with different content: ${localPath}`);
+    }
+
+    if (existing === null) {
+      await mkdir(resolve(localPath, ".."), { recursive: true });
+      await writeUtf8(localPath, content);
+    }
+  }
+}
+
 export async function runStatementsWrite(argsOrFlags: string[] | Map<string, string | boolean>): Promise<number> {
   const initialParsed = argsOrFlags instanceof Map
     ? { positionals: [], flags: argsOrFlags }
@@ -240,6 +365,9 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
     or: statement.objectReferenceIdentifier,
   }));
   const output = `${wires.map((wire) => JSON.stringify(wire)).join("\n")}\n`;
+  if (filePath) {
+    await materializeDeclaredEntityRecords(graphTarget.root, filePath, writtenAtUTC);
+  }
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
   await updateStatementsDayMeta(metaPath, {

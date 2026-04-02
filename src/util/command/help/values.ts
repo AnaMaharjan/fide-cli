@@ -13,12 +13,25 @@ function renderValueDefinition(
   lines: string[],
 ): void {
   const indent = "  ".repeat(depth + 1);
+  const childIndent = `${indent}  `;
   const requires = definition.requires ? ` (requires: ${definition.requires})` : "";
   const required = definition.isRequired ? " (required)" : "";
   const suggested = definition.suggested ? ` (suggested: ${definition.suggested})` : "";
   if (definition.value) {
-    const value = Array.isArray(definition.value) ? definition.value.join(" | ") : definition.value;
-    lines.push(`${indent}${definition.label}: ${value}${required}${suggested}${requires}`);
+    const value = definition.value;
+    if (Array.isArray(value)) {
+      lines.push(`${indent}${definition.label}: ${value.join(" | ")}${required}${suggested}${requires}`);
+    } else {
+      const scalarValue = value as string;
+      if (scalarValue.includes("\n")) {
+      lines.push(`${indent}${definition.label}:${required}${suggested}${requires}`);
+        for (const line of scalarValue.split("\n")) {
+          lines.push(`${childIndent}${line}`);
+        }
+      } else {
+        lines.push(`${indent}${definition.label}: ${scalarValue}${required}${suggested}${requires}`);
+      }
+    }
   } else {
     lines.push(`${indent}${definition.label}${requires}${required}`);
   }

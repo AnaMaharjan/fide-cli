@@ -5,6 +5,9 @@ import {
   statementDoc,
   type StatementInput,
   type FsdDraftFrontmatter,
+  type FsdCuriePrefixes,
+  type FsdEntityDeclarationMap,
+  type FsdReferenceIdentifierMap,
 } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
@@ -34,7 +37,8 @@ export const statementsDraftCommand = defineCommand({
     description: { kind: "string", description: "Optional draft description frontmatter", valueLabel: "<text>" },
     variables: {
       kind: "string",
-      description: "JSON object of reference identifier aliases for frontmatter, e.g. '{\"action-record\":\"https://...\"}'",
+      description:
+        "JSON object for frontmatter variables. Optional top-level keys: reference_identifiers, curie_prefixes, entity_declarations.",
       valueLabel: "<variables-json>",
     },
     stdin: { kind: "boolean", description: "Read statement inputs from stdin" },
@@ -45,24 +49,115 @@ export const statementsDraftCommand = defineCommand({
   notes: [
     "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
     "Reusing the same --name and --path updates the existing draft.",
-    "Reference identifier aliases from `--variables` are written under frontmatter `reference_identifiers:` using plain keys and can be used as `[@alias]`.",
     "Use `fide statements write` for canonical JSONL batches.",
     "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
   ],
   values: [
     {
       label: "<variables-json>",
-      value: '{"<alias>":"<absolute-reference-identifier>"}',
+      children: [
+        {
+          label: '"reference_identifiers"',
+          value: "<reference_identifiers>",
+        },
+        {
+          label: '"curie_prefixes"',
+          value: "<curie_prefixes>",
+        },
+        {
+          label: '"entity_declarations"',
+          value: "<entity_declarations>",
+        },
+      ],
     },
     {
-      label: "<alias>",
-      value: 'string',
-      suggested: '"action-record"',
+      label: "<reference_identifiers>",
+      children: [
+        {
+          label: "<reference-identifier-key>",
+          value: "<reference-identifier>",
+        },
+      ],
     },
     {
-      label: "<absolute-reference-identifier>",
-      value: 'string',
-      suggested: '"https://example.com/records/eval.md"',
+      label: "<reference-identifier-key>",
+      value: "string",
+      suggested: '"resource_alias"',
+    },
+    {
+      label: "<reference-identifier>",
+      value: "string",
+      suggested: '"https://example.com/resource"',
+    },
+    {
+      label: "<curie_prefixes>",
+      children: [
+        {
+          label: '"supported"',
+          value: '["<supported-curie-prefix>"...]',
+        },
+        {
+          label: '"custom"',
+          children: [
+            {
+              label: "<custom-curie-prefix>",
+              value: "<custom-curie-url-prefix>",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      label: "<supported-curie-prefix>",
+      value: "string",
+      suggested: '"schema"',
+    },
+    {
+      label: "<custom-curie-prefix>",
+      value: "string",
+      suggested: '"custom"',
+    },
+    {
+      label: "<custom-curie-url-prefix>",
+      value: "string",
+      suggested: '"https://example.com/vocab/"',
+    },
+    {
+      label: "<entity_declarations>",
+      children: [
+        {
+          label: "<entity-declaration-key>",
+          value: "<entity_declaration>",
+        },
+      ],
+    },
+    {
+      label: "<entity-declaration-key>",
+      value: "string",
+      suggested: '"entity_alias"',
+    },
+    {
+      label: "<entity_declaration>",
+      children: [
+        {
+          label: '"name"',
+          value: "<entity-declaration-name>",
+        },
+        {
+          label: '"description"',
+          value: "<entity-declaration-description>",
+        },
+      ],
+    },
+    {
+      label: "<entity-declaration-name>",
+      value: "string",
+      suggested: '"Entity Name"',
+    },
+    {
+      label: "<entity-declaration-description>",
+      value: "string",
+      suggested: '"Short description of the declared entity."',
     },
   ],
 });
@@ -109,7 +204,112 @@ function inferUniformNodeDefaults(
   };
 }
 
-function parseVariablesFlag(raw: string | null): Record<string, string> | undefined {
+type DraftVariablesInput = {
+  referenceIdentifiers?: FsdReferenceIdentifierMap;
+  curiePrefixes?: FsdCuriePrefixes;
+  entityDeclarations?: FsdEntityDeclarationMap;
+};
+
+function parseReferenceIdentifiersValue(raw: unknown): FsdReferenceIdentifierMap | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || Array.isArray(raw) || typeof raw !== "object") {
+    throw new Error("Invalid --variables.reference_identifiers value. Expected a JSON object.");
+  }
+
+  const aliases: Record<string, string> = {};
+  for (const [rawKey, rawValue] of Object.entries(raw)) {
+    if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+      throw new Error(`Invalid --variables.reference_identifiers value for ${JSON.stringify(rawKey)}. Expected a non-empty string.`);
+    }
+
+    const normalizedKey = rawKey.startsWith("@") ? rawKey.slice(1) : rawKey;
+    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(normalizedKey)) {
+      throw new Error(
+        `Invalid --variables.reference_identifiers key ${JSON.stringify(rawKey)}. Keys must look like action-record and may not be numeric.`,
+      );
+    }
+    aliases[normalizedKey] = rawValue;
+  }
+
+  return aliases;
+}
+
+function parseCuriePrefixesValue(raw: unknown): FsdCuriePrefixes | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || Array.isArray(raw) || typeof raw !== "object") {
+    throw new Error("Invalid --variables.curie_prefixes value. Expected a JSON object.");
+  }
+
+  const parsed = raw as { supported?: unknown; custom?: unknown };
+  const supportedRaw = parsed.supported;
+  const customRaw = parsed.custom;
+
+  const supported =
+    supportedRaw === undefined
+      ? undefined
+      : (() => {
+          if (!Array.isArray(supportedRaw)) {
+            throw new Error("Invalid --variables.curie_prefixes.supported value. Expected an array of strings.");
+          }
+          return supportedRaw.map((item) => {
+            if (typeof item !== "string" || item.trim().length === 0) {
+              throw new Error("Invalid --variables.curie_prefixes.supported value. Expected an array of non-empty strings.");
+            }
+            return item;
+          });
+        })();
+
+  const custom =
+    customRaw === undefined
+      ? undefined
+      : (() => {
+          if (!customRaw || Array.isArray(customRaw) || typeof customRaw !== "object") {
+            throw new Error("Invalid --variables.curie_prefixes.custom value. Expected a JSON object.");
+          }
+          const out: Record<string, string> = {};
+          for (const [key, value] of Object.entries(customRaw)) {
+            if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(key)) {
+              throw new Error(`Invalid --variables.curie_prefixes.custom key ${JSON.stringify(key)}.`);
+            }
+            if (typeof value !== "string" || value.trim().length === 0) {
+              throw new Error(`Invalid --variables.curie_prefixes.custom value for ${JSON.stringify(key)}. Expected a non-empty string.`);
+            }
+            out[key] = value;
+          }
+          return out;
+        })();
+
+  return { supported, custom };
+}
+
+function parseEntityDeclarationsValue(raw: unknown): FsdEntityDeclarationMap | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || Array.isArray(raw) || typeof raw !== "object") {
+    throw new Error("Invalid --variables.entity_declarations value. Expected a JSON object.");
+  }
+
+  const out: FsdEntityDeclarationMap = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(key)) {
+      throw new Error(`Invalid --variables.entity_declarations key ${JSON.stringify(key)}.`);
+    }
+    if (!value || Array.isArray(value) || typeof value !== "object") {
+      throw new Error(`Invalid --variables.entity_declarations value for ${JSON.stringify(key)}. Expected an object with name and description.`);
+    }
+    const { name, description } = value as { name?: unknown; description?: unknown };
+    if (typeof name !== "string" || name.trim().length === 0) {
+      throw new Error(`Invalid --variables.entity_declarations.${key}.name. Expected a non-empty string.`);
+    }
+    if (typeof description !== "string" || description.trim().length === 0) {
+      throw new Error(`Invalid --variables.entity_declarations.${key}.description. Expected a non-empty string.`);
+    }
+    out[key] = { name, description };
+  }
+
+  return out;
+}
+
+function parseVariablesFlag(raw: string | null): DraftVariablesInput | undefined {
   if (!raw) return undefined;
 
   let parsed: unknown;
@@ -125,22 +325,20 @@ function parseVariablesFlag(raw: string | null): Record<string, string> | undefi
     throw new Error("Invalid --variables value. Expected a JSON object.");
   }
 
-  const aliases: Record<string, string> = {};
-  for (const [rawKey, rawValue] of Object.entries(parsed)) {
-    if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
-      throw new Error(`Invalid --variables value for ${JSON.stringify(rawKey)}. Expected a non-empty string.`);
-    }
-
-    const normalizedKey = rawKey.startsWith("@") ? rawKey.slice(1) : rawKey;
-    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(normalizedKey)) {
+  const allowedKeys = new Set(["reference_identifiers", "curie_prefixes", "entity_declarations"]);
+  for (const key of Object.keys(parsed)) {
+    if (!allowedKeys.has(key)) {
       throw new Error(
-        `Invalid --variables key ${JSON.stringify(rawKey)}. Aliases must look like action-record and may not be numeric.`,
+        `Invalid --variables key ${JSON.stringify(key)}. Expected one of: reference_identifiers, curie_prefixes, entity_declarations.`,
       );
     }
-    aliases[normalizedKey] = rawValue;
   }
 
-  return aliases;
+  return {
+    referenceIdentifiers: parseReferenceIdentifiersValue((parsed as Record<string, unknown>).reference_identifiers),
+    curiePrefixes: parseCuriePrefixesValue((parsed as Record<string, unknown>).curie_prefixes),
+    entityDeclarations: parseEntityDeclarationsValue((parsed as Record<string, unknown>).entity_declarations),
+  };
 }
 
 export async function runStatementsDraft(args: string[]): Promise<number> {
@@ -200,17 +398,26 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
     : resolve(graphTarget.root, ".fide", "drafts", "statements", `${draftName}.md`);
   let existingFrontmatter: Partial<FsdDraftFrontmatter> = {};
   let existingReferenceIdentifiers: Record<string, string> | undefined;
+  let existingCuriePrefixes: FsdCuriePrefixes | undefined;
+  let existingEntityDeclarations: FsdEntityDeclarationMap | undefined;
   try {
     const existingContent = await readUtf8(outPath);
     existingFrontmatter = statementDoc.parseStatementDraftFrontmatter(existingContent);
     try {
-      existingReferenceIdentifiers = statementDoc.parseStatementDoc(existingContent).referenceIdentifiers;
+      const parsedExisting = statementDoc.parseStatementDoc(existingContent);
+      existingReferenceIdentifiers = parsedExisting.referenceIdentifiers;
+      existingCuriePrefixes = parsedExisting.curiePrefixes;
+      existingEntityDeclarations = parsedExisting.entityDeclarations;
     } catch {
       existingReferenceIdentifiers = undefined;
+      existingCuriePrefixes = undefined;
+      existingEntityDeclarations = undefined;
     }
   } catch {
     existingFrontmatter = {};
     existingReferenceIdentifiers = undefined;
+    existingCuriePrefixes = undefined;
+    existingEntityDeclarations = undefined;
   }
   const now = new Date().toISOString();
   const createdAtUTC = existingFrontmatter.createdAtUTC ?? now;
@@ -224,7 +431,10 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
     subject: inferUniformNodeDefaults(normalizedInputs, "subject"),
     object: inferUniformNodeDefaults(normalizedInputs, "object"),
   };
-  const referenceIdentifiers = parseVariablesFlag(variablesFlag) ?? existingReferenceIdentifiers;
+  const parsedVariables = parseVariablesFlag(variablesFlag);
+  const referenceIdentifiers = parsedVariables?.referenceIdentifiers ?? existingReferenceIdentifiers;
+  const curiePrefixes = parsedVariables?.curiePrefixes ?? existingCuriePrefixes ?? draftDefaults.curiePrefixes;
+  const entityDeclarations = parsedVariables?.entityDeclarations ?? existingEntityDeclarations;
   const output = statementDoc.formatStatementInputsAsStatementDraft(normalizedInputs, {
     frontmatter: {
       draftName,
@@ -237,8 +447,9 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
       updateCount,
     },
     defaults: inferredDefaults,
-    curiePrefixes: draftDefaults.curiePrefixes,
+    curiePrefixes,
     referenceIdentifiers,
+    entityDeclarations,
   });
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
