@@ -298,11 +298,7 @@ async function materializeDeclaredEntityRecords(
       existing = null;
     }
 
-    if (existing !== null && existing !== content) {
-      throw new Error(`Declared entity record already exists with different content: ${localPath}`);
-    }
-
-    if (existing === null) {
+    if (existing === null || existing !== content) {
       await mkdir(resolve(localPath, ".."), { recursive: true });
       await writeUtf8(localPath, content);
     }
