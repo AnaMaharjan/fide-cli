@@ -74,12 +74,15 @@ type StatementsDayMetaEntry = {
   statementCount: number;
   sourceDraftPath?: string;
   sourceDraftTitle?: string;
+  /** From draft frontmatter `description:` when writing with `--file`. */
+  sourceDraftDescription?: string;
 };
 
 type StatementsDayMeta = Record<string, StatementsDayMetaEntry>;
 
 type DraftWriteMetadata = {
   title?: string;
+  description?: string;
   writtenRoot?: string;
 };
 
@@ -99,6 +102,7 @@ async function updateStatementsDayMeta(
     statementCount: number;
     sourceDraftPath?: string;
     sourceDraftTitle?: string;
+    sourceDraftDescription?: string;
   },
 ): Promise<void> {
   let meta: StatementsDayMeta = {};
@@ -121,6 +125,7 @@ async function updateStatementsDayMeta(
     statementCount: input.statementCount,
     ...(input.sourceDraftPath ? { sourceDraftPath: input.sourceDraftPath } : {}),
     ...(input.sourceDraftTitle ? { sourceDraftTitle: input.sourceDraftTitle } : {}),
+    ...(input.sourceDraftDescription ? { sourceDraftDescription: input.sourceDraftDescription } : {}),
   };
   await writeUtf8(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
 }
@@ -151,6 +156,21 @@ function extractDraftWriteMetadata(content: string): DraftWriteMetadata {
       )
         ? value.slice(1, -1)
         : value;
+      continue;
+    }
+
+    const descriptionMatch = line.match(/^description:\s*(.*)$/);
+    if (descriptionMatch) {
+      let value = descriptionMatch[1].trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (value.length > 0) {
+        metadata.description = value;
+      }
       continue;
     }
 
@@ -371,14 +391,17 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
     throw new Error("`statements write --replace-draft` requires `--file <draft.md>`.");
   }
   let sourceDraftTitle: string | undefined;
+  let sourceDraftDescription: string | undefined;
   let previousWrittenRoot: string | undefined;
   if (filePath) {
     try {
       const draftMetadata = extractDraftWriteMetadata(await readUtf8(filePath));
       sourceDraftTitle = draftMetadata.title ?? undefined;
+      sourceDraftDescription = draftMetadata.description ?? undefined;
       previousWrittenRoot = draftMetadata.writtenRoot;
     } catch {
       sourceDraftTitle = undefined;
+      sourceDraftDescription = undefined;
       previousWrittenRoot = undefined;
     }
   }
@@ -410,6 +433,7 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
       ? {
           sourceDraftPath: toProjectRelativePath(graphTarget.root, filePath) ?? undefined,
           sourceDraftTitle,
+          sourceDraftDescription,
         }
       : {}),
   });
