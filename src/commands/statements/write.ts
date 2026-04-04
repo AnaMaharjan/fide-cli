@@ -67,12 +67,16 @@ function resolveDeclaredEntitiesDir(root: string): string {
   return resolve(root, ".fide", "records", "declared-entities");
 }
 
-type StatementsDayMeta = Record<string, {
-  committedAtUTC: string;
+type StatementsDayMetaEntry = {
+  committedAtUTC?: string;
+  /** Legacy key in older `_meta.json`; treated as first-commit time when present. */
+  writtenAtUTC?: string;
   statementCount: number;
   sourceDraftPath?: string;
   sourceDraftTitle?: string;
-}>;
+};
+
+type StatementsDayMeta = Record<string, StatementsDayMetaEntry>;
 
 type DraftWriteMetadata = {
   title?: string;
@@ -103,8 +107,17 @@ async function updateStatementsDayMeta(
   } catch {
     meta = {};
   }
+  const prev = meta[input.root];
+  const priorCommitTime =
+    typeof prev?.committedAtUTC === "string" && prev.committedAtUTC.length > 0
+      ? prev.committedAtUTC
+      : typeof prev?.writtenAtUTC === "string" && prev.writtenAtUTC.length > 0
+        ? prev.writtenAtUTC
+        : undefined;
+  const committedAtUTC = priorCommitTime ?? input.committedAtUTC;
+
   meta[input.root] = {
-    committedAtUTC: input.committedAtUTC,
+    committedAtUTC,
     statementCount: input.statementCount,
     ...(input.sourceDraftPath ? { sourceDraftPath: input.sourceDraftPath } : {}),
     ...(input.sourceDraftTitle ? { sourceDraftTitle: input.sourceDraftTitle } : {}),
