@@ -183,12 +183,21 @@ async function findBatchFileByRoot(statementsDir: string, root: string): Promise
   return walk(statementsDir);
 }
 
-function updateDraftWriteFrontmatter(content: string, updatedAtUTC: string, writtenRoot: string): string {
+/**
+ * After `fide statements write`, refresh `writtenRoot`.
+ * Bump `updatedAtUTC` only when the canonical root changed (including first time `writtenRoot` is set).
+ */
+function updateDraftWriteFrontmatter(
+  content: string,
+  writtenRoot: string,
+  bumpUpdatedAt: boolean,
+  updatedAtUTCWhenBumping: string,
+): string {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(content);
   if (!match) return content;
   const lines = match[1].split("\n");
   const nextLines: string[] = [];
-  let replacedUpdated = false;
+  let hadUpdatedAt = false;
 
   for (const rawLine of lines) {
     const trimmed = rawLine.trim();
@@ -196,19 +205,23 @@ function updateDraftWriteFrontmatter(content: string, updatedAtUTC: string, writ
       continue;
     }
     if (trimmed.startsWith("updatedAtUTC:")) {
-      nextLines.push(`updatedAtUTC: ${updatedAtUTC}`);
-      replacedUpdated = true;
+      hadUpdatedAt = true;
+      if (bumpUpdatedAt) {
+        nextLines.push(`updatedAtUTC: ${updatedAtUTCWhenBumping}`);
+      } else {
+        nextLines.push(rawLine);
+      }
       continue;
     }
     nextLines.push(rawLine);
   }
 
-  if (!replacedUpdated) {
+  if (!hadUpdatedAt && bumpUpdatedAt) {
     const createdIdx = nextLines.findIndex((line) => line.trim().startsWith("createdAtUTC:"));
     if (createdIdx >= 0) {
-      nextLines.splice(createdIdx + 1, 0, `updatedAtUTC: ${updatedAtUTC}`);
+      nextLines.splice(createdIdx + 1, 0, `updatedAtUTC: ${updatedAtUTCWhenBumping}`);
     } else {
-      nextLines.unshift(`updatedAtUTC: ${updatedAtUTC}`);
+      nextLines.unshift(`updatedAtUTC: ${updatedAtUTCWhenBumping}`);
     }
   }
 
@@ -412,7 +425,8 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
   if (filePath) {
     try {
       const raw = await readUtf8(filePath);
-      const nextDraft = updateDraftWriteFrontmatter(raw, committedAtUTC, batch.root);
+      const bumpUpdatedAt = previousWrittenRoot !== batch.root;
+      const nextDraft = updateDraftWriteFrontmatter(raw, batch.root, bumpUpdatedAt, committedAtUTC);
       if (nextDraft !== raw) {
         await writeUtf8(filePath, nextDraft);
       }
