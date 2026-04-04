@@ -1,4 +1,4 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import { statementDoc } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
@@ -68,7 +68,7 @@ function resolveDeclaredEntitiesDir(root: string): string {
 }
 
 type StatementsDayMeta = Record<string, {
-  writtenAtUTC: string;
+  committedAtUTC: string;
   statementCount: number;
   sourceDraftPath?: string;
   sourceDraftTitle?: string;
@@ -76,7 +76,6 @@ type StatementsDayMeta = Record<string, {
 
 type DraftWriteMetadata = {
   title?: string;
-  writtenAtUTC?: string;
   writtenRoot?: string;
 };
 
@@ -92,7 +91,7 @@ async function updateStatementsDayMeta(
   metaPath: string,
   input: {
     root: string;
-    writtenAtUTC: string;
+    committedAtUTC: string;
     statementCount: number;
     sourceDraftPath?: string;
     sourceDraftTitle?: string;
@@ -105,7 +104,7 @@ async function updateStatementsDayMeta(
     meta = {};
   }
   meta[input.root] = {
-    writtenAtUTC: input.writtenAtUTC,
+    committedAtUTC: input.committedAtUTC,
     statementCount: input.statementCount,
     ...(input.sourceDraftPath ? { sourceDraftPath: input.sourceDraftPath } : {}),
     ...(input.sourceDraftTitle ? { sourceDraftTitle: input.sourceDraftTitle } : {}),
@@ -142,12 +141,6 @@ function extractDraftWriteMetadata(content: string): DraftWriteMetadata {
       continue;
     }
 
-    const writtenAtMatch = line.match(/^writtenAtUTC:\s*(.+?)\s*$/);
-    if (writtenAtMatch) {
-      metadata.writtenAtUTC = writtenAtMatch[1].trim();
-      continue;
-    }
-
     const writtenRootMatch = line.match(/^writtenRoot:\s*(.+?)\s*$/);
     if (writtenRootMatch) {
       metadata.writtenRoot = writtenRootMatch[1].trim();
@@ -156,41 +149,61 @@ function extractDraftWriteMetadata(content: string): DraftWriteMetadata {
   return metadata;
 }
 
-function resolveStatementsOutPath(statementsDir: string, writtenAtUTC: string, root: string): string | null {
-  const date = new Date(writtenAtUTC);
-  if (Number.isNaN(date.valueOf())) return null;
-  const { yyyy, mm, dd } = ymdUtc(date);
-  return resolve(statementsDir, yyyy, mm, dd, `${root}.jsonl`);
+/** Find `.fide/statements/.../<rootHash>.jsonl` for replace-draft cleanup when the draft no longer stores a write timestamp. */
+async function findBatchFileByRoot(statementsDir: string, root: string): Promise<string | null> {
+  const targetName = `${root}.jsonl`;
+
+  async function walk(dir: string): Promise<string | null> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) {
+        const found = await walk(full);
+        if (found) return found;
+      } else if (entry.isFile() && entry.name === targetName) {
+        return full;
+      }
+    }
+    return null;
+  }
+
+  return walk(statementsDir);
 }
 
-function updateDraftWriteFrontmatter(content: string, writtenAtUTC: string, writtenRoot: string): string {
+function updateDraftWriteFrontmatter(content: string, updatedAtUTC: string, writtenRoot: string): string {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(content);
   if (!match) return content;
   const lines = match[1].split("\n");
   const nextLines: string[] = [];
-  let inserted = false;
+  let replacedUpdated = false;
 
   for (const rawLine of lines) {
     const trimmed = rawLine.trim();
     if (trimmed.startsWith("writtenAtUTC:") || trimmed.startsWith("writtenRoot:")) {
       continue;
     }
-    nextLines.push(rawLine);
     if (trimmed.startsWith("updatedAtUTC:")) {
-      nextLines.push(`writtenAtUTC: ${writtenAtUTC}`);
-      nextLines.push(`writtenRoot: ${writtenRoot}`);
-      inserted = true;
+      nextLines.push(`updatedAtUTC: ${updatedAtUTC}`);
+      replacedUpdated = true;
+      continue;
+    }
+    nextLines.push(rawLine);
+  }
+
+  if (!replacedUpdated) {
+    const createdIdx = nextLines.findIndex((line) => line.trim().startsWith("createdAtUTC:"));
+    if (createdIdx >= 0) {
+      nextLines.splice(createdIdx + 1, 0, `updatedAtUTC: ${updatedAtUTC}`);
+    } else {
+      nextLines.unshift(`updatedAtUTC: ${updatedAtUTC}`);
     }
   }
 
-  if (!inserted) {
-    const updateCountIndex = nextLines.findIndex((line) => line.trim().startsWith("updateCount:"));
-    if (updateCountIndex >= 0) {
-      nextLines.splice(updateCountIndex, 0, `writtenAtUTC: ${writtenAtUTC}`, `writtenRoot: ${writtenRoot}`);
-    } else {
-      nextLines.push(`writtenAtUTC: ${writtenAtUTC}`);
-      nextLines.push(`writtenRoot: ${writtenRoot}`);
-    }
+  const updatedIdx = nextLines.findIndex((line) => line.trim().startsWith("updatedAtUTC:"));
+  if (updatedIdx >= 0) {
+    nextLines.splice(updatedIdx + 1, 0, `writtenRoot: ${writtenRoot}`);
+  } else {
+    nextLines.push(`writtenRoot: ${writtenRoot}`);
   }
 
   return content.replace(/^---\n[\s\S]*?\n---\n/, `---\n${nextLines.join("\n")}\n---\n`);
@@ -199,7 +212,7 @@ function updateDraftWriteFrontmatter(content: string, writtenAtUTC: string, writ
 function formatDeclaredEntityRecord(params: {
   name: string;
   description: string;
-  writtenAtUTC: string;
+  updatedAtUTC: string;
   referenceIdentifier: string;
 }): string {
   return [
@@ -207,7 +220,7 @@ function formatDeclaredEntityRecord(params: {
     "type: fide-declared-entity",
     `title: ${params.name}`,
     `description: ${params.description}`,
-    `writtenAtUTC: ${params.writtenAtUTC}`,
+    `updatedAtUTC: ${params.updatedAtUTC}`,
     `referenceIdentifier: ${params.referenceIdentifier}`,
     "---",
     "",
@@ -259,7 +272,7 @@ function resolveDeclaredEntityLocalPath(
 async function materializeDeclaredEntityRecords(
   projectRoot: string,
   filePath: string,
-  writtenAtUTC: string,
+  updatedAtUTC: string,
 ): Promise<void> {
   const raw = await readUtf8(filePath);
   const parsed = statementDoc.parseStatementDoc(raw);
@@ -287,7 +300,7 @@ async function materializeDeclaredEntityRecords(
     const content = formatDeclaredEntityRecord({
       name: declaration.name,
       description: declaration.description,
-      writtenAtUTC,
+      updatedAtUTC,
       referenceIdentifier,
     });
 
@@ -332,17 +345,14 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
     throw new Error("`statements write --replace-draft` requires `--file <draft.md>`.");
   }
   let sourceDraftTitle: string | undefined;
-  let previousWrittenAtUTC: string | undefined;
   let previousWrittenRoot: string | undefined;
   if (filePath) {
     try {
       const draftMetadata = extractDraftWriteMetadata(await readUtf8(filePath));
       sourceDraftTitle = draftMetadata.title ?? undefined;
-      previousWrittenAtUTC = draftMetadata.writtenAtUTC;
       previousWrittenRoot = draftMetadata.writtenRoot;
     } catch {
       sourceDraftTitle = undefined;
-      previousWrittenAtUTC = undefined;
       previousWrittenRoot = undefined;
     }
   }
@@ -350,7 +360,7 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
   const statementsDir = resolveStatementsDir(graphTarget.root);
   const { yyyy, mm, dd } = ymdUtc(new Date());
   const outPath = resolve(statementsDir, yyyy, mm, dd, `${batch.root}.jsonl`);
-  const writtenAtUTC = new Date().toISOString();
+  const committedAtUTC = new Date().toISOString();
   const metaPath = resolve(statementsDir, yyyy, mm, dd, "_meta.json");
   const wires = batch.statements.map((statement) => ({
     s: statement.subjectFideId,
@@ -362,13 +372,13 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
   }));
   const output = `${wires.map((wire) => JSON.stringify(wire)).join("\n")}\n`;
   if (filePath) {
-    await materializeDeclaredEntityRecords(graphTarget.root, filePath, writtenAtUTC);
+    await materializeDeclaredEntityRecords(graphTarget.root, filePath, committedAtUTC);
   }
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
   await updateStatementsDayMeta(metaPath, {
     root: batch.root,
-    writtenAtUTC,
+    committedAtUTC,
     statementCount: batch.statements.length,
     ...(filePath
       ? {
@@ -377,17 +387,8 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
         }
       : {}),
   });
-  if (
-    hasFlag(flags, "replace-draft") &&
-    previousWrittenRoot &&
-    previousWrittenAtUTC &&
-    previousWrittenRoot !== batch.root
-  ) {
-    const previousOutPath = resolveStatementsOutPath(
-      statementsDir,
-      previousWrittenAtUTC,
-      previousWrittenRoot,
-    );
+  if (hasFlag(flags, "replace-draft") && previousWrittenRoot && previousWrittenRoot !== batch.root) {
+    const previousOutPath = await findBatchFileByRoot(statementsDir, previousWrittenRoot);
     if (previousOutPath) {
       await rm(previousOutPath, { force: true });
       const previousMetaPath = resolve(previousOutPath, "..", "_meta.json");
@@ -398,7 +399,7 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
   if (filePath) {
     try {
       const raw = await readUtf8(filePath);
-      const nextDraft = updateDraftWriteFrontmatter(raw, writtenAtUTC, batch.root);
+      const nextDraft = updateDraftWriteFrontmatter(raw, committedAtUTC, batch.root);
       if (nextDraft !== raw) {
         await writeUtf8(filePath, nextDraft);
       }

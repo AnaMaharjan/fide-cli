@@ -442,7 +442,6 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
       description,
       createdAtUTC,
       updatedAtUTC,
-      writtenAtUTC: existingFrontmatter.writtenAtUTC ?? null,
       writtenRoot: existingFrontmatter.writtenRoot ?? null,
       updateCount,
     },

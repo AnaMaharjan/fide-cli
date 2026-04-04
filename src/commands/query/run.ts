@@ -114,7 +114,9 @@ export type QueryRunOutput = {
 type QueryRunFileFormat = "json" | "jsonl" | "csv" | "sqlite";
 
 type QueryResultLeafMeta = {
-  writtenAtUTC: string;
+  recordedAtUTC?: string;
+  /** @deprecated Prefer `recordedAtUTC`; retained for existing `_meta.json` files. */
+  writtenAtUTC?: string;
   rowCount: number;
   sourceQueryPath?: string;
 };
@@ -219,7 +221,8 @@ function toProjectRelativePath(projectRoot: string, filePath: string): string | 
 }
 
 function isQueryResultLeafMeta(value: QueryResultFileMeta | undefined): value is QueryResultLeafMeta {
-  return !!value && typeof value === "object" && "writtenAtUTC" in value && "rowCount" in value;
+  if (!value || typeof value !== "object" || !("rowCount" in value)) return false;
+  return "recordedAtUTC" in value || "writtenAtUTC" in value;
 }
 
 async function updateQueryResultMeta(
@@ -227,7 +230,7 @@ async function updateQueryResultMeta(
   input: {
     outputFileName: string;
     tableName?: string;
-    writtenAtUTC: string;
+    recordedAtUTC: string;
     rowCount: number;
     sourceQueryPath?: string;
   },
@@ -240,7 +243,7 @@ async function updateQueryResultMeta(
   }
 
   const leaf: QueryResultLeafMeta = {
-    writtenAtUTC: input.writtenAtUTC,
+    recordedAtUTC: input.recordedAtUTC,
     rowCount: input.rowCount,
     ...(input.sourceQueryPath ? { sourceQueryPath: input.sourceQueryPath } : {}),
   };
@@ -344,7 +347,7 @@ export async function runQueryRun(args: string[]): Promise<number> {
     sql,
   });
   const rowCount = result.rowCount;
-  const writtenAtUTC = new Date().toISOString();
+  const recordedAtUTC = new Date().toISOString();
   const sourceQueryPath = filePath ? toProjectRelativePath(localTarget.root, resolve(filePath)) ?? undefined : undefined;
   const outputFileName = basename(outPath);
   if (fileFormat === "sqlite") {
@@ -354,7 +357,7 @@ export async function runQueryRun(args: string[]): Promise<number> {
     await updateQueryResultMeta(resolve(dirname(outPath), "_meta.json"), {
       outputFileName,
       tableName,
-      writtenAtUTC,
+      recordedAtUTC,
       rowCount,
       sourceQueryPath,
     });
@@ -362,7 +365,7 @@ export async function runQueryRun(args: string[]): Promise<number> {
     await writeUtf8(outPath, formatQueryRunFileContent(fileFormat, result.rows));
     await updateQueryResultMeta(resolve(dirname(outPath), "_meta.json"), {
       outputFileName,
-      writtenAtUTC,
+      recordedAtUTC,
       rowCount,
       sourceQueryPath,
     });
