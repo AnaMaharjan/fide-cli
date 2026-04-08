@@ -12,6 +12,7 @@ import {
 import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { ymdUtc } from "../../lib/project/path-date.js";
 import { formatPretty } from "../../util/command/pretty.js";
+import { listStatementsDayMetaPaths } from "../../lib/graph/etl/extract/statementsDayMeta.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
 import { readJsonFile } from "../../lib/project/config/fide-dir.js";
 
@@ -76,6 +77,11 @@ type StatementsDayMetaEntry = {
   sourceDraftTitle?: string;
   /** From draft frontmatter `description:` when writing with `--file`. */
   sourceDraftDescription?: string;
+  /**
+   * Root hash(es) to purge on the next `fide statements load --replace-roots` after `--replace-draft`.
+   * May be a single string or a list when several prior batches shared the same `sourceDraftPath`.
+   */
+  sourceDraftRootPendingReplacement?: string | string[] | null;
 };
 
 type StatementsDayMeta = Record<string, StatementsDayMetaEntry>;
@@ -94,6 +100,22 @@ function toProjectRelativePath(projectRoot: string, filePath: string): string | 
   return relativePath.split(sep).join("/");
 }
 
+function resolveSourceDraftRootPendingReplacement(
+  input: string | string[] | null | undefined,
+  prev: string | string[] | null | undefined,
+): string | string[] | null | undefined {
+  if (Array.isArray(input)) {
+    return input.length > 0 ? input : undefined;
+  }
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input === null) {
+    return prev;
+  }
+  return prev;
+}
+
 async function updateStatementsDayMeta(
   metaPath: string,
   input: {
@@ -103,6 +125,8 @@ async function updateStatementsDayMeta(
     sourceDraftPath?: string;
     sourceDraftTitle?: string;
     sourceDraftDescription?: string;
+    /** Superseded root hash(es) when replacing; omit to keep prior value. `null` does not clear. */
+    sourceDraftRootPendingReplacement?: string | string[] | null;
   },
 ): Promise<void> {
   let meta: StatementsDayMeta = {};
@@ -120,12 +144,20 @@ async function updateStatementsDayMeta(
         : undefined;
   const committedAtUTC = priorCommitTime ?? input.committedAtUTC;
 
+  const pendingReplacement = resolveSourceDraftRootPendingReplacement(
+    input.sourceDraftRootPendingReplacement,
+    prev?.sourceDraftRootPendingReplacement,
+  );
+
   meta[input.root] = {
     committedAtUTC,
     statementCount: input.statementCount,
     ...(input.sourceDraftPath ? { sourceDraftPath: input.sourceDraftPath } : {}),
     ...(input.sourceDraftTitle ? { sourceDraftTitle: input.sourceDraftTitle } : {}),
     ...(input.sourceDraftDescription ? { sourceDraftDescription: input.sourceDraftDescription } : {}),
+    ...(pendingReplacement !== undefined
+      ? { sourceDraftRootPendingReplacement: pendingReplacement }
+      : {}),
   };
   await writeUtf8(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
 }
@@ -180,6 +212,33 @@ function extractDraftWriteMetadata(content: string): DraftWriteMetadata {
     }
   }
   return metadata;
+}
+
+/** Every `_meta.json` root for the same draft file (plus `previousWrittenRoot`) so load can purge the full chain. */
+async function collectSupersededRootHashesForDraftPath(
+  statementsDir: string,
+  sourceDraftPath: string,
+  newRoot: string,
+  previousWrittenRoot: string | undefined,
+): Promise<string[]> {
+  const set = new Set<string>();
+  if (previousWrittenRoot && previousWrittenRoot !== newRoot) {
+    set.add(previousWrittenRoot);
+  }
+  for (const metaPath of await listStatementsDayMetaPaths(statementsDir)) {
+    let meta: StatementsDayMeta;
+    try {
+      meta = JSON.parse(await readUtf8(metaPath)) as StatementsDayMeta;
+    } catch {
+      continue;
+    }
+    for (const [rootKey, entry] of Object.entries(meta)) {
+      if (rootKey === newRoot) continue;
+      if (entry?.sourceDraftPath !== sourceDraftPath) continue;
+      set.add(rootKey);
+    }
+  }
+  return [...set];
 }
 
 /** Find `.fide/statements/.../<rootHash>.jsonl` for replace-draft cleanup when the draft no longer stores a write timestamp. */
@@ -425,24 +484,46 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
   }
   await mkdir(resolve(outPath, ".."), { recursive: true });
   await writeUtf8(outPath, output);
+  const sourceDraftRelPath = filePath
+    ? toProjectRelativePath(graphTarget.root, filePath) ?? undefined
+    : undefined;
+
+  let supersededRoots: string[] = [];
+  if (hasFlag(flags, "replace-draft") && sourceDraftRelPath) {
+    supersededRoots = await collectSupersededRootHashesForDraftPath(
+      statementsDir,
+      sourceDraftRelPath,
+      batch.root,
+      previousWrittenRoot,
+    );
+  }
+
+  const pendingReplacementArg: string | string[] | undefined =
+    supersededRoots.length === 0
+      ? undefined
+      : supersededRoots.length === 1
+        ? supersededRoots[0]!
+        : supersededRoots;
+
   await updateStatementsDayMeta(metaPath, {
     root: batch.root,
     committedAtUTC,
     statementCount: batch.statements.length,
     ...(filePath
       ? {
-          sourceDraftPath: toProjectRelativePath(graphTarget.root, filePath) ?? undefined,
+          sourceDraftPath: sourceDraftRelPath,
           sourceDraftTitle,
           sourceDraftDescription,
         }
       : {}),
+    ...(pendingReplacementArg !== undefined ? { sourceDraftRootPendingReplacement: pendingReplacementArg } : {}),
   });
-  if (hasFlag(flags, "replace-draft") && previousWrittenRoot && previousWrittenRoot !== batch.root) {
-    const previousOutPath = await findBatchFileByRoot(statementsDir, previousWrittenRoot);
+  for (const supersededRoot of supersededRoots) {
+    const previousOutPath = await findBatchFileByRoot(statementsDir, supersededRoot);
     if (previousOutPath) {
       await rm(previousOutPath, { force: true });
       const previousMetaPath = resolve(previousOutPath, "..", "_meta.json");
-      await removeStatementsDayMetaEntry(previousMetaPath, previousWrittenRoot);
+      await removeStatementsDayMetaEntry(previousMetaPath, supersededRoot);
     }
   }
 

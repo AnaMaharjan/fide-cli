@@ -969,6 +969,7 @@ export const GENERATED_TYPE_SCHEMAS = {
         "skippedRootCount",
         "statementCount",
         "rootBatchCount",
+        "replaceRoots",
         "warnings"
       ],
       "properties": {
@@ -1038,6 +1039,30 @@ export const GENERATED_TYPE_SCHEMAS = {
           "anyOf": [
             {
               "type": "string"
+            }
+          ]
+        },
+        "replaceRoots": {
+          "type": "boolean"
+        },
+        "supersededRootsPurged": {
+          "anyOf": [
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "statementsDayMetaFilesUpdated": {
+          "anyOf": [
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "orphanedRootsPurged": {
+          "anyOf": [
+            {
+              "type": "number"
             }
           ]
         },

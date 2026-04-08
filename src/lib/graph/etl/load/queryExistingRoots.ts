@@ -55,6 +55,22 @@ async function queryExistingSqliteRoots(file: string, roots: readonly string[]):
   }
 }
 
+/** Every root row in the sqlite graph (for `--replace-roots` orphan reconciliation). */
+export async function queryAllRootsInSqlite(file: string): Promise<string[]> {
+  const { DatabaseSync } = await loadSqliteModule();
+  const db = new DatabaseSync(file);
+  try {
+    const rows = db.prepare(`SELECT root FROM roots`).all() as Array<{ root: string }>;
+    return rows.map((row) => row.root);
+  } catch (error) {
+    throw new Error(
+      `Failed to list sqlite roots. Initialize the graph first with \`fide graph connect --graph-key ... --initialize\`. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    db.close();
+  }
+}
+
 async function queryExistingPostgresRoots(
   databaseUrl: string,
   schema: string,
@@ -71,6 +87,22 @@ async function queryExistingPostgresRoots(
   } catch (error) {
     throw new Error(
       `Failed to query postgres roots in schema "${schema}". Initialize the graph first with \`fide graph connect --graph-key ... --initialize\`. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    await client.end({ timeout: 1 });
+  }
+}
+
+export async function queryAllRootsInPostgres(databaseUrl: string, schema: string): Promise<string[]> {
+  const client = createPgClient(databaseUrl, { suppressNotices: true });
+  try {
+    const rows = await client.unsafe<Array<{ root: string }>>(
+      `SELECT root FROM ${quotePostgresIdent(schema)}.${quotePostgresIdent("roots")};`,
+    );
+    return rows.map((row) => row.root);
+  } catch (error) {
+    throw new Error(
+      `Failed to list postgres roots in schema "${schema}". ${error instanceof Error ? error.message : String(error)}`,
     );
   } finally {
     await client.end({ timeout: 1 });

@@ -41,13 +41,12 @@ export async function loadStatementBatchToSqlite(
       INSERT OR IGNORE INTO ${roots.name} (${roots.columns.root.name})
       VALUES (?)
     `);
-    const upsertReferenceIdentifier = db.prepare(`
+    const insertReferenceIdentifier = db.prepare(`
       INSERT INTO ${referenceIdentifiers.name} (
         ${referenceIdentifiers.columns.identifierFingerprint.name},
         ${referenceIdentifiers.columns.referenceIdentifier.name}
       ) VALUES (?, ?)
-      ON CONFLICT(${referenceIdentifiers.columns.identifierFingerprint.name})
-      DO UPDATE SET ${referenceIdentifiers.columns.referenceIdentifier.name} = excluded.${referenceIdentifiers.columns.referenceIdentifier.name}
+      ON CONFLICT(${referenceIdentifiers.columns.identifierFingerprint.name}) DO NOTHING
     `);
     const insertStatement = db.prepare(`
       INSERT INTO ${statements.name} (
@@ -80,7 +79,7 @@ export async function loadStatementBatchToSqlite(
       }
 
       for (const row of rows.referenceIdentifiers) {
-        upsertReferenceIdentifier.run(row.identifierFingerprint, row.referenceIdentifier);
+        insertReferenceIdentifier.run(row.identifierFingerprint, row.referenceIdentifier);
       }
       for (const row of rows.statements) {
         insertStatement.run(
@@ -99,6 +98,50 @@ export async function loadStatementBatchToSqlite(
       }
       db.exec("COMMIT");
       return { insertedRoot: true, statementCount: rows.statements.length };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  } finally {
+    db.close();
+  }
+}
+
+/** Remove one loaded batch: statement root links, root row, then statements only referenced by that batch. */
+export async function deleteStatementBatchByRootFromSqlite(file: string, root: string): Promise<void> {
+  const { DatabaseSync } = await loadSqliteModule();
+  const db = new DatabaseSync(file);
+  const schema = createStatementGraphStorageSchema();
+  const { statements, roots, statementRoots } = schema.tables;
+  const tblSr = statementRoots.name;
+  const tblRoots = roots.name;
+  const tblSt = statements.name;
+  const colRoot = statementRoots.columns.root.name;
+  const colFp = statementRoots.columns.statementFingerprint.name;
+  const stFp = statements.columns.statementFingerprint.name;
+  const rootsPk = roots.columns.root.name;
+
+  try {
+    db.exec("BEGIN");
+    try {
+      const selectFps = db.prepare(`SELECT DISTINCT ${colFp} FROM ${tblSr} WHERE ${colRoot} = ?`);
+      const fpsRows = selectFps.all(root) as Array<Record<string, string>>;
+      const deleteSr = db.prepare(`DELETE FROM ${tblSr} WHERE ${colRoot} = ?`);
+      deleteSr.run(root);
+      const deleteRoot = db.prepare(`DELETE FROM ${tblRoots} WHERE ${rootsPk} = ?`);
+      deleteRoot.run(root);
+      const countSrForFp = db.prepare(`SELECT COUNT(*) AS c FROM ${tblSr} WHERE ${colFp} = ?`);
+      const deleteSt = db.prepare(`DELETE FROM ${tblSt} WHERE ${stFp} = ?`);
+      for (const row of fpsRows) {
+        const fp = row[colFp];
+        if (typeof fp !== "string") continue;
+        const cntRows = countSrForFp.all(fp) as Array<{ c: number }>;
+        const cnt = cntRows[0]?.c ?? 0;
+        if (cnt === 0) {
+          deleteSt.run(fp);
+        }
+      }
+      db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;

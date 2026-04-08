@@ -17,9 +17,24 @@ import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { listStatementBatchCandidates } from "../../lib/graph/etl/extract/listStatementBatches.js";
-import { loadStatementBatchToPostgres } from "../../lib/graph/etl/load/adapters/postgres.js";
-import { loadStatementBatchToSqlite } from "../../lib/graph/etl/load/adapters/sqlite.js";
-import { queryExistingRoots } from "../../lib/graph/etl/load/queryExistingRoots.js";
+import {
+  clearSourceDraftRootPendingReplacementInMetaFile,
+  collectSupersededRootsFromStatementsDayMeta,
+  listStatementsDayMetaPaths,
+} from "../../lib/graph/etl/extract/statementsDayMeta.js";
+import {
+  deleteStatementBatchByRootFromPostgres,
+  loadStatementBatchToPostgres,
+} from "../../lib/graph/etl/load/adapters/postgres.js";
+import {
+  deleteStatementBatchByRootFromSqlite,
+  loadStatementBatchToSqlite,
+} from "../../lib/graph/etl/load/adapters/sqlite.js";
+import {
+  queryAllRootsInPostgres,
+  queryAllRootsInSqlite,
+  queryExistingRoots,
+} from "../../lib/graph/etl/load/queryExistingRoots.js";
 import { transformStatementBatchToGraphRows } from "../../lib/graph/etl/transform/statementBatchToGraphRows.js";
 import { resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
 import { getLocalFideWarnings } from "../query/shared.js";
@@ -32,9 +47,10 @@ export const statementsLoadCommand = defineCommand({
   usage: [
     "fide statements load --graph-key <graph-key>",
     "fide statements load --graph-key <graph-key> --from-date 2026-03-01 --to-date 2026-03-31",
+    "fide statements load --graph-key <graph-key> --replace-roots",
     "fide statements load --graph-key <graph-key> --root-batch-count 250",
   ],
-  paramOrder: ["graph-key", "from-date", "to-date", "root-batch-count", "pretty"],
+  paramOrder: ["graph-key", "from-date", "to-date", "root-batch-count", "replace-roots", "pretty"],
   params: {
     "graph-key": {
       kind: "string",
@@ -57,17 +73,24 @@ export const statementsLoadCommand = defineCommand({
       description: "Batch size for root dedup queries before parsing files",
       valueLabel: "<count>",
     },
+    "replace-roots": {
+      kind: "boolean",
+      description:
+        "Before loading, purge graph rows listed in `sourceDraftRootPendingReplacement` (string or array) inside dated `_meta.json` (honors the date range), clear those fields, then purge graph roots that have no `_meta.json` key and no local `.jsonl` batch",
+    },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
     "fide statements load --graph-key primary",
     "fide statements load --graph-key primary --from-date 2026-03-01 --to-date 2026-03-31",
+    "fide statements load --graph-key primary --replace-roots",
     "fide statements load --graph-key primary --root-batch-count 250",
   ],
   notes: [
     "Loads canonical local statements from this project's `.fide/statements/` into the target graph.",
     "Date filters are inclusive and apply to the dated local statement batch layout.",
     "Batch roots are checked in chunks before parsing files so already-loaded batches can be skipped efficiently.",
+    "With `--replace-roots`, reconcile `fide statements write --replace-draft`: remove superseded roots (including every batch that shared the draft path), clear pending markers in `_meta.json`, purge orphaned graph batches, then ingest.",
   ],
 });
 
@@ -88,6 +111,14 @@ export type StatementsLoadOutput = {
   rootBatchCount: number;
   fromDate?: string;
   toDate?: string;
+  /** Whether `--replace-roots` was passed. */
+  replaceRoots: boolean;
+  /** Roots purged from the graph after reading `_meta.json` pending replacement fields. */
+  supersededRootsPurged?: number;
+  /** `_meta.json` files in the date range where at least one pending field was set to null. */
+  statementsDayMetaFilesUpdated?: number;
+  /** With `--replace-roots`, roots removed that are absent from every `_meta.json` key and every local `.jsonl` batch. */
+  orphanedRootsPurged?: number;
   warnings: string[];
 };
 
@@ -147,6 +178,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
       ? String(parsed.flags.get("root-batch-count"))
       : undefined,
   );
+  const replaceRoots = hasFlag(parsed.flags, "replace-roots");
   if (!graphKey) {
     throw new Error("Missing required flag: --graph-key <graph-key>.");
   }
@@ -170,6 +202,91 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     printStatementsLoadProgress(showProgress, `Connected to postgres graph schema ${target.schema}`);
   } else {
     printStatementsLoadProgress(showProgress, `Postgres graph "${graphKey}" requires a resolved database URL before loading.`);
+  }
+
+  let supersededRootsPurged = 0;
+  let statementsDayMetaFilesUpdated = 0;
+  let orphanedRootsPurged = 0;
+  if (replaceRoots) {
+    printStatementsLoadProgress(
+      showProgress,
+      "`--replace-roots`: scanning dated `_meta.json` for `sourceDraftRootPendingReplacement`...",
+    );
+    const superseded = await collectSupersededRootsFromStatementsDayMeta(statementsDir, { fromDate, toDate });
+    if (superseded.size > 0) {
+      printStatementsLoadProgress(
+        showProgress,
+        `  purging ${superseded.size} superseded batch root(s) from the graph before load`,
+      );
+      for (const oldRoot of superseded) {
+        if (target.type === "sqlite") {
+          await deleteStatementBatchByRootFromSqlite(target.file, oldRoot);
+        } else {
+          if (!target.databaseUrl) {
+            throw new Error(
+              `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
+            );
+          }
+          await deleteStatementBatchByRootFromPostgres({
+            databaseUrl: target.databaseUrl,
+            schema: target.schema,
+            root: oldRoot,
+          });
+        }
+        supersededRootsPurged += 1;
+      }
+      const metaPaths = await listStatementsDayMetaPaths(statementsDir, { fromDate, toDate });
+      for (const metaPath of metaPaths) {
+        if (await clearSourceDraftRootPendingReplacementInMetaFile(metaPath)) {
+          statementsDayMetaFilesUpdated += 1;
+        }
+      }
+    }
+
+    const retainedRoots = new Set<string>();
+    for (const metaPath of await listStatementsDayMetaPaths(statementsDir)) {
+      let doc: unknown;
+      try {
+        doc = JSON.parse(await readFile(metaPath, "utf8"));
+      } catch {
+        continue;
+      }
+      if (doc && typeof doc === "object") {
+        for (const key of Object.keys(doc as Record<string, unknown>)) {
+          retainedRoots.add(key);
+        }
+      }
+    }
+    for (const candidate of await listStatementBatchCandidates(statementsDir)) {
+      retainedRoots.add(candidate.root);
+    }
+
+    if (target.type === "sqlite") {
+      for (const root of await queryAllRootsInSqlite(target.file)) {
+        if (!retainedRoots.has(root)) {
+          await deleteStatementBatchByRootFromSqlite(target.file, root);
+          orphanedRootsPurged += 1;
+        }
+      }
+    } else if (target.databaseUrl) {
+      for (const root of await queryAllRootsInPostgres(target.databaseUrl, target.schema)) {
+        if (!retainedRoots.has(root)) {
+          await deleteStatementBatchByRootFromPostgres({
+            databaseUrl: target.databaseUrl,
+            schema: target.schema,
+            root,
+          });
+          orphanedRootsPurged += 1;
+        }
+      }
+    }
+
+    if (orphanedRootsPurged > 0) {
+      printStatementsLoadProgress(
+        showProgress,
+        `  purged ${orphanedRootsPurged} orphaned batch root(s) (not in any \`_meta.json\` and no local \`.jsonl\`)`,
+      );
+    }
   }
 
   printStatementsLoadProgress(showProgress, `Scanning local statement batches in ${statementsDir}...`);
@@ -271,6 +388,14 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     skippedRootCount: existingRoots.size,
     statementCount,
     rootBatchCount,
+    replaceRoots,
+    ...(replaceRoots
+      ? {
+          supersededRootsPurged,
+          statementsDayMetaFilesUpdated,
+          orphanedRootsPurged,
+        }
+      : {}),
     ...(fromDate ? { fromDate } : {}),
     ...(toDate ? { toDate } : {}),
     warnings: getLocalFideWarnings(graphTarget.root, { gitignore: graphTarget.gitignore }),
