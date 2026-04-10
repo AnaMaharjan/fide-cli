@@ -1,6 +1,6 @@
 import {
   FIDE_ENTITY_TYPES,
-  STATEMENT_GUIDE_RULES,
+  STATEMENT_GUIDE_EXAMPLES,
   type FideEntityTypeName,
 } from "@chris-test/graph";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
@@ -116,7 +116,7 @@ function rulesPayloadBase() {
       vocabulary: "/vocabulary",
       fcp: "/fcp",
     },
-    statementRules: [...STATEMENT_GUIDE_RULES],
+    statementRules: [...STATEMENT_GUIDE_EXAMPLES],
   };
 }
 

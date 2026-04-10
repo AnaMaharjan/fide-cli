@@ -275,7 +275,7 @@ function formatWorkspaceMembers(payload: PrettyRenderable): string {
 
 function formatStatementsGuide(payload: PrettyRenderable): string {
   const statementRules = Array.isArray(payload.statementRules)
-    ? payload.statementRules as Array<{ id?: string; description?: string }>
+    ? payload.statementRules as Array<{ ruleId?: string; id?: string; strength?: string; reason?: string; description?: string }>
     : [];
   const entities = Array.isArray(payload.entities)
     ? payload.entities as Array<{ name?: string; description?: string }>
@@ -287,11 +287,19 @@ function formatStatementsGuide(payload: PrettyRenderable): string {
   const lines: string[] = [];
 
   if (statementRules.length > 0) {
-    lines.push("Statement Rules");
+    lines.push("Statement guide examples");
     for (const rule of statementRules) {
-      const description = typeof rule.description === "string" ? rule.description : "";
-      const id = typeof rule.id === "string" ? rule.id : null;
-      lines.push(`  - ${description}${id ? ` (${id})` : ""}`);
+      const ruleId =
+        typeof rule.ruleId === "string" ? rule.ruleId : typeof rule.id === "string" ? rule.id : null;
+      const strength = typeof rule.strength === "string" ? rule.strength : null;
+      const text =
+        typeof rule.reason === "string"
+          ? rule.reason
+          : typeof rule.description === "string"
+            ? rule.description
+            : "";
+      const suffix = [ruleId ? ruleId : null, strength ? strength : null].filter(Boolean).join(", ");
+      lines.push(`  - ${text}${suffix ? ` (${suffix})` : ""}`);
     }
   }
 
