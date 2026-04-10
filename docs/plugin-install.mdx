@@ -1,9 +1,0 @@
----
-title: "fide plugin install"
-description: "fide plugin install <local-path>"
-full: true
----
-
-import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
-
-<CLICommandPageInteractive data={{"name":"fide plugin install","description":"fide plugin install <local-path>","usage":["fide plugin install <local-path>","fide plugin install <source> --id <plugin-id>"],"arguments":[{"name":"<local-path>","type":"string","required":false},{"name":"<source>","type":"string","required":false}],"options":[{"name":"--pretty","shorthand":"-p","type":"boolean","description":"Human-readable output","required":false},{"name":"--id","type":"string","required":false,"description":"Override the installed plugin id"}],"outputFields":[],"subcommands":[],"schemas":[{"surface":"plugin.install","command":"fide plugin install","params":[{"name":"--id","type":"string","description":"Override the installed plugin id"},{"name":"--pretty","type":"boolean","description":"Human-readable output"}],"outputFields":[],"json":"{\n  \"command\": \"fide plugin install\",\n  \"params\": [\n    {\n      \"name\": \"id\",\n      \"type\": \"string\",\n      \"description\": \"Override the installed plugin id\"\n    },\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {}\n}"}],"examples":[{"command":"fide plugin install ./plugins/sqlite"},{"command":"fide plugin install ./plugins/sqlite --id chrislally/sqlite-dev"}],"notes":[{"title":"Notes","body":"GitHub repo shorthand and Git URL sources are planned.\nOnly local-path installation is implemented right now."}]}} />

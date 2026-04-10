@@ -1,14 +1,14 @@
 import { extname } from "node:path";
 
-export type StatementsInputFormat = "json" | "jsonl" | "fsd";
+export type StatementsInputFormat = "json" | "jsonl" | "md";
 
 /**
  * Parse optional `--format` flag into a supported statements input format.
  */
 export function parseStatementsInputFormat(value: string | null): StatementsInputFormat | null {
   if (!value) return null;
-  if (value === "json" || value === "jsonl" || value === "fsd") return value;
-  throw new Error(`Invalid --format value: ${value}. Expected one of: json, jsonl, fsd.`);
+  if (value === "json" || value === "jsonl" || value === "md") return value;
+  throw new Error(`Invalid --format value: ${value}. Expected one of: json, jsonl, md.`);
 }
 
 /**
@@ -18,9 +18,9 @@ export function detectStatementsInputFormat(raw: string): StatementsInputFormat 
   const trimmed = raw.trim();
   if (!trimmed) throw new Error("Input payload is empty.");
 
-  if (trimmed.startsWith("---")) return "fsd";
+  if (trimmed.startsWith("---")) return "md";
   if (/^\[\s*[{"]/.test(trimmed)) return "json";
-  if (/^\[\s*[A-Za-z][\w-]*\s*:/.test(trimmed)) return "fsd";
+  if (/^\[\s*[A-Za-z][\w-]*\s*:/.test(trimmed)) return "md";
 
   const lines = trimmed
     .split("\n")
@@ -31,7 +31,7 @@ export function detectStatementsInputFormat(raw: string): StatementsInputFormat 
     return "jsonl";
   }
 
-  throw new Error("Ambiguous input format. Pass --format <json|jsonl|fsd>.");
+  throw new Error("Ambiguous input format. Pass --format <json|jsonl|md>.");
 }
 
 /**
@@ -41,6 +41,6 @@ export function detectStatementsInputFormatFromFilePath(filePath: string): State
   const extension = extname(filePath).toLowerCase();
   if (extension === ".json") return "json";
   if (extension === ".jsonl") return "jsonl";
-  if (extension === ".fsd" || extension === ".md" || extension === ".mdx") return "fsd";
+  if (extension === ".md" || extension === ".mdx") return "md";
   return null;
 }

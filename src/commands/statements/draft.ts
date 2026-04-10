@@ -2,12 +2,15 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   STANDARD_CURIE_PREFIXES,
-  statementDoc,
+  parseMd,
+  parseStatementDraftFrontmatter,
+  formatStatementInputsAsStatementDraft,
+  titleFromDraftName,
   type StatementInput,
-  type FsdDraftFrontmatter,
-  type FsdCuriePrefixes,
-  type FsdEntityDeclarationMap,
-  type FsdReferenceIdentifierMap,
+  type MdDraftFrontmatter,
+  type MdCuriePrefixes,
+  type MdEntityDeclarationMap,
+  type MdReferenceIdentifierMap,
 } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
@@ -28,7 +31,7 @@ export const statementsDraftCommand = defineCommand({
   summary: "Create a markdown statement draft in a local project",
   usage: [
     "fide statements draft --name <draft-name> <json>",
-    "fide statements draft --name <draft-name> --stdin [--format <json|jsonl|fsd>] [--variables <json>]",
+    "fide statements draft --name <draft-name> --stdin [--format <json|jsonl|md>] [--variables <json>]",
   ],
   paramOrder: ["name", "path", "description", "variables", "stdin", "format", "no-normalize", "pretty"],
   params: {
@@ -42,7 +45,7 @@ export const statementsDraftCommand = defineCommand({
       valueLabel: "<variables-json>",
     },
     stdin: { kind: "boolean", description: "Read statement inputs from stdin" },
-    format: { kind: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
+    format: { kind: "string", enum: ["json", "jsonl", "md"], description: "Force input format" },
     "no-normalize": { kind: "boolean", description: "Disable reference identifier normalization" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
@@ -205,12 +208,12 @@ function inferUniformNodeDefaults(
 }
 
 type DraftVariablesInput = {
-  referenceIdentifiers?: FsdReferenceIdentifierMap;
-  curiePrefixes?: FsdCuriePrefixes;
-  entityDeclarations?: FsdEntityDeclarationMap;
+  referenceIdentifiers?: MdReferenceIdentifierMap;
+  curiePrefixes?: MdCuriePrefixes;
+  entityDeclarations?: MdEntityDeclarationMap;
 };
 
-function parseReferenceIdentifiersValue(raw: unknown): FsdReferenceIdentifierMap | undefined {
+function parseReferenceIdentifiersValue(raw: unknown): MdReferenceIdentifierMap | undefined {
   if (raw === undefined) return undefined;
   if (!raw || Array.isArray(raw) || typeof raw !== "object") {
     throw new Error("Invalid --variables.reference_identifiers value. Expected a JSON object.");
@@ -234,7 +237,7 @@ function parseReferenceIdentifiersValue(raw: unknown): FsdReferenceIdentifierMap
   return aliases;
 }
 
-function parseCuriePrefixesValue(raw: unknown): FsdCuriePrefixes | undefined {
+function parseCuriePrefixesValue(raw: unknown): MdCuriePrefixes | undefined {
   if (raw === undefined) return undefined;
   if (!raw || Array.isArray(raw) || typeof raw !== "object") {
     throw new Error("Invalid --variables.curie_prefixes value. Expected a JSON object.");
@@ -282,13 +285,13 @@ function parseCuriePrefixesValue(raw: unknown): FsdCuriePrefixes | undefined {
   return { supported, custom };
 }
 
-function parseEntityDeclarationsValue(raw: unknown): FsdEntityDeclarationMap | undefined {
+function parseEntityDeclarationsValue(raw: unknown): MdEntityDeclarationMap | undefined {
   if (raw === undefined) return undefined;
   if (!raw || Array.isArray(raw) || typeof raw !== "object") {
     throw new Error("Invalid --variables.entity_declarations value. Expected a JSON object.");
   }
 
-  const out: FsdEntityDeclarationMap = {};
+  const out: MdEntityDeclarationMap = {};
   for (const [key, value] of Object.entries(raw)) {
     if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(key)) {
       throw new Error(`Invalid --variables.entity_declarations key ${JSON.stringify(key)}.`);
@@ -396,15 +399,15 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
   const outPath = draftPath
     ? resolve(graphTarget.root, ".fide", "drafts", "statements", draftPath, `${draftName}.md`)
     : resolve(graphTarget.root, ".fide", "drafts", "statements", `${draftName}.md`);
-  let existingFrontmatter: Partial<FsdDraftFrontmatter> = {};
+  let existingFrontmatter: Partial<MdDraftFrontmatter> = {};
   let existingReferenceIdentifiers: Record<string, string> | undefined;
-  let existingCuriePrefixes: FsdCuriePrefixes | undefined;
-  let existingEntityDeclarations: FsdEntityDeclarationMap | undefined;
+  let existingCuriePrefixes: MdCuriePrefixes | undefined;
+  let existingEntityDeclarations: MdEntityDeclarationMap | undefined;
   try {
     const existingContent = await readUtf8(outPath);
-    existingFrontmatter = statementDoc.parseStatementDraftFrontmatter(existingContent);
+    existingFrontmatter = parseStatementDraftFrontmatter(existingContent);
     try {
-      const parsedExisting = statementDoc.parseStatementDoc(existingContent);
+      const parsedExisting = parseMd(existingContent);
       existingReferenceIdentifiers = parsedExisting.referenceIdentifiers;
       existingCuriePrefixes = parsedExisting.curiePrefixes;
       existingEntityDeclarations = parsedExisting.entityDeclarations;
@@ -435,10 +438,10 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
   const referenceIdentifiers = parsedVariables?.referenceIdentifiers ?? existingReferenceIdentifiers;
   const curiePrefixes = parsedVariables?.curiePrefixes ?? existingCuriePrefixes ?? draftDefaults.curiePrefixes;
   const entityDeclarations = parsedVariables?.entityDeclarations ?? existingEntityDeclarations;
-  const output = statementDoc.formatStatementInputsAsStatementDraft(normalizedInputs, {
+  const output = formatStatementInputsAsStatementDraft(normalizedInputs, {
     frontmatter: {
       draftName,
-      title: existingFrontmatter.title ?? statementDoc.titleFromDraftName(draftName),
+      title: existingFrontmatter.title ?? titleFromDraftName(draftName),
       description,
       createdAtUTC,
       updatedAtUTC,

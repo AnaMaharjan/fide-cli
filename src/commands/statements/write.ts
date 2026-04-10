@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
-import { statementDoc } from "@chris-test/graph";
+import { parseMd } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
@@ -29,8 +29,8 @@ export const statementsWriteCommand = defineCommand({
   summary: "Write canonical statement batches into a local project",
   usage: [
     "fide statements write <json>",
-    "fide statements write --file <inputs> [--replace-draft] [--format <json|jsonl|fsd>]",
-    "fide statements write --stdin [--format <json|jsonl|fsd>]",
+    "fide statements write --file <inputs> [--replace-draft] [--format <json|jsonl|md>]",
+    "fide statements write --stdin [--format <json|jsonl|md>]",
   ],
   paramOrder: ["file", "stdin", "replace-draft", "format", "no-normalize", "pretty"],
   params: {
@@ -40,7 +40,7 @@ export const statementsWriteCommand = defineCommand({
       kind: "boolean",
       description: "When writing from a draft file, remove the previously written root for that draft",
     },
-    format: { kind: "string", enum: ["json", "jsonl", "fsd"], description: "Force input format" },
+    format: { kind: "string", enum: ["json", "jsonl", "md"], description: "Force input format" },
     "no-normalize": { kind: "boolean", description: "Disable reference identifier normalization" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
@@ -380,7 +380,7 @@ async function materializeDeclaredEntityRecords(
   updatedAtUTC: string,
 ): Promise<void> {
   const raw = await readUtf8(filePath);
-  const parsed = statementDoc.parseStatementDoc(raw);
+  const parsed = parseMd(raw);
   const entityDeclarations = parsed.entityDeclarations;
   if (!entityDeclarations || Object.keys(entityDeclarations).length === 0) return;
 

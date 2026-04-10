@@ -52,7 +52,7 @@ const GRAPH_STATEMENT_INPUT_EXTENDED = {
   policyNotes: [
     "Predicate must use entityType=Concept and referenceType=NetworkResource.",
     "Allowed entity/reference pairings are further validated by Fide ID policy at runtime.",
-    "Use --format json|jsonl|fsd as needed; this schema describes statement-input payload shape.",
+    "Use --format json|jsonl|md as needed; this schema describes statement-input payload shape.",
   ],
 } as const;
 
