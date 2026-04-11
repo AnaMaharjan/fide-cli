@@ -8,7 +8,14 @@ import {
 import { readUtf8 } from "../../util/command/io.js";
 import {
   buildStatementsWithRoot,
+  buildStatementsWithRootFromRecipe,
+  classifyJsonStatementDocumentRows,
+  parseJsonInputs,
+  parseJsonStatementRecipeDocument,
+  type Statement,
   type StatementInput,
+  type StatementInputsJsonRecipeFile,
+  type StatementRecipeRow,
 } from "@chris-test/graph";
 import { resolveGraphTarget } from "../../lib/project/config/project-settings.js";
 import {
@@ -17,6 +24,43 @@ import {
   parseStatementsInputFormat,
 } from "../../lib/statements/input/shared.js";
 import { parseStatementInputsByFormat } from "../../lib/statements/input/targets/parse-inputs.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function statementInputsFromRecipeAndBuiltStatements(
+  sortedRows: StatementRecipeRow[],
+  statements: Statement[],
+): StatementInput[] {
+  if (sortedRows.length !== statements.length) {
+    throw new Error("Internal error: recipe row count does not match built statement count.");
+  }
+  return sortedRows.map((row, i) => {
+    const st = statements[i]!;
+    return {
+      subject: {
+        referenceIdentifier: st.subjectReferenceIdentifier,
+        entityType: row.subject.entityType,
+        referenceType: row.subject.referenceType,
+      },
+      predicate: {
+        referenceIdentifier: st.predicateReferenceIdentifier,
+        entityType: row.predicate.entityType,
+        referenceType: row.predicate.referenceType,
+      },
+      object: {
+        referenceIdentifier: st.objectReferenceIdentifier,
+        entityType: row.object.entityType,
+        referenceType: row.object.referenceType,
+      },
+    };
+  });
+}
+
+export type StatementsPayload =
+  | { kind: "inputs"; statementInputs: StatementInput[] }
+  | { kind: "recipe"; recipe: StatementInputsJsonRecipeFile };
 
 let statementsInputBooleanKeysCache: ReadonlySet<string> | undefined;
 
@@ -53,9 +97,9 @@ export async function readStdinUtf8(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-export async function resolveStatementInputsFromArgs(
+export async function resolveStatementPayloadFromArgs(
   argsOrFlags: string[] | Map<string, string | boolean>,
-): Promise<{ parsed: ReturnType<typeof parseArgs>; statementInputs: StatementInput[] }> {
+): Promise<{ parsed: ReturnType<typeof parseArgs>; payload: StatementsPayload }> {
   const parsed = argsOrFlags instanceof Map
     ? { positionals: [], flags: argsOrFlags }
     : parseArgs(argsOrFlags, { booleanKeys: await statementsInputParseBooleanKeys() });
@@ -67,34 +111,75 @@ export async function resolveStatementInputsFromArgs(
   const stdinAvailable = process.stdin.isTTY === false;
   const inlineParams = parsed.positionals.join(" ");
 
-  let statementInputs: StatementInput[] = [];
+  let payload: StatementsPayload | undefined;
+
+  async function jsonPayloadFromRaw(raw: string): Promise<StatementsPayload> {
+    const trimmed = raw.trim();
+    const outer = JSON.parse(trimmed) as unknown;
+    if (isRecord(outer) && Array.isArray(outer.statements)) {
+      const rowKind = classifyJsonStatementDocumentRows(outer.statements);
+      if (rowKind === "recipe") {
+        return { kind: "recipe", recipe: parseJsonStatementRecipeDocument(trimmed) };
+      }
+    }
+    return { kind: "inputs", statementInputs: parseJsonInputs(trimmed) };
+  }
 
   if (filePath) {
     const raw = await readUtf8(filePath);
     const format = formatFlag ?? detectStatementsInputFormatFromFilePath(filePath) ?? detectStatementsInputFormat(raw);
-    statementInputs = await parseStatementInputsByFormat(raw, format, {
-      filePath,
-      normalizeReferenceIdentifier: normalize,
-    });
+    if (format === "json") {
+      payload = await jsonPayloadFromRaw(raw);
+    } else {
+      payload = {
+        kind: "inputs",
+        statementInputs: await parseStatementInputsByFormat(raw, format, {
+          filePath,
+          normalizeReferenceIdentifier: normalize,
+        }),
+      };
+    }
   } else if (useStdin) {
     const raw = await readStdinUtf8();
     const format = formatFlag ?? detectStatementsInputFormat(raw);
-    statementInputs = await parseStatementInputsByFormat(raw, format, {
-      normalizeReferenceIdentifier: normalize,
-    });
+    if (format === "json") {
+      payload = await jsonPayloadFromRaw(raw);
+    } else {
+      payload = {
+        kind: "inputs",
+        statementInputs: await parseStatementInputsByFormat(raw, format, {
+          normalizeReferenceIdentifier: normalize,
+        }),
+      };
+    }
   } else if (inlineParams && inlineParams.trim().length > 0) {
-    statementInputs = await parseStatementInputsByFormat(inlineParams, formatFlag ?? "json", {
-      normalizeReferenceIdentifier: normalize,
-    });
+    const format = formatFlag ?? "json";
+    if (format === "json") {
+      payload = await jsonPayloadFromRaw(inlineParams);
+    } else {
+      payload = {
+        kind: "inputs",
+        statementInputs: await parseStatementInputsByFormat(inlineParams, format, {
+          normalizeReferenceIdentifier: normalize,
+        }),
+      };
+    }
   } else if (!stdinAvailable) {
     const raw = await readStdinUtf8();
     const format = formatFlag ?? detectStatementsInputFormat(raw);
-    statementInputs = await parseStatementInputsByFormat(raw, format, {
-      normalizeReferenceIdentifier: normalize,
-    });
+    if (format === "json") {
+      payload = await jsonPayloadFromRaw(raw);
+    } else {
+      payload = {
+        kind: "inputs",
+        statementInputs: await parseStatementInputsByFormat(raw, format, {
+          normalizeReferenceIdentifier: normalize,
+        }),
+      };
+    }
   }
 
-  return { parsed, statementInputs };
+  return { parsed, payload: payload ?? { kind: "inputs", statementInputs: [] } };
 }
 
 export async function resolveStatementsBatch(
@@ -104,10 +189,19 @@ export async function resolveStatementsBatch(
   statementInputs: StatementInput[];
   batch: Awaited<ReturnType<typeof buildStatementsWithRoot>>;
 }> {
-  const { parsed, statementInputs } = await resolveStatementInputsFromArgs(argsOrFlags);
+  const { parsed, payload } = await resolveStatementPayloadFromArgs(argsOrFlags);
   const normalize = !hasFlag(parsed.flags, "no-normalize");
-  const batch = await buildStatementsWithRoot(statementInputs, { normalizeReferenceIdentifier: normalize });
-  return { parsed, statementInputs, batch };
+  const buildOpts = { normalizeReferenceIdentifier: normalize };
+
+  if (payload.kind === "recipe") {
+    const batch = await buildStatementsWithRootFromRecipe(payload.recipe.statements, buildOpts);
+    const sortedRows = [...payload.recipe.statements].sort((a, b) => a.batch_index - b.batch_index);
+    const statementInputs = statementInputsFromRecipeAndBuiltStatements(sortedRows, batch.statements);
+    return { parsed, statementInputs, batch };
+  }
+
+  const batch = await buildStatementsWithRoot(payload.statementInputs, buildOpts);
+  return { parsed, statementInputs: payload.statementInputs, batch };
 }
 
 export async function resolveLocalStatementsBatchOrExit(

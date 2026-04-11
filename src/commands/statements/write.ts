@@ -47,6 +47,7 @@ export const statementsWriteCommand = defineCommand({
   notes: [
     "Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
     "JSON inputs (inline, `--file *.json`, or `--format json`) must be one object with a `statements` array; bare top-level arrays are rejected.",
+    "Recipe JSON: each `statements` row may include `batch_index` (positive integer, unique). Use `subject.referenceIdentifier` `\"@N\"` when `subject` is a Statement role to refer to the row with `batch_index` N (same rules as markdown `@N`).",
     "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
   ],
 });
