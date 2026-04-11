@@ -1,5 +1,9 @@
 import { extname } from "node:path";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 export type StatementsInputFormat = "json" | "jsonl" | "md";
 
 /**
@@ -20,6 +24,16 @@ export function detectStatementsInputFormat(raw: string): StatementsInputFormat 
 
   if (trimmed.startsWith("---")) return "md";
   if (/^\[\s*[{"]/.test(trimmed)) return "json";
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed: unknown = JSON.parse(trimmed);
+      if (isRecord(parsed) && Array.isArray(parsed.statements)) {
+        return "json";
+      }
+    } catch {
+      /* fall through */
+    }
+  }
   if (/^\[\s*[A-Za-z][\w-]*\s*:/.test(trimmed)) return "md";
 
   const lines = trimmed

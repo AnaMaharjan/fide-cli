@@ -25,7 +25,7 @@ export function statementsHelp(): string {
       {
         title: "Workflows",
         items: [
-          "  fide statements write '[{ ... statement inputs ... }]'",
+          `  fide statements write '{"statements":[{ ... statement inputs ... }]}'`,
           "  fide statements write --file inputs.json",
           "  fide statements draft --name research-notes --file inputs.json",
           "  fide statements load --graph-key primary",

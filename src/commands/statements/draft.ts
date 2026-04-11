@@ -30,7 +30,7 @@ export const statementsDraftCommand = defineCommand({
   outputType: "StatementsDraftOutput",
   summary: "Create a markdown statement draft in a local project",
   usage: [
-    "fide statements draft --name <draft-name> <json>",
+    `fide statements draft --name <draft-name> '{"statements":[...]}'`,
     "fide statements draft --name <draft-name> --stdin [--format <json|jsonl|md>] [--variables <json>]",
   ],
   paramOrder: ["name", "path", "description", "variables", "stdin", "format", "no-normalize", "pretty"],
@@ -52,6 +52,7 @@ export const statementsDraftCommand = defineCommand({
   notes: [
     "Writes to .fide/drafts/statements/<draft-path>/<draft-name>.md.",
     "Reusing the same --name and --path updates the existing draft.",
+    "JSON inputs (`--format json` or `.json` files) must be one object with a `statements` array; bare top-level arrays are rejected.",
     "Use `fide statements write` for canonical JSONL batches.",
     "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
   ],

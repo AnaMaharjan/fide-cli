@@ -71,7 +71,7 @@ function helpText(): string {
             "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
             "  fide plugin install owner/repo",
-            "  fide statements write '<json>'",
+            `  fide statements write '{"statements":[...]}'`,
             "  fide graph list",
             "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
             "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",

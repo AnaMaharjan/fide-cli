@@ -28,7 +28,7 @@ export const statementsWriteCommand = defineCommand({
   outputType: "StatementsWriteOutput",
   summary: "Write canonical statement batches into a local project",
   usage: [
-    "fide statements write <json>",
+    `fide statements write '{"statements":[...]}'`,
     "fide statements write --file <inputs> [--replace-draft] [--format <json|jsonl|md>]",
     "fide statements write --stdin [--format <json|jsonl|md>]",
   ],
@@ -46,6 +46,7 @@ export const statementsWriteCommand = defineCommand({
   },
   notes: [
     "Writes JSONL batches under .fide/statements/YYYY/MM/DD/<root>.jsonl.",
+    "JSON inputs (inline, `--file *.json`, or `--format json`) must be one object with a `statements` array; bare top-level arrays are rejected.",
     "Use `fide statements guide` to inspect statement-shape guidance and allowed entity types while preparing inputs.",
   ],
 });
