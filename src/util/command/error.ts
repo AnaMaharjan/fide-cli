@@ -176,7 +176,10 @@ export function printCliError(err: unknown, options: CliErrorOptions): void {
     }
     if (payload.error.details) {
       for (const [key, value] of Object.entries(payload.error.details)) {
-        console.error(`${key}: ${String(value)}`);
+        const rendered = value && typeof value === "object"
+          ? JSON.stringify(value, null, 2)
+          : String(value);
+        console.error(`${key}: ${rendered}`);
       }
     }
     return;

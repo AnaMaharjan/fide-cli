@@ -2,10 +2,78 @@ import {
   createStatementGraphStorageSchema,
 } from "../../initialize/createStatementGraphStorageSchema.js";
 import type { GraphStatementBatchRows } from "../../transform/statementBatchToGraphRows.js";
+import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 
 type SqliteModule = typeof import("node:sqlite");
 
 let sqliteModulePromise: Promise<SqliteModule> | null = null;
+const SQLITE_ENTITY_TYPE_VALUES: ReadonlySet<string> = new Set(
+  Object.values(FIDE_ENTITY_TYPES).map((spec) => spec.code),
+);
+
+function createLoadDiagnosticError(
+  message: string,
+  details: Record<string, unknown>,
+  cause?: unknown,
+): Error & { details: Record<string, unknown>; cause?: unknown } {
+  const error = new Error(message) as Error & { details: Record<string, unknown>; cause?: unknown };
+  error.details = details;
+  if (cause !== undefined) {
+    error.cause = cause;
+  }
+  return error;
+}
+
+function validateStatementRow(batchRoot: string, rowIndex: number, row: GraphStatementBatchRows["statements"][number]): void {
+  const pairs = [
+    ["subjectType", row.subjectType],
+    ["subjectReferenceType", row.subjectReferenceType],
+    ["objectType", row.objectType],
+    ["objectReferenceType", row.objectReferenceType],
+  ] as const;
+  for (const [field, value] of pairs) {
+    if (!SQLITE_ENTITY_TYPE_VALUES.has(value)) {
+      throw createLoadDiagnosticError(
+        `Invalid statement row before sqlite load: ${field} ${JSON.stringify(value)} is not an allowed FIDE entity type code.`,
+        {
+          batchRoot,
+          table: "statements",
+          rowIndex,
+          field,
+          allowedEntityTypeCodes: Array.from(SQLITE_ENTITY_TYPE_VALUES).sort(),
+          statementRow: row,
+          statementDebug: row.debug,
+        },
+      );
+    }
+  }
+  const subjectSelfSourced = row.subjectType === "00";
+  if (subjectSelfSourced !== (row.subjectReferenceType === "00")) {
+    throw createLoadDiagnosticError(
+      "Invalid statement row before sqlite load: subject_type and subject_reference_type must both be '00' or both be non-'00'.",
+      {
+        batchRoot,
+        table: "statements",
+        rowIndex,
+        statementRow: row,
+        statementDebug: row.debug,
+      },
+    );
+  }
+  const objectSelfSourced = row.objectType === "00";
+  if (objectSelfSourced !== (row.objectReferenceType === "00")) {
+    throw createLoadDiagnosticError(
+      "Invalid statement row before sqlite load: object_type and object_reference_type must both be '00' or both be non-'00'.",
+      {
+        batchRoot,
+        table: "statements",
+        rowIndex,
+        statementRow: row,
+        statementDebug: row.debug,
+      },
+    );
+  }
+}
 
 async function loadSqliteModule(): Promise<SqliteModule> {
   if (!sqliteModulePromise) {
@@ -79,22 +147,61 @@ export async function loadStatementBatchToSqlite(
       }
 
       for (const row of rows.referenceIdentifiers) {
-        insertReferenceIdentifier.run(row.identifierFingerprint, row.referenceIdentifier);
+        try {
+          insertReferenceIdentifier.run(row.identifierFingerprint, row.referenceIdentifier);
+        } catch (error) {
+          throw createLoadDiagnosticError(
+            "Failed inserting reference identifier row during sqlite load.",
+            {
+              batchRoot: rows.root.root,
+              table: "reference_identifiers",
+              row,
+            },
+            error,
+          );
+        }
       }
-      for (const row of rows.statements) {
-        insertStatement.run(
-          row.statementFingerprint,
-          row.subjectType,
-          row.subjectReferenceType,
-          row.subjectFingerprint,
-          row.predicateFingerprint,
-          row.objectType,
-          row.objectReferenceType,
-          row.objectFingerprint,
-        );
+      for (const [rowIndex, row] of rows.statements.entries()) {
+        validateStatementRow(rows.root.root, rowIndex, row);
+        try {
+          insertStatement.run(
+            row.statementFingerprint,
+            row.subjectType,
+            row.subjectReferenceType,
+            row.subjectFingerprint,
+            row.predicateFingerprint,
+            row.objectType,
+            row.objectReferenceType,
+            row.objectFingerprint,
+          );
+        } catch (error) {
+          throw createLoadDiagnosticError(
+            "Failed inserting statement row during sqlite load.",
+            {
+              batchRoot: rows.root.root,
+              table: "statements",
+              rowIndex,
+              statementRow: row,
+              statementDebug: row.debug,
+            },
+            error,
+          );
+        }
       }
       for (const row of rows.statementRoots) {
-        insertStatementRoot.run(row.root, row.statementFingerprint);
+        try {
+          insertStatementRoot.run(row.root, row.statementFingerprint);
+        } catch (error) {
+          throw createLoadDiagnosticError(
+            "Failed inserting statement-root row during sqlite load.",
+            {
+              batchRoot: rows.root.root,
+              table: "statement_roots",
+              row,
+            },
+            error,
+          );
+        }
       }
       db.exec("COMMIT");
       return { insertedRoot: true, statementCount: rows.statements.length };

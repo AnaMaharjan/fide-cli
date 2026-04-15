@@ -18,6 +18,16 @@ export type GraphStatementRow = {
   objectType: string;
   objectReferenceType: string;
   objectFingerprint: string;
+  debug?: {
+    statementIndex: number;
+    statementFideId: string;
+    subjectFideId: string;
+    subjectReferenceIdentifier: string;
+    predicateFideId: string;
+    predicateReferenceIdentifier: string;
+    objectFideId: string;
+    objectReferenceIdentifier: string;
+  };
 };
 
 export type GraphStatementRootRow = {
@@ -45,7 +55,7 @@ export function transformStatementBatchToGraphRows(
   const statementRows = new Map<string, GraphStatementRow>();
   const statementRootRows = new Map<string, GraphStatementRootRow>();
 
-  for (const statement of input.statements) {
+  for (const [statementIndex, statement] of input.statements.entries()) {
     assertStatementHasId(statement);
 
     const subject = parseFideId(statement.subjectFideId);
@@ -75,6 +85,16 @@ export function transformStatementBatchToGraphRows(
       objectType: object.typeChar,
       objectReferenceType: object.referenceChar,
       objectFingerprint: object.fingerprint,
+      debug: {
+        statementIndex,
+        statementFideId: statement.statementFideId,
+        subjectFideId: statement.subjectFideId,
+        subjectReferenceIdentifier: statement.subjectReferenceIdentifier,
+        predicateFideId: statement.predicateFideId,
+        predicateReferenceIdentifier: statement.predicateReferenceIdentifier,
+        objectFideId: statement.objectFideId,
+        objectReferenceIdentifier: statement.objectReferenceIdentifier,
+      },
     });
 
     statementRootRows.set(`${input.root}:${statementId.fingerprint}`, {

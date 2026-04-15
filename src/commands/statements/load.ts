@@ -155,6 +155,29 @@ function printStatementsLoadProgress(enabled: boolean, message: string): void {
   process.stderr.write(`${message}\n`);
 }
 
+function withBatchContext(
+  error: unknown,
+  input: { graphKey: string; batchRoot: string; batchFile: string },
+): Error & { details: Record<string, unknown>; cause?: unknown } {
+  const details =
+    error && typeof error === "object" && "details" in error && typeof (error as { details?: unknown }).details === "object"
+      ? { ...((error as { details: Record<string, unknown> }).details) }
+      : {};
+  const message = error instanceof Error ? error.message : String(error);
+  const wrapped = new Error(`Failed loading batch ${input.batchRoot} into graph "${input.graphKey}": ${message}`) as
+    Error & { details: Record<string, unknown>; cause?: unknown };
+  wrapped.details = {
+    graphKey: input.graphKey,
+    batchRoot: input.batchRoot,
+    batchFile: input.batchFile,
+    ...details,
+  };
+  if (error !== undefined) {
+    wrapped.cause = error;
+  }
+  return wrapped;
+}
+
 export async function runStatementsLoad(args: string[] = []): Promise<number> {
   const parsed = parseArgs(args, { booleanKeys: STATEMENTS_LOAD_PARSE_KEYS });
   if (hasFlag(parsed.flags, "help") || hasFlag(parsed.flags, "-h")) {
@@ -325,23 +348,31 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
   if (pendingCandidates.length > 0) {
     if (target.type === "sqlite") {
       for (const [index, candidate] of pendingCandidates.entries()) {
-        printStatementsLoadProgress(
-          showProgress,
-          `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
-        );
-        printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
-        const raw = await readFile(candidate.file, "utf8");
-        printStatementsLoadProgress(showProgress, "  parsing statements");
-        const parsedBatch = await parseGraphStatementBatchJsonl(raw);
-        printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
-        const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
-        printStatementsLoadProgress(
-          showProgress,
-          `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
-        );
-        const result = await loadStatementBatchToSqlite(target.file, rows);
-        statementCount += result.statementCount;
-        printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
+        try {
+          printStatementsLoadProgress(
+            showProgress,
+            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
+          );
+          printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
+          const raw = await readFile(candidate.file, "utf8");
+          printStatementsLoadProgress(showProgress, "  parsing statements");
+          const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+          printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
+          const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+          printStatementsLoadProgress(
+            showProgress,
+            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
+          );
+          const result = await loadStatementBatchToSqlite(target.file, rows);
+          statementCount += result.statementCount;
+          printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
+        } catch (error) {
+          throw withBatchContext(error, {
+            graphKey,
+            batchRoot: candidate.root,
+            batchFile: candidate.file,
+          });
+        }
       }
     } else {
       if (!target.databaseUrl) {
@@ -350,27 +381,35 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
         );
       }
       for (const [index, candidate] of pendingCandidates.entries()) {
-        printStatementsLoadProgress(
-          showProgress,
-          `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
-        );
-        printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
-        const raw = await readFile(candidate.file, "utf8");
-        printStatementsLoadProgress(showProgress, "  parsing statements");
-        const parsedBatch = await parseGraphStatementBatchJsonl(raw);
-        printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
-        const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
-        printStatementsLoadProgress(
-          showProgress,
-          `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
-        );
-        const result = await loadStatementBatchToPostgres({
-          databaseUrl: target.databaseUrl,
-          schema: target.schema,
-          rows,
-        });
-        statementCount += result.statementCount;
-        printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
+        try {
+          printStatementsLoadProgress(
+            showProgress,
+            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
+          );
+          printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
+          const raw = await readFile(candidate.file, "utf8");
+          printStatementsLoadProgress(showProgress, "  parsing statements");
+          const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+          printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
+          const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+          printStatementsLoadProgress(
+            showProgress,
+            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
+          );
+          const result = await loadStatementBatchToPostgres({
+            databaseUrl: target.databaseUrl,
+            schema: target.schema,
+            rows,
+          });
+          statementCount += result.statementCount;
+          printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
+        } catch (error) {
+          throw withBatchContext(error, {
+            graphKey,
+            batchRoot: candidate.root,
+            batchFile: candidate.file,
+          });
+        }
       }
     }
   }

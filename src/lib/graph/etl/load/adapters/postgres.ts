@@ -1,4 +1,5 @@
 import { createPgClient } from "../../../clients/postgres.js";
+import { FIDE_ENTITY_TYPES } from "@chris-test/graph";
 import {
   createStatementGraphStorageSchema,
 } from "../../initialize/createStatementGraphStorageSchema.js";
@@ -22,6 +23,74 @@ function chunkArray<T>(items: readonly T[], size: number): T[][] {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
+}
+
+const POSTGRES_ENTITY_TYPE_VALUES: ReadonlySet<string> = new Set(
+  Object.values(FIDE_ENTITY_TYPES).map((spec) => spec.code),
+);
+
+function createLoadDiagnosticError(
+  message: string,
+  details: Record<string, unknown>,
+  cause?: unknown,
+): Error & { details: Record<string, unknown>; cause?: unknown } {
+  const error = new Error(message) as Error & { details: Record<string, unknown>; cause?: unknown };
+  error.details = details;
+  if (cause !== undefined) {
+    error.cause = cause;
+  }
+  return error;
+}
+
+function validateStatementRow(batchRoot: string, rowIndex: number, row: GraphStatementBatchRows["statements"][number]): void {
+  const pairs = [
+    ["subjectType", row.subjectType],
+    ["subjectReferenceType", row.subjectReferenceType],
+    ["objectType", row.objectType],
+    ["objectReferenceType", row.objectReferenceType],
+  ] as const;
+  for (const [field, value] of pairs) {
+    if (!POSTGRES_ENTITY_TYPE_VALUES.has(value)) {
+      throw createLoadDiagnosticError(
+        `Invalid statement row before postgres load: ${field} ${JSON.stringify(value)} is not an allowed FIDE entity type code.`,
+        {
+          batchRoot,
+          table: "statements",
+          rowIndex,
+          field,
+          allowedEntityTypeCodes: Array.from(POSTGRES_ENTITY_TYPE_VALUES).sort(),
+          statementRow: row,
+          statementDebug: row.debug,
+        },
+      );
+    }
+  }
+  const subjectSelfSourced = row.subjectType === "00";
+  if (subjectSelfSourced !== (row.subjectReferenceType === "00")) {
+    throw createLoadDiagnosticError(
+      "Invalid statement row before postgres load: subject_type and subject_reference_type must both be '00' or both be non-'00'.",
+      {
+        batchRoot,
+        table: "statements",
+        rowIndex,
+        statementRow: row,
+        statementDebug: row.debug,
+      },
+    );
+  }
+  const objectSelfSourced = row.objectType === "00";
+  if (objectSelfSourced !== (row.objectReferenceType === "00")) {
+    throw createLoadDiagnosticError(
+      "Invalid statement row before postgres load: object_type and object_reference_type must both be '00' or both be non-'00'.",
+      {
+        batchRoot,
+        table: "statements",
+        rowIndex,
+        statementRow: row,
+        statementDebug: row.debug,
+      },
+    );
+  }
 }
 
 export async function loadStatementBatchToPostgres(
@@ -62,6 +131,8 @@ export async function loadStatementBatchToPostgres(
       }
 
       for (const chunk of chunkArray(input.rows.statements, insertChunkSize)) {
+        const firstChunkIndex = input.rows.statements.indexOf(chunk[0]!);
+        chunk.forEach((row, offset) => validateStatementRow(input.rows.root.root, firstChunkIndex + offset, row));
         const values = chunk
           .map((row) =>
             `(
@@ -76,19 +147,34 @@ export async function loadStatementBatchToPostgres(
             )`.replace(/\s+/g, " ").trim(),
           )
           .join(",\n");
-        await tx.unsafe(
-          `INSERT INTO ${qualify(input.schema, statements.name)} (
-             ${quoteIdent(statements.columns.statementFingerprint.name)},
-             ${quoteIdent(statements.columns.subjectType.name)},
-             ${quoteIdent(statements.columns.subjectReferenceType.name)},
-             ${quoteIdent(statements.columns.subjectFingerprint.name)},
-             ${quoteIdent(statements.columns.predicateFingerprint.name)},
-             ${quoteIdent(statements.columns.objectType.name)},
-             ${quoteIdent(statements.columns.objectReferenceType.name)},
-             ${quoteIdent(statements.columns.objectFingerprint.name)}
-           ) VALUES ${values}
-           ON CONFLICT (${quoteIdent(statements.columns.statementFingerprint.name)}) DO NOTHING;`,
-        );
+        try {
+          await tx.unsafe(
+            `INSERT INTO ${qualify(input.schema, statements.name)} (
+               ${quoteIdent(statements.columns.statementFingerprint.name)},
+               ${quoteIdent(statements.columns.subjectType.name)},
+               ${quoteIdent(statements.columns.subjectReferenceType.name)},
+               ${quoteIdent(statements.columns.subjectFingerprint.name)},
+               ${quoteIdent(statements.columns.predicateFingerprint.name)},
+               ${quoteIdent(statements.columns.objectType.name)},
+               ${quoteIdent(statements.columns.objectReferenceType.name)},
+               ${quoteIdent(statements.columns.objectFingerprint.name)}
+             ) VALUES ${values}
+             ON CONFLICT (${quoteIdent(statements.columns.statementFingerprint.name)}) DO NOTHING;`,
+          );
+        } catch (error) {
+          throw createLoadDiagnosticError(
+            "Failed inserting statement chunk during postgres load.",
+            {
+              batchRoot: input.rows.root.root,
+              table: "statements",
+              chunkStartIndex: firstChunkIndex,
+              chunkSize: chunk.length,
+              firstStatementDebug: chunk[0]?.debug,
+              lastStatementDebug: chunk[chunk.length - 1]?.debug,
+            },
+            error,
+          );
+        }
       }
 
       for (const chunk of chunkArray(input.rows.statementRoots, insertChunkSize)) {

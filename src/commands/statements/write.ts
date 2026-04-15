@@ -1,5 +1,5 @@
 import { mkdir, readdir, rm } from "node:fs/promises";
-import { relative, resolve, sep } from "node:path";
+import { extname, relative, resolve, sep } from "node:path";
 import { parseMd } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
@@ -381,6 +381,11 @@ async function materializeDeclaredEntityRecords(
   filePath: string,
   updatedAtUTC: string,
 ): Promise<void> {
+  const extension = extname(filePath).toLowerCase();
+  if (extension !== ".md" && extension !== ".mdx") {
+    return;
+  }
+
   const raw = await readUtf8(filePath);
   const parsed = parseMd(raw);
   const entityDeclarations = parsed.entityDeclarations;
