@@ -90,6 +90,8 @@ export function createSqliteGraphStorageAdapter(
   if (!roots.optional) {
     createStatements.push(`CREATE TABLE IF NOT EXISTS ${quoteIdent(roots.name)} (
   ${quoteIdent(roots.columns.root.name)} TEXT PRIMARY KEY,
+  ${quoteIdent(roots.columns.title.name)} TEXT,
+  ${quoteIdent(roots.columns.description.name)} TEXT,
   ${quoteIdent(roots.columns.createdAt.name)} TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );`);
   }
@@ -120,6 +122,20 @@ export async function initializeSqliteGraphStorage(
   try {
     for (const statement of adapter.createStatements) {
       db.exec(statement);
+    }
+    const rootsColumns = (
+      db.prepare(`PRAGMA table_info(${quoteIdent(adapter.storageSchema.tables.roots.name)})`).all() as Array<{ name: string }>
+    ).map((row) => row.name);
+    const roots = adapter.storageSchema.tables.roots;
+    if (!rootsColumns.includes(roots.columns.title.name)) {
+      db.exec(
+        `ALTER TABLE ${quoteIdent(roots.name)} ADD COLUMN ${quoteIdent(roots.columns.title.name)} TEXT`,
+      );
+    }
+    if (!rootsColumns.includes(roots.columns.description.name)) {
+      db.exec(
+        `ALTER TABLE ${quoteIdent(roots.name)} ADD COLUMN ${quoteIdent(roots.columns.description.name)} TEXT`,
+      );
     }
   } finally {
     db.close();

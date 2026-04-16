@@ -25,10 +25,12 @@ import {
 import {
   deleteStatementBatchByRootFromPostgres,
   loadStatementBatchToPostgres,
+  updateStatementBatchRootMetadataInPostgres,
 } from "../../lib/graph/etl/load/adapters/postgres.js";
 import {
   deleteStatementBatchByRootFromSqlite,
   loadStatementBatchToSqlite,
+  updateStatementBatchRootMetadataInSqlite,
 } from "../../lib/graph/etl/load/adapters/sqlite.js";
 import {
   queryAllRootsInPostgres,
@@ -340,6 +342,24 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
   }
 
   const pendingCandidates = candidates.filter((candidate) => !existingRoots.has(candidate.root));
+  const existingCandidates = candidates.filter((candidate) => existingRoots.has(candidate.root));
+  for (const candidate of existingCandidates) {
+    if (target.type === "sqlite") {
+      await updateStatementBatchRootMetadataInSqlite(target.file, {
+        root: candidate.root,
+        ...(candidate.title ? { title: candidate.title } : {}),
+        ...(candidate.description ? { description: candidate.description } : {}),
+      });
+    } else if (target.databaseUrl) {
+      await updateStatementBatchRootMetadataInPostgres({
+        databaseUrl: target.databaseUrl,
+        schema: target.schema,
+        root: candidate.root,
+        ...(candidate.title ? { title: candidate.title } : {}),
+        ...(candidate.description ? { description: candidate.description } : {}),
+      });
+    }
+  }
   printStatementsLoadProgress(
     showProgress,
     `Skipping ${existingRoots.size} existing batch root(s); loading ${pendingCandidates.length} batch file(s).`,
@@ -358,7 +378,12 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           printStatementsLoadProgress(showProgress, "  parsing statements");
           const parsedBatch = await parseGraphStatementBatchJsonl(raw);
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
-          const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+          const rows = transformStatementBatchToGraphRows({
+            root: candidate.root,
+            ...(candidate.title ? { title: candidate.title } : {}),
+            ...(candidate.description ? { description: candidate.description } : {}),
+            statements: parsedBatch.statements,
+          });
           printStatementsLoadProgress(
             showProgress,
             `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
@@ -391,7 +416,12 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           printStatementsLoadProgress(showProgress, "  parsing statements");
           const parsedBatch = await parseGraphStatementBatchJsonl(raw);
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
-          const rows = transformStatementBatchToGraphRows({ root: candidate.root, statements: parsedBatch.statements });
+          const rows = transformStatementBatchToGraphRows({
+            root: candidate.root,
+            ...(candidate.title ? { title: candidate.title } : {}),
+            ...(candidate.description ? { description: candidate.description } : {}),
+            statements: parsedBatch.statements,
+          });
           printStatementsLoadProgress(
             showProgress,
             `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,

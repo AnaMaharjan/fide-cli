@@ -177,6 +177,23 @@ async function removeStatementsDayMetaEntry(metaPath: string, root: string): Pro
 }
 
 function extractDraftWriteMetadata(content: string): DraftWriteMetadata {
+  const trimmed = content.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const metadata: DraftWriteMetadata = {};
+      if (typeof parsed.title === "string" && parsed.title.trim().length > 0) {
+        metadata.title = parsed.title.trim();
+      }
+      if (typeof parsed.description === "string" && parsed.description.trim().length > 0) {
+        metadata.description = parsed.description.trim();
+      }
+      return metadata;
+    } catch {
+      return {};
+    }
+  }
+
   const match = /^---\n([\s\S]*?)\n---\n/.exec(content);
   if (!match) return {};
   const metadata: DraftWriteMetadata = {};

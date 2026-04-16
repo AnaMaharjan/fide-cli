@@ -2,6 +2,8 @@ import { parseFideId, type Statement } from "@chris-test/graph";
 
 export type GraphRootRow = {
   root: string;
+  title?: string;
+  description?: string;
 };
 
 export type GraphReferenceIdentifierRow = {
@@ -49,7 +51,7 @@ function assertStatementHasId(statement: Statement): asserts statement is Statem
 }
 
 export function transformStatementBatchToGraphRows(
-  input: { root: string; statements: Statement[] },
+  input: { root: string; title?: string; description?: string; statements: Statement[] },
 ): GraphStatementBatchRows {
   const referenceIdentifierRows = new Map<string, GraphReferenceIdentifierRow>();
   const statementRows = new Map<string, GraphStatementRow>();
@@ -104,7 +106,11 @@ export function transformStatementBatchToGraphRows(
   }
 
   return {
-    root: { root: input.root },
+    root: {
+      root: input.root,
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.description ? { description: input.description } : {}),
+    },
     referenceIdentifiers: Array.from(referenceIdentifierRows.values()),
     statements: Array.from(statementRows.values()),
     statementRoots: Array.from(statementRootRows.values()),

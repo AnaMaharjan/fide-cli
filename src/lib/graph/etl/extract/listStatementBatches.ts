@@ -1,11 +1,20 @@
-import { readdir } from "node:fs/promises";
-import { basename, join, relative } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve } from "node:path";
 
 export type StatementBatchCandidate = {
   file: string;
   root: string;
   batchDate: string | null;
+  title?: string;
+  description?: string;
 };
+
+type StatementsDayMetaEntry = {
+  sourceDraftTitle?: string;
+  sourceDraftDescription?: string;
+};
+
+type StatementsDayMeta = Record<string, StatementsDayMetaEntry>;
 
 function extractBatchDate(statementsDir: string, file: string): string | null {
   const rel = relative(statementsDir, file).replaceAll("\\", "/");
@@ -35,13 +44,31 @@ export async function listStatementBatchCandidates(
   options: { fromDate?: string; toDate?: string } = {},
 ): Promise<StatementBatchCandidate[]> {
   const files = await listJsonlFiles(statementsDir);
-  return files
-    .map((file) => ({
+  const metaByDir = new Map<string, StatementsDayMeta>();
+  const candidates = await Promise.all(files.map(async (file) => {
+    const candidate = {
       file,
       root: basename(file, ".jsonl"),
       batchDate: extractBatchDate(statementsDir, file),
-    }))
-    .filter((candidate) => {
+    };
+    const dir = dirname(candidate.file);
+    let meta = metaByDir.get(dir);
+    if (!meta) {
+      try {
+        meta = JSON.parse(await readFile(resolve(dir, "_meta.json"), "utf8")) as StatementsDayMeta;
+      } catch {
+        meta = {};
+      }
+      metaByDir.set(dir, meta);
+    }
+    const entry = meta[candidate.root];
+    return {
+      ...candidate,
+      ...(entry?.sourceDraftTitle ? { title: entry.sourceDraftTitle } : {}),
+      ...(entry?.sourceDraftDescription ? { description: entry.sourceDraftDescription } : {}),
+    };
+  }));
+  return candidates.filter((candidate) => {
       if (options.fromDate && candidate.batchDate && candidate.batchDate < options.fromDate) return false;
       if (options.toDate && candidate.batchDate && candidate.batchDate > options.toDate) return false;
       return true;

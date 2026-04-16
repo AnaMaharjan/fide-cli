@@ -20,7 +20,6 @@
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",
-    "build:link": "node ./scripts/build.mjs --link",
     "check-types": "tsc --noEmit",
     "check:scope-model": "pnpm run build && node ./scripts/check-scope-model.mjs",
     "generate:schema": "node ./scripts/generate-schema/command-type-schemas.mjs",

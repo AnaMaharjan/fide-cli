@@ -142,6 +142,14 @@ export function createStatementGraphStorageSchema(
             name: "root",
             description: "Deterministic root identifier for a loaded statement batch.",
           },
+          title: {
+            name: "title",
+            description: "Optional human-readable title for the loaded statement batch.",
+          },
+          description: {
+            name: "description",
+            description: "Optional human-readable description for the loaded statement batch.",
+          },
           createdAt: {
             name: "created_at",
             description: "Storage-layer insertion timestamp for the root row.",

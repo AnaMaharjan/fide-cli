@@ -103,8 +103,16 @@ $$;`,
   if (!roots.optional) {
     createStatements.push(`CREATE TABLE IF NOT EXISTS ${qualifyTable(options.schemaName, roots.name)} (
   ${quoteIdent(roots.columns.root.name)} TEXT PRIMARY KEY,
+  ${quoteIdent(roots.columns.title.name)} TEXT,
+  ${quoteIdent(roots.columns.description.name)} TEXT,
   ${quoteIdent(roots.columns.createdAt.name)} TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );`);
+    createStatements.push(
+      `ALTER TABLE ${qualifyTable(options.schemaName, roots.name)} ADD COLUMN IF NOT EXISTS ${quoteIdent(roots.columns.title.name)} TEXT;`,
+    );
+    createStatements.push(
+      `ALTER TABLE ${qualifyTable(options.schemaName, roots.name)} ADD COLUMN IF NOT EXISTS ${quoteIdent(roots.columns.description.name)} TEXT;`,
+    );
     createStatements.push(
       `COMMENT ON TABLE ${qualifyTable(options.schemaName, roots.name)} IS '${roots.description.replaceAll("'", "''")}';`,
     );

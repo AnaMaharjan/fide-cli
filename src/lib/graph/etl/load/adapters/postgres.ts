@@ -104,12 +104,22 @@ export async function loadStatementBatchToPostgres(
   const storage = createStatementGraphStorageSchema();
   const { referenceIdentifiers, statements, roots, statementRoots } = storage.tables;
   const insertChunkSize = 500;
+  const sqlStringOrNull = (value: string | undefined): string =>
+    value === undefined ? "NULL" : quoteLiteral(value);
 
   try {
     return await client.begin(async (tx) => {
       const insertedRoots = await tx.unsafe<Array<{ root: string }>>(
-        `INSERT INTO ${qualify(input.schema, roots.name)} (${quoteIdent(roots.columns.root.name)})
-         VALUES (${quoteLiteral(input.rows.root.root)})
+        `INSERT INTO ${qualify(input.schema, roots.name)} (
+           ${quoteIdent(roots.columns.root.name)},
+           ${quoteIdent(roots.columns.title.name)},
+           ${quoteIdent(roots.columns.description.name)}
+         )
+         VALUES (
+           ${quoteLiteral(input.rows.root.root)},
+           ${sqlStringOrNull(input.rows.root.title)},
+           ${sqlStringOrNull(input.rows.root.description)}
+         )
          ON CONFLICT (${quoteIdent(roots.columns.root.name)}) DO NOTHING
          RETURNING ${quoteIdent(roots.columns.root.name)};`,
       );
@@ -195,6 +205,32 @@ export async function loadStatementBatchToPostgres(
 
       return { insertedRoot: true, statementCount: input.rows.statements.length };
     });
+  } finally {
+    await client.end({ timeout: 1 });
+  }
+}
+
+export async function updateStatementBatchRootMetadataInPostgres(input: {
+  databaseUrl: string;
+  schema: string;
+  root: string;
+  title?: string;
+  description?: string;
+}): Promise<void> {
+  const client = createPgClient(input.databaseUrl, { suppressNotices: true });
+  const storage = createStatementGraphStorageSchema();
+  const { roots } = storage.tables;
+  const sqlStringOrNull = (value: string | undefined): string =>
+    value === undefined ? "NULL" : quoteLiteral(value);
+
+  try {
+    await client.unsafe(
+      `UPDATE ${qualify(input.schema, roots.name)}
+       SET
+         ${quoteIdent(roots.columns.title.name)} = ${sqlStringOrNull(input.title)},
+         ${quoteIdent(roots.columns.description.name)} = ${sqlStringOrNull(input.description)}
+       WHERE ${quoteIdent(roots.columns.root.name)} = ${quoteLiteral(input.root)};`,
+    );
   } finally {
     await client.end({ timeout: 1 });
   }

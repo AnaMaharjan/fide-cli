@@ -106,8 +106,12 @@ export async function loadStatementBatchToSqlite(
 
   try {
     const insertRoot = db.prepare(`
-      INSERT OR IGNORE INTO ${roots.name} (${roots.columns.root.name})
-      VALUES (?)
+      INSERT OR IGNORE INTO ${roots.name} (
+        ${roots.columns.root.name},
+        ${roots.columns.title.name},
+        ${roots.columns.description.name}
+      )
+      VALUES (?, ?, ?)
     `);
     const insertReferenceIdentifier = db.prepare(`
       INSERT INTO ${referenceIdentifiers.name} (
@@ -139,7 +143,11 @@ export async function loadStatementBatchToSqlite(
 
     db.exec("BEGIN");
     try {
-      const rootInsertResult = insertRoot.run(rows.root.root) as { changes?: number };
+      const rootInsertResult = insertRoot.run(
+        rows.root.root,
+        rows.root.title ?? null,
+        rows.root.description ?? null,
+      ) as { changes?: number };
       const insertedRoot = (rootInsertResult.changes ?? 0) > 0;
       if (!insertedRoot) {
         db.exec("COMMIT");
@@ -209,6 +217,29 @@ export async function loadStatementBatchToSqlite(
       db.exec("ROLLBACK");
       throw error;
     }
+  } finally {
+    db.close();
+  }
+}
+
+export async function updateStatementBatchRootMetadataInSqlite(
+  file: string,
+  input: { root: string; title?: string; description?: string },
+): Promise<void> {
+  const { DatabaseSync } = await loadSqliteModule();
+  const db = new DatabaseSync(file);
+  const schema = createStatementGraphStorageSchema();
+  const { roots } = schema.tables;
+
+  try {
+    const updateRoot = db.prepare(`
+      UPDATE ${roots.name}
+      SET
+        ${roots.columns.title.name} = ?,
+        ${roots.columns.description.name} = ?
+      WHERE ${roots.columns.root.name} = ?
+    `);
+    updateRoot.run(input.title ?? null, input.description ?? null, input.root);
   } finally {
     db.close();
   }

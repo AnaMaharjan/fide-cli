@@ -32,6 +32,8 @@ const EXPECTED_STATEMENTS_COLUMNS = [
 
 const EXPECTED_ROOTS_COLUMNS = [
   "root",
+  "title",
+  "description",
   "created_at",
 ];
 
