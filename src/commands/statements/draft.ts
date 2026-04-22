@@ -386,8 +386,8 @@ export async function runStatementsDraft(args: string[]): Promise<number> {
       },
       property: {
         referenceIdentifier: statement.propertyReferenceIdentifier,
-        entityType: "Concept",
-        referenceType: "NetworkResource",
+        entityType: original.property.entityType,
+        referenceType: original.property.referenceType,
       },
       object: {
         referenceIdentifier: statement.objectReferenceIdentifier,
