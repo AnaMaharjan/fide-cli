@@ -93,7 +93,7 @@ export function createStatementGraphStorageSchema(
         name: "statements",
         description: "Canonical stored statement rows for a graph backend.",
         columnNotes: [
-          "Predicate type and predicate reference type are assumed by canonical statements and are therefore not stored as separate columns.",
+          "Property type and property reference type are assumed by canonical statements and are therefore not stored as separate columns.",
         ],
         columns: {
           statementFingerprint: {
@@ -112,9 +112,9 @@ export function createStatementGraphStorageSchema(
             name: "subject_fingerprint",
             description: "Fingerprint of the subject reference identifier.",
           },
-          predicateFingerprint: {
-            name: "predicate_fingerprint",
-            description: "Fingerprint of the predicate reference identifier.",
+          propertyFingerprint: {
+            name: "property_fingerprint",
+            description: "Fingerprint of the property reference identifier.",
           },
           objectType: {
             name: "object_type",

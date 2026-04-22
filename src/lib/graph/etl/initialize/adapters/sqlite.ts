@@ -71,7 +71,7 @@ export function createSqliteGraphStorageAdapter(
   ${quoteIdent(statements.columns.subjectType.name)} TEXT NOT NULL CHECK (${quoteIdent(statements.columns.subjectType.name)} IN (${sqliteInList(SQLITE_ENTITY_TYPE_VALUES)})),
   ${quoteIdent(statements.columns.subjectReferenceType.name)} TEXT NOT NULL CHECK (${quoteIdent(statements.columns.subjectReferenceType.name)} IN (${sqliteInList(SQLITE_ENTITY_TYPE_VALUES)})),
   ${quoteIdent(statements.columns.subjectFingerprint.name)} TEXT NOT NULL,
-  ${quoteIdent(statements.columns.predicateFingerprint.name)} TEXT NOT NULL,
+  ${quoteIdent(statements.columns.propertyFingerprint.name)} TEXT NOT NULL,
   ${quoteIdent(statements.columns.objectType.name)} TEXT NOT NULL CHECK (${quoteIdent(statements.columns.objectType.name)} IN (${sqliteInList(SQLITE_ENTITY_TYPE_VALUES)})),
   ${quoteIdent(statements.columns.objectReferenceType.name)} TEXT NOT NULL CHECK (${quoteIdent(statements.columns.objectReferenceType.name)} IN (${sqliteInList(SQLITE_ENTITY_TYPE_VALUES)})),
   ${quoteIdent(statements.columns.objectFingerprint.name)} TEXT NOT NULL,

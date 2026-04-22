@@ -497,8 +497,8 @@ export async function runStatementsWrite(argsOrFlags: string[] | Map<string, str
   const wires = batch.statements.map((statement) => ({
     s: statement.subjectFideId,
     sr: statement.subjectReferenceIdentifier,
-    p: statement.predicateFideId,
-    pr: statement.predicateReferenceIdentifier,
+    p: statement.propertyFideId,
+    pr: statement.propertyReferenceIdentifier,
     o: statement.objectFideId,
     or: statement.objectReferenceIdentifier,
   }));

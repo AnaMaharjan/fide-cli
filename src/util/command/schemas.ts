@@ -9,10 +9,10 @@ const GRAPH_STATEMENT_INPUT_EXTENDED = {
   command: "fide schema --surface graph.statement-input",
   format: "fcp.statement-input.v0",
   rootType: "array",
-  required: ["subject", "predicate", "object"],
+  required: ["subject", "property", "object"],
   item: {
     type: "object",
-    required: ["subject", "predicate", "object"],
+    required: ["subject", "property", "object"],
     properties: {
       subject: {
         type: "object",
@@ -23,7 +23,7 @@ const GRAPH_STATEMENT_INPUT_EXTENDED = {
           referenceType: { type: "string", enum: FIDE_ENTITY_TYPE_ENUM },
         },
       },
-      predicate: {
+      property: {
         type: "object",
         required: ["referenceIdentifier", "entityType", "referenceType"],
         properties: {
@@ -45,12 +45,12 @@ const GRAPH_STATEMENT_INPUT_EXTENDED = {
   },
   subjectEntityTypeEnum: FIDE_ENTITY_TYPE_ENUM,
   subjectReferenceTypeEnum: FIDE_ENTITY_TYPE_ENUM,
-  predicateEntityTypeEnum: ["Concept"],
-  predicateReferenceTypeEnum: ["NetworkResource"],
+  propertyEntityTypeEnum: ["Concept"],
+  propertyReferenceTypeEnum: ["NetworkResource"],
   objectEntityTypeEnum: FIDE_ENTITY_TYPE_ENUM,
   objectReferenceTypeEnum: FIDE_ENTITY_TYPE_ENUM,
   policyNotes: [
-    "Predicate must use entityType=Concept and referenceType=NetworkResource.",
+    "Property must use entityType=Concept and referenceType=NetworkResource.",
     "Allowed entity/reference pairings are further validated by Fide ID policy at runtime.",
     "Use --format json|jsonl|md as needed; this schema describes statement-input payload shape.",
   ],

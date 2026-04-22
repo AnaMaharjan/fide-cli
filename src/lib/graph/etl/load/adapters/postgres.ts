@@ -150,7 +150,7 @@ export async function loadStatementBatchToPostgres(
               ${quoteLiteral(row.subjectType)},
               ${quoteLiteral(row.subjectReferenceType)},
               ${quoteLiteral(row.subjectFingerprint)},
-              ${quoteLiteral(row.predicateFingerprint)},
+              ${quoteLiteral(row.propertyFingerprint)},
               ${quoteLiteral(row.objectType)},
               ${quoteLiteral(row.objectReferenceType)},
               ${quoteLiteral(row.objectFingerprint)}
@@ -164,7 +164,7 @@ export async function loadStatementBatchToPostgres(
                ${quoteIdent(statements.columns.subjectType.name)},
                ${quoteIdent(statements.columns.subjectReferenceType.name)},
                ${quoteIdent(statements.columns.subjectFingerprint.name)},
-               ${quoteIdent(statements.columns.predicateFingerprint.name)},
+               ${quoteIdent(statements.columns.propertyFingerprint.name)},
                ${quoteIdent(statements.columns.objectType.name)},
                ${quoteIdent(statements.columns.objectReferenceType.name)},
                ${quoteIdent(statements.columns.objectFingerprint.name)}

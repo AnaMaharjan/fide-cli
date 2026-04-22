@@ -1,5 +1,11 @@
 import { parseFideId, type Statement } from "@chris-test/graph";
 
+type StatementWithPropertyIds = Statement & {
+  statementFideId: string;
+  propertyFideId: string;
+  propertyReferenceIdentifier: string;
+};
+
 export type GraphRootRow = {
   root: string;
   title?: string;
@@ -16,7 +22,7 @@ export type GraphStatementRow = {
   subjectType: string;
   subjectReferenceType: string;
   subjectFingerprint: string;
-  predicateFingerprint: string;
+  propertyFingerprint: string;
   objectType: string;
   objectReferenceType: string;
   objectFingerprint: string;
@@ -25,8 +31,8 @@ export type GraphStatementRow = {
     statementFideId: string;
     subjectFideId: string;
     subjectReferenceIdentifier: string;
-    predicateFideId: string;
-    predicateReferenceIdentifier: string;
+    propertyFideId: string;
+    propertyReferenceIdentifier: string;
     objectFideId: string;
     objectReferenceIdentifier: string;
   };
@@ -44,9 +50,15 @@ export type GraphStatementBatchRows = {
   statementRoots: GraphStatementRootRow[];
 };
 
-function assertStatementHasId(statement: Statement): asserts statement is Statement & { statementFideId: string } {
+function assertStatementHasId(statement: Statement): asserts statement is StatementWithPropertyIds {
   if (!statement.statementFideId) {
     throw new Error("Invalid statement: missing statementFideId.");
+  }
+  if (!statement.propertyFideId) {
+    throw new Error("Invalid statement: missing propertyFideId.");
+  }
+  if (!statement.propertyReferenceIdentifier) {
+    throw new Error("Invalid statement: missing propertyReferenceIdentifier.");
   }
 }
 
@@ -61,7 +73,7 @@ export function transformStatementBatchToGraphRows(
     assertStatementHasId(statement);
 
     const subject = parseFideId(statement.subjectFideId);
-    const predicate = parseFideId(statement.predicateFideId);
+    const property = parseFideId(statement.propertyFideId);
     const object = parseFideId(statement.objectFideId);
     const statementId = parseFideId(statement.statementFideId);
 
@@ -69,9 +81,9 @@ export function transformStatementBatchToGraphRows(
       identifierFingerprint: subject.fingerprint,
       referenceIdentifier: statement.subjectReferenceIdentifier,
     });
-    referenceIdentifierRows.set(predicate.fingerprint, {
-      identifierFingerprint: predicate.fingerprint,
-      referenceIdentifier: statement.predicateReferenceIdentifier,
+    referenceIdentifierRows.set(property.fingerprint, {
+      identifierFingerprint: property.fingerprint,
+      referenceIdentifier: statement.propertyReferenceIdentifier,
     });
     referenceIdentifierRows.set(object.fingerprint, {
       identifierFingerprint: object.fingerprint,
@@ -83,7 +95,7 @@ export function transformStatementBatchToGraphRows(
       subjectType: subject.typeChar,
       subjectReferenceType: subject.referenceChar,
       subjectFingerprint: subject.fingerprint,
-      predicateFingerprint: predicate.fingerprint,
+      propertyFingerprint: property.fingerprint,
       objectType: object.typeChar,
       objectReferenceType: object.referenceChar,
       objectFingerprint: object.fingerprint,
@@ -92,8 +104,8 @@ export function transformStatementBatchToGraphRows(
         statementFideId: statement.statementFideId,
         subjectFideId: statement.subjectFideId,
         subjectReferenceIdentifier: statement.subjectReferenceIdentifier,
-        predicateFideId: statement.predicateFideId,
-        predicateReferenceIdentifier: statement.predicateReferenceIdentifier,
+        propertyFideId: statement.propertyFideId,
+        propertyReferenceIdentifier: statement.propertyReferenceIdentifier,
         objectFideId: statement.objectFideId,
         objectReferenceIdentifier: statement.objectReferenceIdentifier,
       },

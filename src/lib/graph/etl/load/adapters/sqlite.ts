@@ -126,7 +126,7 @@ export async function loadStatementBatchToSqlite(
         ${statements.columns.subjectType.name},
         ${statements.columns.subjectReferenceType.name},
         ${statements.columns.subjectFingerprint.name},
-        ${statements.columns.predicateFingerprint.name},
+        ${statements.columns.propertyFingerprint.name},
         ${statements.columns.objectType.name},
         ${statements.columns.objectReferenceType.name},
         ${statements.columns.objectFingerprint.name}
@@ -177,7 +177,7 @@ export async function loadStatementBatchToSqlite(
             row.subjectType,
             row.subjectReferenceType,
             row.subjectFingerprint,
-            row.predicateFingerprint,
+            row.propertyFingerprint,
             row.objectType,
             row.objectReferenceType,
             row.objectFingerprint,

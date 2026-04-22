@@ -72,7 +72,7 @@ $$;`,
   ${quoteIdent(statements.columns.subjectType.name)} ${qualifiedEntityType} NOT NULL,
   ${quoteIdent(statements.columns.subjectReferenceType.name)} ${qualifiedEntityType} NOT NULL,
   ${quoteIdent(statements.columns.subjectFingerprint.name)} CHAR(36) NOT NULL,
-  ${quoteIdent(statements.columns.predicateFingerprint.name)} CHAR(36) NOT NULL,
+  ${quoteIdent(statements.columns.propertyFingerprint.name)} CHAR(36) NOT NULL,
   ${quoteIdent(statements.columns.objectType.name)} ${qualifiedEntityType} NOT NULL,
   ${quoteIdent(statements.columns.objectReferenceType.name)} ${qualifiedEntityType} NOT NULL,
   ${quoteIdent(statements.columns.objectFingerprint.name)} CHAR(36) NOT NULL,
@@ -87,7 +87,7 @@ $$;`,
   ),
   CONSTRAINT ${quoteIdent("fk_statements_subject_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.subjectFingerprint.name)})
     REFERENCES ${qualifyTable(options.schemaName, referenceIdentifiers.name)} (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)}),
-  CONSTRAINT ${quoteIdent("fk_statements_predicate_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.predicateFingerprint.name)})
+  CONSTRAINT ${quoteIdent("fk_statements_property_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.propertyFingerprint.name)})
     REFERENCES ${qualifyTable(options.schemaName, referenceIdentifiers.name)} (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)}),
   CONSTRAINT ${quoteIdent("fk_statements_object_fingerprint")} FOREIGN KEY (${quoteIdent(statements.columns.objectFingerprint.name)})
     REFERENCES ${qualifyTable(options.schemaName, referenceIdentifiers.name)} (${quoteIdent(referenceIdentifiers.columns.identifierFingerprint.name)})

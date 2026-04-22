@@ -44,10 +44,10 @@ function statementInputsFromRecipeAndBuiltStatements(
         entityType: row.subject.entityType,
         referenceType: row.subject.referenceType,
       },
-      predicate: {
-        referenceIdentifier: st.predicateReferenceIdentifier,
-        entityType: row.predicate.entityType,
-        referenceType: row.predicate.referenceType,
+      property: {
+        referenceIdentifier: st.propertyReferenceIdentifier,
+        entityType: row.property.entityType,
+        referenceType: row.property.referenceType,
       },
       object: {
         referenceIdentifier: st.objectReferenceIdentifier,

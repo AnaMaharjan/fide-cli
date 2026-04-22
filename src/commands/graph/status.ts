@@ -120,7 +120,7 @@ async function inspectGraphStore(target: ReturnType<typeof resolveStoreTarget>) 
     "subject_type",
     "subject_reference_type",
     "subject_fingerprint",
-    "predicate_fingerprint",
+    "property_fingerprint",
     "object_type",
     "object_reference_type",
     "object_fingerprint",

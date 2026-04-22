@@ -23,7 +23,7 @@ const EXPECTED_STATEMENTS_COLUMNS = [
   "subject_type",
   "subject_reference_type",
   "subject_fingerprint",
-  "predicate_fingerprint",
+  "property_fingerprint",
   "object_type",
   "object_reference_type",
   "object_fingerprint",
