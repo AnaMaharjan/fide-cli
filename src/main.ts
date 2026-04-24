@@ -33,6 +33,7 @@ function helpText(): string {
             "  fide whoami [flags]",
             "  fide docs <path>",
             "  fide plugin install <source>",
+            "  fide daemon <command> [flags]",
             "  fide schema [--surface <surface>]",
             "  fide query <command> [flags]",
             "  fide statements <command> [flags]",
@@ -45,6 +46,7 @@ function helpText(): string {
             "  logout   Remove saved auth for an account",
             "  start    Start the background sync agent for this project",
             "  stop     Stop the background sync agent",
+            "  daemon   Manage the local Fide daemon",
             "  status   Inspect machine auth, project context, and sync state",
             "  whoami   Show the current authenticated user",
           ],
@@ -59,6 +61,7 @@ function helpText(): string {
             "  docs     Resolve local docs pointers",
             "  schema   Print command schemas",
             "  plugin   Install optional Fide plugins",
+            "  daemon   Start and inspect the local daemon",
           ],
         },
         {
@@ -67,6 +70,7 @@ function helpText(): string {
             "  fide status",
             "  fide login",
             "  fide start",
+            "  fide daemon start",
             "  fide stop",
             "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
@@ -185,6 +189,10 @@ export async function runCli(argv: string[]): Promise<number> {
       case "plugin": {
         const { runPluginCommand } = await import("./commands/plugin/index.js");
         return await runPluginCommand(command, rest);
+      }
+      case "daemon": {
+        const { runDaemonCommand } = await import("./commands/daemon.js");
+        return await runDaemonCommand(command, rest);
       }
       default:
         throw new Error(`Unknown group: ${group}. Run \`fide --help\` to see available commands.`);

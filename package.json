@@ -27,6 +27,7 @@
     "check:generated:docs": "node ./scripts/generate-docs/cli-reference.mjs --check"
   },
   "dependencies": {
+    "@chris-test/daemon": "workspace:0.0.0-alpha.0",
     "@chris-test/graph": "workspace:*",
     "@chris-test/workspace": "workspace:*",
     "chokidar": "^5.0.0",

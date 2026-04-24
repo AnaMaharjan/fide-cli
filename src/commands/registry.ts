@@ -3,6 +3,7 @@ import { authLoginCommand } from "./auth/login.js";
 import { authLogoutCommand } from "./auth/logout.js";
 import { authWhoamiCommand } from "./auth/whoami.js";
 import { docsCommand } from "./docs.js";
+import { daemonStartCommand, daemonStopCommand } from "./daemon.js";
 import { pluginInstallCommand } from "./plugin/install.js";
 import { graphConnectCommand } from "./graph/connect.js";
 import { graphGetCommand } from "./graph/get.js";
@@ -34,6 +35,8 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   authLogoutCommand,
   authWhoamiCommand,
   docsCommand,
+  daemonStartCommand,
+  daemonStopCommand,
   pluginInstallCommand,
   workspaceListCommand,
   workspaceGetCommand,

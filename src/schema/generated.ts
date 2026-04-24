@@ -1,4 +1,127 @@
 export const GENERATED_TYPE_SCHEMAS = {
+  "daemon.start.output": {
+    "command": "fide schema --surface daemon.start.output",
+    "format": "ts-type.v0",
+    "typeName": "DaemonStartOutput",
+    "source": "src/commands/daemon.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command",
+        "started",
+        "alreadyRunning",
+        "foreground",
+        "host",
+        "port",
+        "localApiBaseUrl",
+        "ready"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "daemon-start.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide daemon start"
+          ]
+        },
+        "started": {
+          "type": "boolean"
+        },
+        "alreadyRunning": {
+          "type": "boolean"
+        },
+        "foreground": {
+          "type": "boolean"
+        },
+        "pid": {
+          "anyOf": [
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "number"
+        },
+        "localApiBaseUrl": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "daemon.stop.output": {
+    "command": "fide schema --surface daemon.stop.output",
+    "format": "ts-type.v0",
+    "typeName": "DaemonStopOutput",
+    "source": "src/commands/daemon.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command",
+        "stopped",
+        "alreadyStopped",
+        "host",
+        "port",
+        "localApiBaseUrl"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "daemon-stop.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide daemon stop"
+          ]
+        },
+        "stopped": {
+          "type": "boolean"
+        },
+        "alreadyStopped": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "number"
+        },
+        "localApiBaseUrl": {
+          "type": "string"
+        }
+      }
+    }
+  },
   "docs.output": {
     "command": "fide schema --surface docs.output",
     "format": "ts-type.v0",
