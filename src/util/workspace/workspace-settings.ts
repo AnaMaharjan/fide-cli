@@ -29,7 +29,7 @@ export async function resolveWorkspaceSelectionOrThrow(
 ): Promise<ResolvedWorkspaceSelection> {
   const selection = await resolveWorkspaceSelection(root);
   if (!selection) {
-    throw new Error("Missing workspace selection. Set project .fide/settings.json with workspace.id or run `fide login`.");
+    throw new Error("Missing workspace selection. Set FIDE_DIR/_meta.json with workspace.id or run `fide login`.");
   }
   return selection;
 }

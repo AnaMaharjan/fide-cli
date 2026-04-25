@@ -59,3 +59,25 @@ export async function postDaemonMapsRemove(mapKey: string): Promise<void> {
     throw new Error(`Daemon maps/remove failed (${res.status}): ${text || res.statusText}`);
   }
 }
+
+export type DaemonGraphRow = {
+  graphKey: string;
+  type: 'sqlite' | 'duckdb' | 'postgres' | 'fide-jsonl' | null;
+  fidePath: string | null;
+  projectPath: string | null;
+  url: string | null;
+  updatedAt: string | null;
+}
+
+export async function getDaemonGraphs(): Promise<DaemonGraphRow[]> {
+  const res = await fetch(`${resolveDaemonOrigin()}/graphs`, {
+    method: 'GET',
+    headers: daemonJsonHeaders(),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Daemon graphs failed (${res.status}): ${text || res.statusText}`)
+  }
+  const json = (await res.json()) as { graphs?: DaemonGraphRow[] }
+  return json.graphs ?? []
+}

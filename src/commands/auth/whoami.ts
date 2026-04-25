@@ -43,7 +43,7 @@ export async function runAuthWhoami(args: string[]): Promise<number> {
 
   const auth = await resolveAuthSettings(flags);
   if (!auth) {
-    throw new Error("No Fide auth account resolved. Set FIDE_ACCOUNT_ID, set project .fide/settings.json with account.id, or run `fide login`.");
+    throw new Error("No Fide auth account resolved. Set FIDE_ACCOUNT_ID, set FIDE_DIR/_meta.json with account.id, or run `fide login`.");
   }
 
   const me = await createAuthApiClient(auth).me();

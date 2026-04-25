@@ -48,7 +48,7 @@ export const startCommand = defineCommand({
   notes: [
     "Sync URL resolution order: --sync-url, FIDE_SYNC_BASE_URL, then derived from the resolved API base URL.",
     "API base URL resolution uses --api-base-url where supported, then FIDE_API_BASE_URL, then the default API base URL.",
-    "Workspace targeting resolves from the current project's .fide/settings.json.",
+    "Workspace targeting resolves from FIDE_DIR/_meta.json.",
     "Starts a detached local sync agent and returns immediately.",
     "Current sync behavior is one-way: project .fide/graphs/<graphKey>/config.json files are the source of truth for hosted graph metadata.",
     "Graph sync projects only shared graph type upstream; local connection settings stay local.",

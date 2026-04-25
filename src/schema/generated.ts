@@ -1,4 +1,187 @@
 export const GENERATED_TYPE_SCHEMAS = {
+  "batches.load.output": {
+    "command": "fide schema --surface batches.load.output",
+    "format": "ts-type.v0",
+    "typeName": "BatchesLoadOutput",
+    "source": "src/commands/batches/load.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "command",
+        "graphKey",
+        "graphStoreType",
+        "batchesPath",
+        "candidateFileCount",
+        "loadedFileCount",
+        "updatedFileCount",
+        "replacedFileCount",
+        "statementCount",
+        "entries"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide batches load"
+          ]
+        },
+        "graphKey": {
+          "type": "string"
+        },
+        "graphStoreType": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "postgres"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "sqlite"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "duckdb"
+              ]
+            }
+          ]
+        },
+        "batchesPath": {
+          "type": "string"
+        },
+        "candidateFileCount": {
+          "type": "number"
+        },
+        "loadedFileCount": {
+          "type": "number"
+        },
+        "updatedFileCount": {
+          "type": "number"
+        },
+        "replacedFileCount": {
+          "type": "number"
+        },
+        "statementCount": {
+          "type": "number"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "batchRoot",
+              "statementCount",
+              "mode"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "batchRoot": {
+                "type": "string"
+              },
+              "statementCount": {
+                "type": "number"
+              },
+              "mode": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "inserted"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "updated"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "replaced"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "batches.write.output": {
+    "command": "fide schema --surface batches.write.output",
+    "format": "ts-type.v0",
+    "typeName": "BatchesWriteOutput",
+    "source": "src/commands/batches/write.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "command",
+        "mapPath",
+        "dataPath",
+        "outDir",
+        "written"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide batches write"
+          ]
+        },
+        "mapPath": {
+          "type": "string"
+        },
+        "dataPath": {
+          "type": "string"
+        },
+        "outDir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "written": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "inputPath",
+              "outputPath",
+              "statementCount",
+              "title"
+            ],
+            "properties": {
+              "inputPath": {
+                "type": "string"
+              },
+              "outputPath": {
+                "type": "string"
+              },
+              "statementCount": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "daemon.start.output": {
     "command": "fide schema --surface daemon.start.output",
     "format": "ts-type.v0",
@@ -644,6 +827,73 @@ export const GENERATED_TYPE_SCHEMAS = {
                 }
               ]
             }
+          }
+        }
+      }
+    }
+  },
+  "maps.guide.output": {
+    "command": "fide schema --surface maps.guide.output",
+    "format": "ts-type.v0",
+    "typeName": "MapsGuideOutput",
+    "source": "src/commands/maps/guide.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command",
+        "layers",
+        "statementRules"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "statements-guide.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide maps guide"
+          ]
+        },
+        "next": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {}
+            }
+          ]
+        },
+        "layers": {
+          "type": "object",
+          "properties": {}
+        },
+        "entities": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "unknown"
+              }
+            }
+          ]
+        },
+        "entity": {
+          "type": "unknown"
+        },
+        "statementRules": {
+          "type": "array",
+          "items": {
+            "type": "unknown"
           }
         }
       }

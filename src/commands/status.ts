@@ -13,6 +13,7 @@ import { printJson } from "../util/command/io.js";
 import { formatPretty } from "../util/command/pretty.js";
 import { okResponse } from "../util/command/response.js";
 import { readJsonFile, resolveFideContext, resolveSettingsPath } from "../lib/project/config/fide-dir.js";
+import { resolveProjectPointerSettings } from "../lib/project/config/project-pointer.js";
 import type { FideSettings } from "../lib/project/config/project-settings.js";
 import { readLiveSyncSession } from "../util/workspace/sync-session.js";
 import { resolveWorkspaceSelection } from "../util/workspace/workspace-settings.js";
@@ -72,7 +73,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   } catch (error) {
     authResolutionError = error instanceof Error ? error.message : String(error);
   }
-  const missingAccountHint = "No Fide auth account selected. Set FIDE_ACCOUNT_ID, set project .fide/settings.json with account.id, or run `fide login`.";
+  const missingAccountHint = "No Fide auth account selected. Set FIDE_ACCOUNT_ID, set FIDE_DIR/_meta.json with account.id, or run `fide login`.";
   let remote: { ok: boolean; error?: string | null } = { ok: false, error: null };
   if (resolvedAuth) {
     try {
@@ -86,25 +87,13 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   const fide = resolveFideContext(process.cwd());
   const settingsPath = resolveSettingsPath(process.cwd());
   const projectSettings = readJsonFile<FideSettings>(settingsPath);
+  const pointer = resolveProjectPointerSettings(process.cwd());
   const workspaceSelection = await resolveWorkspaceSelection();
   const syncSession = await readLiveSyncSession();
-  const projectSettingsRecord = projectSettings as Record<string, unknown> | null;
   const envApiBaseUrl = process.env.FIDE_API_BASE_URL?.trim() || null;
   const envSyncBaseUrl = process.env.FIDE_SYNC_BASE_URL?.trim() || null;
   const envWorkspaceUrl = process.env.FIDE_WORKSPACE_URL?.trim() || null;
   const envAccountId = process.env.FIDE_ACCOUNT_ID?.trim() || null;
-  const projectAccount = projectSettingsRecord?.account && typeof projectSettingsRecord.account === "object"
-    ? projectSettingsRecord.account as Record<string, unknown>
-    : null;
-  const projectWorkspace = projectSettingsRecord?.workspace && typeof projectSettingsRecord.workspace === "object"
-    ? projectSettingsRecord.workspace as Record<string, unknown>
-    : null;
-  const projectAccountId = typeof (projectAccount?.id ?? projectSettingsRecord?.accountId) === "string"
-    ? String(projectAccount?.id ?? projectSettingsRecord?.accountId)
-    : null;
-  const projectWorkspaceId = typeof (projectWorkspace?.id ?? projectSettingsRecord?.workspaceId) === "string"
-    ? String(projectWorkspace?.id ?? projectSettingsRecord?.workspaceId)
-    : null;
 
   const payload = okResponse("status.v1", {
     machine: {
@@ -136,14 +125,19 @@ export async function runStatusCommand(args: string[]): Promise<number> {
       settingsPath,
       settingsPresent: existsSync(settingsPath),
       graphCount: Object.keys(projectSettings?.graphs ?? {}).length,
+      pointerPath: pointer?.path ?? null,
       settings: omitNullFields({
-        account: projectAccountId ? {
-          id: projectAccountId,
-          ...(typeof projectAccount?.name === "string" ? { name: projectAccount.name } : {}),
+        account: pointer?.accountId ? {
+          id: pointer.accountId,
+          ...(pointer.accountName ? { name: pointer.accountName } : {}),
         } : null,
-        workspace: projectWorkspaceId ? {
-          id: projectWorkspaceId,
-          ...(typeof projectWorkspace?.name === "string" ? { name: projectWorkspace.name } : {}),
+        workspace: pointer?.workspaceId ? {
+          id: pointer.workspaceId,
+          ...(pointer.workspaceName ? { name: pointer.workspaceName } : {}),
+        } : null,
+        daemon: pointer?.daemonId ? {
+          id: pointer.daemonId,
+          ...(pointer.daemonName ? { name: pointer.daemonName } : {}),
         } : null,
       }),
     },
@@ -173,7 +167,7 @@ export async function runStatusCommand(args: string[]): Promise<number> {
   } else {
     if (!resolvedAuth && !authResolutionError) {
       console.log("No Fide auth account selected.");
-      console.log("Use FIDE_ACCOUNT_ID, project .fide/settings.json with account.id, or run `fide login`.");
+      console.log("Use FIDE_ACCOUNT_ID, FIDE_DIR/_meta.json with account.id, or run `fide login`.");
       console.log("");
     }
     console.log(formatPretty("status.v1", payload) ?? JSON.stringify(payload, null, 2));

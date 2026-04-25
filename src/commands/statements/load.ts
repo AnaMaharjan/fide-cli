@@ -358,12 +358,14 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     if (target.type === "sqlite") {
       await updateStatementBatchMetadataInSqlite(target.file, {
         batch: candidate.batch,
+        localWorkspacePath: candidate.file,
         ...(candidate.title ? { title: candidate.title } : {}),
         ...(candidate.description ? { description: candidate.description } : {}),
       });
     } else if (target.type === "duckdb") {
       await updateStatementBatchMetadataInDuckdb(target.file, {
         batch: candidate.batch,
+        localWorkspacePath: candidate.file,
         ...(candidate.title ? { title: candidate.title } : {}),
         ...(candidate.description ? { description: candidate.description } : {}),
       });
@@ -372,6 +374,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
         databaseUrl: target.databaseUrl,
         schema: target.schema,
         batch: candidate.batch,
+        localWorkspacePath: candidate.file,
         ...(candidate.title ? { title: candidate.title } : {}),
         ...(candidate.description ? { description: candidate.description } : {}),
       });
@@ -397,6 +400,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
           const rows = transformStatementBatchToGraphRows({
             batch: candidate.batch,
+            localWorkspacePath: candidate.file,
             ...(candidate.title ? { title: candidate.title } : {}),
             ...(candidate.description ? { description: candidate.description } : {}),
             statements: parsedBatch.statements,
@@ -430,6 +434,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
           const rows = transformStatementBatchToGraphRows({
             batch: candidate.batch,
+            localWorkspacePath: candidate.file,
             ...(candidate.title ? { title: candidate.title } : {}),
             ...(candidate.description ? { description: candidate.description } : {}),
             statements: parsedBatch.statements,
@@ -468,6 +473,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
           const rows = transformStatementBatchToGraphRows({
             batch: candidate.batch,
+            localWorkspacePath: candidate.file,
             ...(candidate.title ? { title: candidate.title } : {}),
             ...(candidate.description ? { description: candidate.description } : {}),
             statements: parsedBatch.statements,

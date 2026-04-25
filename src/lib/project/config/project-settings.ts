@@ -13,8 +13,8 @@ import { type QueryCatalogSettings, validateQueryCatalogSettings } from "./query
 
 export const GRAPH_STATEMENTS_TABLE = "statements";
 export const GRAPH_REFERENCE_IDENTIFIERS_TABLE = "reference_identifiers";
-export const GRAPH_STATEMENT_BATCHES_TABLE = "statement_batches";
-export const GRAPH_BATCHES_TABLE = "batches";
+export const GRAPH_STATEMENT_BATCHES_TABLE = "batches";
+export const GRAPH_BATCHES_TABLE = "statement_batches";
 
 type PostgresConnectionSettings = {
   url?: string;

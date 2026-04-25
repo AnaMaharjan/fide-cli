@@ -37,6 +37,7 @@ function helpText(): string {
             "  fide schema [--surface <surface>]",
             "  fide query <command> [flags]",
             "  fide statements <command> [flags]",
+            "  fide batches <command> [flags]",
             "  fide maps <command> [flags]",
           ],
         },
@@ -58,6 +59,7 @@ function helpText(): string {
             "  graph    Local graph work and hosted graph projection",
             "  query    Local query authoring and execution",
             "  statements Local statement batch and draft authoring",
+            "  batches  Map source data into statement batch JSON files",
             "  maps     Install and inspect local map blocks/components",
             "  workspace Workspace info",
             "  docs     Resolve local docs pointers",
@@ -81,6 +83,7 @@ function helpText(): string {
             "  fide graph list",
             "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
             "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
+            "  fide batches write --map .fide/maps/blocks/person/social-profile/linkedin.json --data .fide/data/linkedin",
             "  fide maps add http://localhost:2996/r/fide-map-block-linkedin-profile.json",
             "  fide workspace list",
           ],
@@ -188,6 +191,10 @@ export async function runCli(argv: string[]): Promise<number> {
       case "maps": {
         const { runMapsCommand } = await import("./commands/maps/index.js");
         return await runMapsCommand([command, ...rest].filter((value): value is string => Boolean(value)));
+      }
+      case "batches": {
+        const { runBatchesCommand } = await import("./commands/batches/index.js");
+        return await runBatchesCommand([command, ...rest].filter((value): value is string => Boolean(value)));
       }
       case "workspace": {
         const { runWorkspaceCommand } = await import("./commands/workspace/index.js");

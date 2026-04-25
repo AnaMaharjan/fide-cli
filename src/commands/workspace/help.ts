@@ -27,7 +27,7 @@ export function workspaceCommandHelp(): string {
         title: "Notes",
         items: [
           "  - Use `workspace` for shared hosted workspace inspection.",
-          "  - `workspace get` resolves the workspace bound in the current project's `.fide/settings.json`.",
+          "  - `workspace get` resolves the workspace bound in `FIDE_DIR/_meta.json`.",
           "  - Hosted auth resolves from the current project account or `FIDE_ACCOUNT_ID`.",
           "  - Hosted IDs are typed: use `workspace_*` for workspaces.",
         ],

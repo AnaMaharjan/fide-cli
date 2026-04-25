@@ -412,7 +412,7 @@ async function materializeDeclaredEntityRecords(
   const publicBaseUrl = settings?.workspace?.public_base_url;
   if (!publicBaseUrl) {
     throw new Error(
-      "Draft includes entity_declarations, but workspace .fide/settings.json is missing workspace.public_base_url.",
+      "Draft includes entity_declarations, but FIDE_DIR/_meta.json is missing workspace.public_base_url.",
     );
   }
 

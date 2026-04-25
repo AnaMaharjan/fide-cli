@@ -43,7 +43,7 @@ export async function runAuthLogout(args: string[]): Promise<number> {
 
   const accountSelection = await resolveSelectedAccount(flags);
   if (!accountSelection) {
-    throw new Error("No account resolved for logout. Set FIDE_ACCOUNT_ID, set project .fide/settings.json with account.id, or run `fide login`.");
+    throw new Error("No account resolved for logout. Set FIDE_ACCOUNT_ID, set FIDE_DIR/_meta.json with account.id, or run `fide login`.");
   }
 
   await clearStoredAuthSettings(accountSelection.accountId);

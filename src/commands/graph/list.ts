@@ -7,7 +7,8 @@ import {
 } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { listLocalProjectGraphs } from "../../lib/project/config/graph-config.js";
+import { getDaemonGraphs } from "../../util/daemon/daemon-http.js";
+import { resolveFideRoot } from "../../lib/project/config/fide-dir.js";
 
 export const graphListCommand = defineCommand({
   surface: "graph.list",
@@ -41,14 +42,11 @@ export async function runGraphList(args: string[]): Promise<number> {
     return 0;
   }
 
-  const local = listLocalProjectGraphs();
+  const graphs = await getDaemonGraphs();
   const payload = {
     targetScope: "local" as const,
-    root: local.root,
-    graphs: local.graphs.map(({ graphKey, graph }) => ({
-      graphKey,
-      ...graph,
-    })),
+    root: resolveFideRoot(),
+    graphs,
   };
 
   if (useJson) {

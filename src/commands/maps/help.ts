@@ -1,5 +1,6 @@
 import { renderHelp } from "../../util/command/help/index.js";
 import { mapsAddCommand } from "./add.js";
+import { mapsGuideCommand } from "./guide.js";
 import { mapsGetCommand } from "./get.js";
 import { mapsListCommand } from "./list.js";
 import { mapsRemoveCommand } from "./remove.js";
@@ -16,6 +17,7 @@ export function mapsCommandHelp(): string {
         title: "Commands",
         items: [
           `  add       ${mapsAddCommand.summary}`,
+          `  guide     ${mapsGuideCommand.summary}`,
           `  list      ${mapsListCommand.summary}`,
           `  get       ${mapsGetCommand.summary}`,
           `  validate  ${mapsValidateCommand.summary}`,
@@ -26,6 +28,7 @@ export function mapsCommandHelp(): string {
         title: "Workflows",
         items: [
           "  fide maps add http://localhost:2996/r/fide-map-block-linkedin-profile.json",
+          "  fide maps guide --entity Person",
           "  fide maps list --kind block",
           "  fide maps get blocks.person.social-profile.linkedin",
           "  fide maps validate",

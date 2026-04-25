@@ -4,12 +4,15 @@ import { authLogoutCommand } from "./auth/logout.js";
 import { authWhoamiCommand } from "./auth/whoami.js";
 import { docsCommand } from "./docs.js";
 import { daemonStartCommand, daemonStopCommand } from "./daemon.js";
+import { batchesLoadCommand } from "./batches/load.js";
+import { batchesWriteCommand } from "./batches/write.js";
 import { pluginInstallCommand } from "./plugin/install.js";
 import { graphConnectCommand } from "./graph/connect.js";
 import { graphGetCommand } from "./graph/get.js";
 import { graphListCommand } from "./graph/list.js";
 import { graphStatusCommand } from "./graph/status.js";
 import { mapsAddCommand } from "./maps/add.js";
+import { mapsGuideCommand } from "./maps/guide.js";
 import { mapsGetCommand } from "./maps/get.js";
 import { mapsListCommand } from "./maps/list.js";
 import { mapsRemoveCommand } from "./maps/remove.js";
@@ -49,11 +52,14 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   queryListCommand,
   queryGetCommand,
   querySaveCommand,
+  batchesLoadCommand,
+  batchesWriteCommand,
   statementsWriteCommand,
   statementsDraftCommand,
   statementsLoadCommand,
   statementsGuideCommand,
   mapsAddCommand,
+  mapsGuideCommand,
   mapsListCommand,
   mapsGetCommand,
   mapsValidateCommand,
