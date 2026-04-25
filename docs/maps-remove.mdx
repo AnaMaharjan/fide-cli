@@ -1,0 +1,9 @@
+---
+title: "fide maps remove"
+description: "fide maps remove <map-key> [--pretty|-p]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide maps remove","description":"fide maps remove <map-key> [--pretty|-p]","usage":["fide maps remove <map-key> [--pretty|-p]"],"arguments":[{"name":"<map-key>","type":"string","required":true}],"options":[{"name":"--pretty","type":"boolean","required":false,"description":"Human-readable output"}],"outputFields":[],"subcommands":[],"schemas":[{"surface":"maps.remove","command":"fide maps remove","params":[{"name":"--pretty","type":"boolean","description":"Human-readable output"}],"outputFields":[],"json":"{\n  \"command\": \"fide maps remove\",\n  \"params\": [\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {}\n}"}],"examples":[{"command":"fide maps remove blocks.person.social-profile.linkedin"}],"notes":[{"title":"Notes","body":"The map key determines the path removed under FIDE_DIR/maps."}]}} />

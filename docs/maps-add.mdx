@@ -1,0 +1,9 @@
+---
+title: "fide maps add"
+description: "fide maps add <registry-item-url-or-file> [--pretty|-p]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide maps add","description":"fide maps add <registry-item-url-or-file> [--pretty|-p]","usage":["fide maps add <registry-item-url-or-file> [--pretty|-p]"],"arguments":[{"name":"<registry-item-url-or-file>","type":"string","required":true}],"options":[{"name":"--pretty","type":"boolean","required":false,"description":"Human-readable output"}],"outputFields":[],"subcommands":[],"schemas":[{"surface":"maps.add","command":"fide maps add","params":[{"name":"--pretty","type":"boolean","description":"Human-readable output"}],"outputFields":[],"json":"{\n  \"command\": \"fide maps add\",\n  \"params\": [\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {}\n}"}],"examples":[{"command":"fide maps add http://localhost:2996/r/fide-map-block-linkedin-profile.json"},{"command":"fide maps add apps/map-registry/public/r/fide-map-component-identity-named-entity.json"}],"notes":[{"title":"Notes","body":"Only registry:item documents with registry:file entries are supported.\nRegistry file targets must be under ~/.fide/maps/blocks or ~/.fide/maps/components.\n~/.fide is resolved with FIDE_DIR and project .fide discovery, not the current project root."}]}} />

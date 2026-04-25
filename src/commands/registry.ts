@@ -9,6 +9,11 @@ import { graphConnectCommand } from "./graph/connect.js";
 import { graphGetCommand } from "./graph/get.js";
 import { graphListCommand } from "./graph/list.js";
 import { graphStatusCommand } from "./graph/status.js";
+import { mapsAddCommand } from "./maps/add.js";
+import { mapsGetCommand } from "./maps/get.js";
+import { mapsListCommand } from "./maps/list.js";
+import { mapsRemoveCommand } from "./maps/remove.js";
+import { mapsValidateCommand } from "./maps/validate.js";
 import { queryGetCommand } from "./query/get.js";
 import { queryListCommand } from "./query/list.js";
 import { queryRunCommand } from "./query/run.js";
@@ -48,6 +53,11 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   statementsDraftCommand,
   statementsLoadCommand,
   statementsGuideCommand,
+  mapsAddCommand,
+  mapsListCommand,
+  mapsGetCommand,
+  mapsValidateCommand,
+  mapsRemoveCommand,
   graphStatusCommand,
   graphListCommand,
   graphGetCommand,

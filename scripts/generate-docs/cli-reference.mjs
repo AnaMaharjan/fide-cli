@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, mkdtempSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,6 +49,10 @@ const PAGE_GROUPS = [
     match: (slug) => slug === "statements" || slug.startsWith("statements-"),
   },
   {
+    title: "Maps",
+    match: (slug) => slug === "maps" || slug.startsWith("maps-"),
+  },
+  {
     title: "Workspace",
     match: (slug) =>
       (slug === "workspace" || slug.startsWith("workspace-"))
@@ -88,12 +93,22 @@ function run(command, args, options = {}) {
 }
 
 function runCapture(command, args) {
-  const result = run(command, args, {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
+  console.log(`> ${[command, ...args].join(" ")}`);
+  const tmpRoot = mkdtempSync(resolve(tmpdir(), "fide-cli-docs-"));
+  const stdoutPath = resolve(tmpRoot, "stdout.txt");
+  const stdoutFd = openSync(stdoutPath, "w");
+  const result = spawnSync(command, args, {
+    cwd: REPO_ROOT,
+    env: process.env,
+    stdio: ["ignore", stdoutFd, "inherit"],
   });
-
-  return result.stdout ?? "";
+  closeSync(stdoutFd);
+  const output = readFileSync(stdoutPath, "utf8");
+  rmSync(tmpRoot, { recursive: true, force: true });
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+  return output;
 }
 
 function runCaptureAllowFailure(command, args) {

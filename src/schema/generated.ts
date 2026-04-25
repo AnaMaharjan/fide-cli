@@ -458,6 +458,421 @@ export const GENERATED_TYPE_SCHEMAS = {
       }
     }
   },
+  "maps.add.output": {
+    "command": "fide schema --surface maps.add.output",
+    "format": "ts-type.v0",
+    "typeName": "MapsAddOutput",
+    "source": "src/commands/maps/add.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "scope",
+        "command",
+        "fideDir",
+        "source",
+        "installed",
+        "dependencyCount"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "maps.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide maps add"
+          ]
+        },
+        "fideDir": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "mapKey",
+              "kind",
+              "title",
+              "path"
+            ],
+            "properties": {
+              "mapKey": {
+                "type": "string"
+              },
+              "kind": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "block"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "component"
+                    ]
+                  }
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "dependencyCount": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "maps.get.output": {
+    "command": "fide schema --surface maps.get.output",
+    "format": "ts-type.v0",
+    "typeName": "MapsGetOutput",
+    "source": "src/commands/maps/get.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "scope",
+        "command",
+        "fideDir",
+        "mapKey",
+        "kind",
+        "path",
+        "document"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "maps.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide maps get"
+          ]
+        },
+        "fideDir": {
+          "type": "string"
+        },
+        "mapKey": {
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "block"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "component"
+              ]
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "document": {
+          "type": "object",
+          "required": [
+            "version",
+            "mapKey",
+            "title"
+          ],
+          "properties": {
+            "version": {
+              "type": "unknown"
+            },
+            "mapKey": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "uses": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "component": {
+                        "type": "unknown"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "maps.list.output": {
+    "command": "fide schema --surface maps.list.output",
+    "format": "ts-type.v0",
+    "typeName": "MapsListOutput",
+    "source": "src/commands/maps/list.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "scope",
+        "command",
+        "fideDir",
+        "kind",
+        "maps"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "maps.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide maps list"
+          ]
+        },
+        "fideDir": {
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "block"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "component"
+              ]
+            }
+          ]
+        },
+        "maps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "mapKey",
+              "kind",
+              "title",
+              "path"
+            ],
+            "properties": {
+              "mapKey": {
+                "type": "string"
+              },
+              "kind": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "block"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "component"
+                    ]
+                  }
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "maps.remove.output": {
+    "command": "fide schema --surface maps.remove.output",
+    "format": "ts-type.v0",
+    "typeName": "MapsRemoveOutput",
+    "source": "src/commands/maps/remove.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "scope",
+        "command",
+        "fideDir",
+        "mapKey",
+        "kind",
+        "path",
+        "removed"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "maps.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide maps remove"
+          ]
+        },
+        "fideDir": {
+          "type": "string"
+        },
+        "mapKey": {
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "block"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "component"
+              ]
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "removed": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "maps.validate.output": {
+    "command": "fide schema --surface maps.validate.output",
+    "format": "ts-type.v0",
+    "typeName": "MapsValidateOutput",
+    "source": "src/commands/maps/validate.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "scope",
+        "command",
+        "fideDir",
+        "valid",
+        "maps",
+        "errors"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "maps.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide maps validate"
+          ]
+        },
+        "fideDir": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "maps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "mapKey",
+              "kind",
+              "title",
+              "path"
+            ],
+            "properties": {
+              "mapKey": {
+                "type": "string"
+              },
+              "kind": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "block"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "component"
+                    ]
+                  }
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "message"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "plugin.install.output": {
     "command": "fide schema --surface plugin.install.output",
     "format": "ts-type.v0",

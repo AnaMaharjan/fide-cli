@@ -32,6 +32,12 @@
     "statements-guide",
     "statements-load",
     "statements-write",
+    "--- Maps ---",
+    "maps-add",
+    "maps-get",
+    "maps-list",
+    "maps-remove",
+    "maps-validate",
     "--- Workspace ---",
     "workspace-get",
     "workspace-list"

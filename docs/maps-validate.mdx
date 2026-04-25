@@ -1,0 +1,9 @@
+---
+title: "fide maps validate"
+description: "fide maps validate [--pretty|-p]"
+full: true
+---
+
+import { CLICommandPageInteractive } from '@/components/cli-layout/interactive/cli-command-page-interactive';
+
+<CLICommandPageInteractive data={{"name":"fide maps validate","description":"fide maps validate [--pretty|-p]","usage":["fide maps validate [--pretty|-p]"],"arguments":[],"options":[{"name":"--pretty","type":"boolean","required":false,"description":"Human-readable output"}],"outputFields":[],"subcommands":[],"schemas":[{"surface":"maps.validate","command":"fide maps validate","params":[{"name":"--pretty","type":"boolean","description":"Human-readable output"}],"outputFields":[],"json":"{\n  \"command\": \"fide maps validate\",\n  \"params\": [\n    {\n      \"name\": \"pretty\",\n      \"type\": \"boolean\",\n      \"description\": \"Human-readable output\"\n    }\n  ],\n  \"output\": {}\n}"}],"examples":[{"command":"fide maps validate"},{"command":"fide maps validate --pretty"}],"notes":[{"title":"Notes","body":"Every installed map must parse as JSON and include version, mapKey, and title.\nEvery non-builtin uses[].component reference must resolve to an installed component."}]}} />
