@@ -6,7 +6,7 @@ import type { GraphStoreSettings } from "./project-settings.js";
 
 export type LocalProjectGraphRecord = GraphStoreSettings;
 export type HostedWorkspaceGraphInput = {
-  type: "postgres" | "sqlite" | "fide-jsonl";
+  type: "postgres" | "sqlite" | "duckdb" | "fide-jsonl";
 };
 
 export type HostedWorkspaceGraphRecord = HostedWorkspaceGraphInput & {
@@ -114,7 +114,7 @@ export function projectLocalGraphToHostedGraph(
   const type = connection && typeof connection === "object" && !Array.isArray(connection)
     ? (connection as { type?: unknown }).type
     : ("type" in graph ? graph.type : undefined);
-  if (type !== "postgres" && type !== "sqlite" && type !== "fide-jsonl") {
+  if (type !== "postgres" && type !== "sqlite" && type !== "duckdb" && type !== "fide-jsonl") {
     return null;
   }
   return {

@@ -15,8 +15,12 @@ import { printJson } from "../../util/command/io.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { okResponse } from "../../util/command/response.js";
-import { createPostgresGraphStorageAdapter } from "../../lib/graph/etl/initialize/adapters/postgres.js";
-import { initializeSqliteGraphStorage } from "../../lib/graph/etl/initialize/adapters/sqlite.js";
+import {
+  createPgClient,
+  createPostgresGraphStorageAdapter,
+  initializeDuckdbGraphStorage,
+  initializeSqliteGraphStorage,
+} from "@chris-test/graph";
 import {
   readLocalProjectGraph,
   writeLocalProjectGraph,
@@ -24,7 +28,6 @@ import {
 } from "../../lib/project/config/graph-config.js";
 import { resolveFideContext, resolveGraphConfigPath } from "../../lib/project/config/fide-dir.js";
 import { resolveStoreTarget, validateGraphStoreConfig } from "../../lib/project/config/project-settings.js";
-import { createPgClient } from "../../lib/graph/clients/postgres.js";
 
 export const graphConnectCommand = defineCommand({
   surface: "graph.connect",
@@ -69,6 +72,8 @@ export const graphConnectCommand = defineCommand({
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"project-path\":\"tmp/local-graph.sqlite\"}'",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize",
     "fide graph connect --graph-key local --connection '{\"type\":\"sqlite\",\"fide-path\":\"graphs/local/graph.sqlite\"}' --initialize --initialize-options '{\"dangerously_overwrite\":true}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"duckdb\",\"fide-path\":\"graphs/local/graph.duckdb\"}'",
+    "fide graph connect --graph-key local --connection '{\"type\":\"duckdb\",\"fide-path\":\"graphs/local/graph.duckdb\"}' --initialize",
   ],
   values: [
     {
@@ -133,6 +138,27 @@ export const graphConnectCommand = defineCommand({
         },
       ],
     },
+    {
+      label: '<connection-json-type> = "duckdb"',
+      children: [
+        {
+          label: "<connection-json-value>",
+          requires: "one of: `fide-path` or `project-path`, ending in `.duckdb`",
+          children: [
+            {
+              label: "fide-path",
+              value: "string",
+              suggested: '"/graphs/<graph-key>/graph.duckdb"',
+            },
+            {
+              label: "project-path",
+              value: "string",
+              suggested: '"fide-graphs/<graph-key>/graph.duckdb"',
+            },
+          ],
+        },
+      ],
+    },
   ],
 
   notes: [
@@ -181,14 +207,14 @@ function localGraphsEqual(left: LocalProjectGraphRecord | null, right: LocalProj
   return JSON.stringify(canonicalizeValue(left)) === JSON.stringify(canonicalizeValue(right));
 }
 
-function assertGraphConnectType(value: string | null | undefined): "postgres" | "sqlite" | null {
-  if (value === "postgres" || value === "sqlite") {
+function assertGraphConnectType(value: string | null | undefined): "postgres" | "sqlite" | "duckdb" | null {
+  if (value === "postgres" || value === "sqlite" || value === "duckdb") {
     return value;
   }
   return null;
 }
 
-function readExistingGraphType(existing: LocalProjectGraphRecord | null): "postgres" | "sqlite" | null {
+function readExistingGraphType(existing: LocalProjectGraphRecord | null): "postgres" | "sqlite" | "duckdb" | null {
   if (!existing || !existing.connection || typeof existing.connection !== "object" || Array.isArray(existing.connection)) {
     return null;
   }
@@ -290,6 +316,32 @@ function resolvePostgresConnection(
   };
 }
 
+function resolveDuckdbConnection(
+  connectionInput: unknown,
+  existingConnection: unknown,
+): { type: "duckdb"; "fide-path"?: string; "project-path"?: string } {
+  const nextConnection = connectionInput ?? existingConnection ?? null;
+  if (!nextConnection || typeof nextConnection !== "object" || Array.isArray(nextConnection)) {
+    throw new Error(
+      "Duckdb graphs require --connection '{\"fide-path\":\"...\"}' or '{\"project-path\":\"...\"}' when creating or updating without an existing connection object.",
+    );
+  }
+  const connection = nextConnection as Record<string, unknown>;
+  if (connection.type !== undefined && connection.type !== "duckdb") {
+    throw new Error("Duckdb graph connection JSON must include `type: \"duckdb\"` when `type` is provided.");
+  }
+  const fidePath = typeof connection["fide-path"] === "string" ? connection["fide-path"] : null;
+  const projectPath = typeof connection["project-path"] === "string" ? connection["project-path"] : null;
+  if ((!fidePath || fidePath.trim().length === 0) && (!projectPath || projectPath.trim().length === 0)) {
+    throw new Error("Duckdb graph connection JSON must include a non-empty `fide-path` or `project-path` string.");
+  }
+  return {
+    type: "duckdb",
+    ...(fidePath && fidePath.trim().length > 0 ? { "fide-path": fidePath } : {}),
+    ...(projectPath && projectPath.trim().length > 0 ? { "project-path": projectPath } : {}),
+  };
+}
+
 function resolveSqliteConnection(
   connectionInput: unknown,
   existingConnection: unknown,
@@ -363,6 +415,18 @@ async function readGraphInput(args: string[]): Promise<{
     };
   }
 
+  if (type === "duckdb") {
+    const connection = resolveDuckdbConnection(connectionInput, existing?.connection);
+    return {
+      flags,
+      graphKey,
+      graph: {
+        ...Object.fromEntries(Object.entries(existing ?? {}).filter(([key]) => key !== "type")),
+        connection,
+      },
+    };
+  }
+
   const connection = resolveSqliteConnection(connectionInput, existing?.connection);
 
   return {
@@ -401,19 +465,30 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
     await writeLocalProjectGraph(graphKey, graph);
   }
 
-  let initialized: { type: "sqlite"; file: string } | { type: "postgres"; schema: string } | null = null;
+  let initialized:
+    | { type: "sqlite"; file: string }
+    | { type: "duckdb"; file: string }
+    | { type: "postgres"; schema: string }
+    | null = null;
   if (initialize && !dryRun) {
     const connection = graph.connection;
+    const resolveFileBackedPath = (conn: { "fide-path"?: string; "project-path"?: string }): string | null => {
+      if (typeof conn["fide-path"] === "string") {
+        return conn["fide-path"].startsWith("/")
+          ? conn["fide-path"]
+          : resolve(fide.fideDir, conn["fide-path"]);
+      }
+      if (typeof conn["project-path"] === "string") {
+        return conn["project-path"].startsWith("/")
+          ? conn["project-path"]
+          : resolve(fide.root, conn["project-path"]);
+      }
+      return null;
+    };
     if (connection && typeof connection === "object" && !Array.isArray(connection) && connection.type === "sqlite") {
-      const sqliteFile = typeof connection["fide-path"] === "string"
-        ? (connection["fide-path"].startsWith("/")
-          ? connection["fide-path"]
-          : resolve(fide.fideDir, connection["fide-path"]))
-        : (typeof connection["project-path"] === "string"
-          ? (connection["project-path"].startsWith("/")
-            ? connection["project-path"]
-            : resolve(fide.root, connection["project-path"]))
-          : null);
+      const sqliteFile = resolveFileBackedPath(
+        connection as { "fide-path"?: string; "project-path"?: string },
+      );
       if (!sqliteFile) {
         throw new Error("Sqlite graph connection is missing both `fide-path` and `project-path`.");
       }
@@ -424,6 +499,20 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
         file: sqliteFile,
       });
       initialized = { type: "sqlite", file: sqliteFile };
+    } else if (connection && typeof connection === "object" && !Array.isArray(connection) && connection.type === "duckdb") {
+      const duckdbFile = resolveFileBackedPath(
+        connection as { "fide-path"?: string; "project-path"?: string },
+      );
+      if (!duckdbFile) {
+        throw new Error("Duckdb graph connection is missing both `fide-path` and `project-path`.");
+      }
+      if (initializeOptions.dangerously_overwrite) {
+        await rm(duckdbFile, { force: true });
+      }
+      await initializeDuckdbGraphStorage({
+        file: duckdbFile,
+      });
+      initialized = { type: "duckdb", file: duckdbFile };
     } else if (connection && typeof connection === "object" && !Array.isArray(connection) && connection.type === "postgres") {
       const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
       if (target.type !== "postgres") {
@@ -450,7 +539,7 @@ export async function runGraphConnectCommand(args: string[]): Promise<number> {
       }
       initialized = { type: "postgres", schema: target.schema };
     } else {
-      throw new Error("`fide graph connect --initialize` currently supports sqlite and postgres graphs only.");
+      throw new Error("`fide graph connect --initialize` currently supports sqlite, duckdb, and postgres graphs only.");
     }
   }
 

@@ -5,7 +5,27 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { parseGraphStatementBatchJsonl } from "@chris-test/graph";
+import {
+  clearSourceDraftRootPendingReplacementInMetaFile,
+  collectSupersededBatchesFromStatementsDayMeta,
+  deleteStatementBatchByBatchFromDuckdb,
+  deleteStatementBatchByBatchFromPostgres,
+  deleteStatementBatchByBatchFromSqlite,
+  listStatementBatchCandidates,
+  listStatementsDayMetaPaths,
+  loadStatementBatchToDuckdb,
+  loadStatementBatchToPostgres,
+  loadStatementBatchToSqlite,
+  parseGraphStatementBatchJsonl,
+  queryAllBatchesInDuckdb,
+  queryAllBatchesInPostgres,
+  queryAllBatchesInSqlite,
+  queryExistingBatches,
+  transformStatementBatchToGraphRows,
+  updateStatementBatchMetadataInDuckdb,
+  updateStatementBatchMetadataInPostgres,
+  updateStatementBatchMetadataInSqlite,
+} from "@chris-test/graph";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -16,28 +36,6 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
-import { listStatementBatchCandidates } from "../../lib/graph/etl/extract/listStatementBatches.js";
-import {
-  clearSourceDraftRootPendingReplacementInMetaFile,
-  collectSupersededRootsFromStatementsDayMeta,
-  listStatementsDayMetaPaths,
-} from "../../lib/graph/etl/extract/statementsDayMeta.js";
-import {
-  deleteStatementBatchByRootFromPostgres,
-  loadStatementBatchToPostgres,
-  updateStatementBatchRootMetadataInPostgres,
-} from "../../lib/graph/etl/load/adapters/postgres.js";
-import {
-  deleteStatementBatchByRootFromSqlite,
-  loadStatementBatchToSqlite,
-  updateStatementBatchRootMetadataInSqlite,
-} from "../../lib/graph/etl/load/adapters/sqlite.js";
-import {
-  queryAllRootsInPostgres,
-  queryAllRootsInSqlite,
-  queryExistingRoots,
-} from "../../lib/graph/etl/load/queryExistingRoots.js";
-import { transformStatementBatchToGraphRows } from "../../lib/graph/etl/transform/statementBatchToGraphRows.js";
 import { resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
 import { getLocalFideWarnings } from "../query/shared.js";
 
@@ -49,10 +47,10 @@ export const statementsLoadCommand = defineCommand({
   usage: [
     "fide statements load --graph-key <graph-key>",
     "fide statements load --graph-key <graph-key> --from-date 2026-03-01 --to-date 2026-03-31",
-    "fide statements load --graph-key <graph-key> --replace-roots",
-    "fide statements load --graph-key <graph-key> --root-batch-count 250",
+    "fide statements load --graph-key <graph-key> --replace-batches",
+    "fide statements load --graph-key <graph-key> --batch-chunk-count 250",
   ],
-  paramOrder: ["graph-key", "from-date", "to-date", "root-batch-count", "replace-roots", "pretty"],
+  paramOrder: ["graph-key", "from-date", "to-date", "batch-chunk-count", "replace-batches", "pretty"],
   params: {
     "graph-key": {
       kind: "string",
@@ -70,29 +68,29 @@ export const statementsLoadCommand = defineCommand({
       description: "End date for local statement batches to load",
       valueLabel: "<YYYY-MM-DD>",
     },
-    "root-batch-count": {
+    "batch-chunk-count": {
       kind: "string",
-      description: "Batch size for root dedup queries before parsing files",
+      description: "Chunk size for statement-batch id dedup queries before parsing files",
       valueLabel: "<count>",
     },
-    "replace-roots": {
+    "replace-batches": {
       kind: "boolean",
       description:
-        "Before loading, purge graph rows listed in `sourceDraftRootPendingReplacement` (string or array) inside dated `_meta.json` (honors the date range), clear those fields, then purge graph roots that have no `_meta.json` key and no local `.jsonl` batch",
+        "Before loading, purge graph rows listed in `sourceDraftRootPendingReplacement` (string or array) inside dated `_meta.json` (honors the date range), clear those fields, then purge statement batches that have no `_meta.json` key and no local `.jsonl` batch",
     },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
     "fide statements load --graph-key primary",
     "fide statements load --graph-key primary --from-date 2026-03-01 --to-date 2026-03-31",
-    "fide statements load --graph-key primary --replace-roots",
-    "fide statements load --graph-key primary --root-batch-count 250",
+    "fide statements load --graph-key primary --replace-batches",
+    "fide statements load --graph-key primary --batch-chunk-count 250",
   ],
   notes: [
     "Loads canonical local statements from this project's `.fide/statements/` into the target graph.",
     "Date filters are inclusive and apply to the dated local statement batch layout.",
-    "Batch roots are checked in chunks before parsing files so already-loaded batches can be skipped efficiently.",
-    "With `--replace-roots`, reconcile `fide statements write --replace-draft`: remove superseded roots (including every batch that shared the draft path), clear pending markers in `_meta.json`, purge orphaned graph batches, then ingest.",
+    "Statement batch ids are checked in chunks before parsing files so already-loaded batches can be skipped efficiently.",
+    "With `--replace-batches`, reconcile `fide statements write --replace-draft`: remove superseded statement batches (including every batch that shared the draft path), clear pending markers in `_meta.json`, purge orphaned graph batches, then ingest.",
   ],
 });
 
@@ -104,23 +102,23 @@ export type StatementsLoadOutput = {
   scope: typeof STATEMENTS_LOAD_SCOPE;
   command: "fide statements load";
   graphKey: string;
-  graphStoreType: "postgres" | "sqlite";
+  graphStoreType: "postgres" | "sqlite" | "duckdb";
   statementsDir: string;
   candidateFileCount: number;
   loadedFileCount: number;
-  skippedRootCount: number;
+  skippedBatchCount: number;
   statementCount: number;
-  rootBatchCount: number;
+  batchChunkCount: number;
   fromDate?: string;
   toDate?: string;
-  /** Whether `--replace-roots` was passed. */
-  replaceRoots: boolean;
-  /** Roots purged from the graph after reading `_meta.json` pending replacement fields. */
-  supersededRootsPurged?: number;
+  /** Whether `--replace-batches` was passed. */
+  replaceBatches: boolean;
+  /** Statement batches purged from the graph after reading `_meta.json` pending replacement fields. */
+  supersededBatchesPurged?: number;
   /** `_meta.json` files in the date range where at least one pending field was set to null. */
   statementsDayMetaFilesUpdated?: number;
-  /** With `--replace-roots`, roots removed that are absent from every `_meta.json` key and every local `.jsonl` batch. */
-  orphanedRootsPurged?: number;
+  /** With `--replace-batches`, statement batches removed that are absent from every `_meta.json` key and every local `.jsonl` batch. */
+  orphanedBatchesPurged?: number;
   warnings: string[];
 };
 
@@ -132,14 +130,14 @@ function normalizeDateFlag(value: string | undefined, flag: "--from-date" | "--t
   return value;
 }
 
-function normalizeRootBatchCount(value: string | undefined): number {
+function normalizeBatchChunkCount(value: string | undefined): number {
   if (!value) return 100;
   if (!/^\d+$/.test(value)) {
-    throw new Error("Invalid --root-batch-count value: expected a positive integer.");
+    throw new Error("Invalid --batch-chunk-count value: expected a positive integer.");
   }
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error("Invalid --root-batch-count value: expected a positive integer.");
+    throw new Error("Invalid --batch-chunk-count value: expected a positive integer.");
   }
   return parsed;
 }
@@ -159,18 +157,18 @@ function printStatementsLoadProgress(enabled: boolean, message: string): void {
 
 function withBatchContext(
   error: unknown,
-  input: { graphKey: string; batchRoot: string; batchFile: string },
+  input: { graphKey: string; statementBatch: string; batchFile: string },
 ): Error & { details: Record<string, unknown>; cause?: unknown } {
   const details =
     error && typeof error === "object" && "details" in error && typeof (error as { details?: unknown }).details === "object"
       ? { ...((error as { details: Record<string, unknown> }).details) }
       : {};
   const message = error instanceof Error ? error.message : String(error);
-  const wrapped = new Error(`Failed loading batch ${input.batchRoot} into graph "${input.graphKey}": ${message}`) as
+  const wrapped = new Error(`Failed loading statement batch ${input.statementBatch} into graph "${input.graphKey}": ${message}`) as
     Error & { details: Record<string, unknown>; cause?: unknown };
   wrapped.details = {
     graphKey: input.graphKey,
-    batchRoot: input.batchRoot,
+    statementBatch: input.statementBatch,
     batchFile: input.batchFile,
     ...details,
   };
@@ -198,12 +196,12 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     typeof parsed.flags.get("to-date") === "string" ? String(parsed.flags.get("to-date")) : undefined,
     "--to-date",
   );
-  const rootBatchCount = normalizeRootBatchCount(
-    typeof parsed.flags.get("root-batch-count") === "string"
-      ? String(parsed.flags.get("root-batch-count"))
+  const batchChunkCount = normalizeBatchChunkCount(
+    typeof parsed.flags.get("batch-chunk-count") === "string"
+      ? String(parsed.flags.get("batch-chunk-count"))
       : undefined,
   );
-  const replaceRoots = hasFlag(parsed.flags, "replace-roots");
+  const replaceBatches = hasFlag(parsed.flags, "replace-batches");
   if (!graphKey) {
     throw new Error("Missing required flag: --graph-key <graph-key>.");
   }
@@ -219,46 +217,50 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
   printStatementsLoadProgress(showProgress, `Connecting to graph "${graphKey}"...`);
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
   if (target.type === "fide-jsonl") {
-    throw new Error("`fide statements load` only supports sqlite and postgres graphs.");
+    throw new Error("`fide statements load` only supports sqlite, duckdb, and postgres graphs.");
   }
   if (target.type === "sqlite") {
     printStatementsLoadProgress(showProgress, `Connected to sqlite graph at ${target.file}`);
+  } else if (target.type === "duckdb") {
+    printStatementsLoadProgress(showProgress, `Connected to duckdb graph at ${target.file}`);
   } else if (target.databaseUrl) {
     printStatementsLoadProgress(showProgress, `Connected to postgres graph schema ${target.schema}`);
   } else {
     printStatementsLoadProgress(showProgress, `Postgres graph "${graphKey}" requires a resolved database URL before loading.`);
   }
 
-  let supersededRootsPurged = 0;
+  let supersededBatchesPurged = 0;
   let statementsDayMetaFilesUpdated = 0;
-  let orphanedRootsPurged = 0;
-  if (replaceRoots) {
+  let orphanedBatchesPurged = 0;
+  if (replaceBatches) {
     printStatementsLoadProgress(
       showProgress,
-      "`--replace-roots`: scanning dated `_meta.json` for `sourceDraftRootPendingReplacement`...",
+      "`--replace-batches`: scanning dated `_meta.json` for `sourceDraftRootPendingReplacement`...",
     );
-    const superseded = await collectSupersededRootsFromStatementsDayMeta(statementsDir, { fromDate, toDate });
+    const superseded = await collectSupersededBatchesFromStatementsDayMeta(statementsDir, { fromDate, toDate });
     if (superseded.size > 0) {
       printStatementsLoadProgress(
         showProgress,
-        `  purging ${superseded.size} superseded batch root(s) from the graph before load`,
+        `  purging ${superseded.size} superseded statement batch id(s) from the graph before load`,
       );
-      for (const oldRoot of superseded) {
+      for (const oldBatch of superseded) {
         if (target.type === "sqlite") {
-          await deleteStatementBatchByRootFromSqlite(target.file, oldRoot);
+          await deleteStatementBatchByBatchFromSqlite(target.file, oldBatch);
+        } else if (target.type === "duckdb") {
+          await deleteStatementBatchByBatchFromDuckdb(target.file, oldBatch);
         } else {
           if (!target.databaseUrl) {
             throw new Error(
               `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
             );
           }
-          await deleteStatementBatchByRootFromPostgres({
+          await deleteStatementBatchByBatchFromPostgres({
             databaseUrl: target.databaseUrl,
             schema: target.schema,
-            root: oldRoot,
+            batch: oldBatch,
           });
         }
-        supersededRootsPurged += 1;
+        supersededBatchesPurged += 1;
       }
       const metaPaths = await listStatementsDayMetaPaths(statementsDir, { fromDate, toDate });
       for (const metaPath of metaPaths) {
@@ -268,7 +270,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
       }
     }
 
-    const retainedRoots = new Set<string>();
+    const retainedBatches = new Set<string>();
     for (const metaPath of await listStatementsDayMetaPaths(statementsDir)) {
       let doc: unknown;
       try {
@@ -278,38 +280,45 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
       }
       if (doc && typeof doc === "object") {
         for (const key of Object.keys(doc as Record<string, unknown>)) {
-          retainedRoots.add(key);
+          retainedBatches.add(key);
         }
       }
     }
     for (const candidate of await listStatementBatchCandidates(statementsDir)) {
-      retainedRoots.add(candidate.root);
+      retainedBatches.add(candidate.batch);
     }
 
     if (target.type === "sqlite") {
-      for (const root of await queryAllRootsInSqlite(target.file)) {
-        if (!retainedRoots.has(root)) {
-          await deleteStatementBatchByRootFromSqlite(target.file, root);
-          orphanedRootsPurged += 1;
+      for (const batch of await queryAllBatchesInSqlite(target.file)) {
+        if (!retainedBatches.has(batch)) {
+          await deleteStatementBatchByBatchFromSqlite(target.file, batch);
+          orphanedBatchesPurged += 1;
+        }
+      }
+    } else if (target.type === "duckdb") {
+      for (const batch of await queryAllBatchesInDuckdb(target.file)) {
+        if (!retainedBatches.has(batch)) {
+          await deleteStatementBatchByBatchFromDuckdb(target.file, batch);
+          orphanedBatchesPurged += 1;
         }
       }
     } else if (target.databaseUrl) {
-      for (const root of await queryAllRootsInPostgres(target.databaseUrl, target.schema)) {
-        if (!retainedRoots.has(root)) {
-          await deleteStatementBatchByRootFromPostgres({
+      for (const batch of await queryAllBatchesInPostgres(target.databaseUrl, target.schema)) {
+        if (!retainedBatches.has(batch)) {
+          await deleteStatementBatchByBatchFromPostgres({
             databaseUrl: target.databaseUrl,
             schema: target.schema,
-            root,
+            batch,
           });
-          orphanedRootsPurged += 1;
+          orphanedBatchesPurged += 1;
         }
       }
     }
 
-    if (orphanedRootsPurged > 0) {
+    if (orphanedBatchesPurged > 0) {
       printStatementsLoadProgress(
         showProgress,
-        `  purged ${orphanedRootsPurged} orphaned batch root(s) (not in any \`_meta.json\` and no local \`.jsonl\`)`,
+        `  purged ${orphanedBatchesPurged} orphaned statement batch(es) (not in any \`_meta.json\` and no local \`.jsonl\`)`,
       );
     }
   }
@@ -318,18 +327,20 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
   const candidates = await listStatementBatchCandidates(statementsDir, { fromDate, toDate });
   printStatementsLoadProgress(showProgress, `Found ${candidates.length} candidate batch file(s).`);
 
-  const existingRoots = new Set<string>();
-  printStatementsLoadProgress(showProgress, `Checking existing roots in batches of ${rootBatchCount}...`);
+  const existingBatches = new Set<string>();
+  printStatementsLoadProgress(showProgress, `Checking existing statement batch ids in chunks of ${batchChunkCount}...`);
   try {
-    for (const chunk of chunkArray(candidates, rootBatchCount)) {
-      const foundRoots = await queryExistingRoots(
+    for (const chunk of chunkArray(candidates, batchChunkCount)) {
+      const found = await queryExistingBatches(
         target.type === "sqlite"
           ? { type: "sqlite", file: target.file }
-          : { type: "postgres", databaseUrl: target.databaseUrl, schema: target.schema },
-        chunk.map((candidate) => candidate.root),
+          : target.type === "duckdb"
+            ? { type: "duckdb", file: target.file }
+            : { type: "postgres", databaseUrl: target.databaseUrl, schema: target.schema },
+        chunk.map((candidate) => candidate.batch),
       );
-      for (const root of foundRoots) {
-        existingRoots.add(root);
+      for (const b of found) {
+        existingBatches.add(b);
       }
     }
   } catch (error) {
@@ -341,20 +352,26 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     throw error;
   }
 
-  const pendingCandidates = candidates.filter((candidate) => !existingRoots.has(candidate.root));
-  const existingCandidates = candidates.filter((candidate) => existingRoots.has(candidate.root));
+  const pendingCandidates = candidates.filter((candidate) => !existingBatches.has(candidate.batch));
+  const existingCandidates = candidates.filter((candidate) => existingBatches.has(candidate.batch));
   for (const candidate of existingCandidates) {
     if (target.type === "sqlite") {
-      await updateStatementBatchRootMetadataInSqlite(target.file, {
-        root: candidate.root,
+      await updateStatementBatchMetadataInSqlite(target.file, {
+        batch: candidate.batch,
+        ...(candidate.title ? { title: candidate.title } : {}),
+        ...(candidate.description ? { description: candidate.description } : {}),
+      });
+    } else if (target.type === "duckdb") {
+      await updateStatementBatchMetadataInDuckdb(target.file, {
+        batch: candidate.batch,
         ...(candidate.title ? { title: candidate.title } : {}),
         ...(candidate.description ? { description: candidate.description } : {}),
       });
     } else if (target.databaseUrl) {
-      await updateStatementBatchRootMetadataInPostgres({
+      await updateStatementBatchMetadataInPostgres({
         databaseUrl: target.databaseUrl,
         schema: target.schema,
-        root: candidate.root,
+        batch: candidate.batch,
         ...(candidate.title ? { title: candidate.title } : {}),
         ...(candidate.description ? { description: candidate.description } : {}),
       });
@@ -362,7 +379,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
   }
   printStatementsLoadProgress(
     showProgress,
-    `Skipping ${existingRoots.size} existing batch root(s); loading ${pendingCandidates.length} batch file(s).`,
+    `Skipping ${existingBatches.size} existing statement batch(es); loading ${pendingCandidates.length} batch file(s).`,
   );
   let statementCount = 0;
   if (pendingCandidates.length > 0) {
@@ -371,7 +388,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
         try {
           printStatementsLoadProgress(
             showProgress,
-            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
+            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.batch}`,
           );
           printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
           const raw = await readFile(candidate.file, "utf8");
@@ -379,14 +396,14 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           const parsedBatch = await parseGraphStatementBatchJsonl(raw);
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
           const rows = transformStatementBatchToGraphRows({
-            root: candidate.root,
+            batch: candidate.batch,
             ...(candidate.title ? { title: candidate.title } : {}),
             ...(candidate.description ? { description: candidate.description } : {}),
             statements: parsedBatch.statements,
           });
           printStatementsLoadProgress(
             showProgress,
-            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
+            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.batches.length} statement-batch link(s)`,
           );
           const result = await loadStatementBatchToSqlite(target.file, rows);
           statementCount += result.statementCount;
@@ -394,7 +411,40 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
         } catch (error) {
           throw withBatchContext(error, {
             graphKey,
-            batchRoot: candidate.root,
+            statementBatch: candidate.batch,
+            batchFile: candidate.file,
+          });
+        }
+      }
+    } else if (target.type === "duckdb") {
+      for (const [index, candidate] of pendingCandidates.entries()) {
+        try {
+          printStatementsLoadProgress(
+            showProgress,
+            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.batch}`,
+          );
+          printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
+          const raw = await readFile(candidate.file, "utf8");
+          printStatementsLoadProgress(showProgress, "  parsing statements");
+          const parsedBatch = await parseGraphStatementBatchJsonl(raw);
+          printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
+          const rows = transformStatementBatchToGraphRows({
+            batch: candidate.batch,
+            ...(candidate.title ? { title: candidate.title } : {}),
+            ...(candidate.description ? { description: candidate.description } : {}),
+            statements: parsedBatch.statements,
+          });
+          printStatementsLoadProgress(
+            showProgress,
+            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.batches.length} statement-batch link(s)`,
+          );
+          const result = await loadStatementBatchToDuckdb(target.file, rows);
+          statementCount += result.statementCount;
+          printStatementsLoadProgress(showProgress, `  loaded ${result.statementCount} statement(s)`);
+        } catch (error) {
+          throw withBatchContext(error, {
+            graphKey,
+            statementBatch: candidate.batch,
             batchFile: candidate.file,
           });
         }
@@ -409,7 +459,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
         try {
           printStatementsLoadProgress(
             showProgress,
-            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.root}`,
+            `Loading batch ${index + 1}/${pendingCandidates.length}: ${candidate.batch}`,
           );
           printStatementsLoadProgress(showProgress, `  reading ${candidate.file}`);
           const raw = await readFile(candidate.file, "utf8");
@@ -417,14 +467,14 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
           const parsedBatch = await parseGraphStatementBatchJsonl(raw);
           printStatementsLoadProgress(showProgress, `  parsed ${parsedBatch.statements.length} statement(s)`);
           const rows = transformStatementBatchToGraphRows({
-            root: candidate.root,
+            batch: candidate.batch,
             ...(candidate.title ? { title: candidate.title } : {}),
             ...(candidate.description ? { description: candidate.description } : {}),
             statements: parsedBatch.statements,
           });
           printStatementsLoadProgress(
             showProgress,
-            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.statementRoots.length} statement-root link(s)`,
+            `  loading rows: ${rows.referenceIdentifiers.length} reference identifier(s), ${rows.statements.length} statement(s), ${rows.batches.length} statement-batch link(s)`,
           );
           const result = await loadStatementBatchToPostgres({
             databaseUrl: target.databaseUrl,
@@ -436,7 +486,7 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
         } catch (error) {
           throw withBatchContext(error, {
             graphKey,
-            batchRoot: candidate.root,
+            statementBatch: candidate.batch,
             batchFile: candidate.file,
           });
         }
@@ -454,15 +504,15 @@ export async function runStatementsLoad(args: string[] = []): Promise<number> {
     statementsDir,
     candidateFileCount: candidates.length,
     loadedFileCount: pendingCandidates.length,
-    skippedRootCount: existingRoots.size,
+    skippedBatchCount: existingBatches.size,
     statementCount,
-    rootBatchCount,
-    replaceRoots,
-    ...(replaceRoots
+    batchChunkCount,
+    replaceBatches,
+    ...(replaceBatches
       ? {
-          supersededRootsPurged,
+          supersededBatchesPurged,
           statementsDayMetaFilesUpdated,
-          orphanedRootsPurged,
+          orphanedBatchesPurged,
         }
       : {}),
     ...(fromDate ? { fromDate } : {}),

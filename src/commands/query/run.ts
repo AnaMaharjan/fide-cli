@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { basename, dirname, extname, relative, resolve, sep } from "node:path";
-import { writeSqliteTableFromRows } from "../../lib/graph/clients/sqlite.js";
+import { executeGraphQuery, writeSqliteTableFromRows } from "@chris-test/graph";
 import { parseArgs } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -10,7 +10,6 @@ import {
 } from "../../util/command/command-metadata.js";
 import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { executeGraphQuery } from "../../lib/graph/runtime/query.js";
 import {
   assertLocalQueryableStore,
   getLocalFideWarnings,

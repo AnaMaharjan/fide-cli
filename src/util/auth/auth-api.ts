@@ -34,7 +34,7 @@ export type WorkspaceSummary = {
 
 export type WorkspaceGraph = {
   graphKey: string;
-  type: "postgres" | "sqlite" | "fide-jsonl";
+  type: "postgres" | "sqlite" | "duckdb" | "fide-jsonl";
   createdAt: string;
   updatedAt: string;
 };

@@ -13,8 +13,8 @@ import { type QueryCatalogSettings, validateQueryCatalogSettings } from "./query
 
 export const GRAPH_STATEMENTS_TABLE = "statements";
 export const GRAPH_REFERENCE_IDENTIFIERS_TABLE = "reference_identifiers";
-export const GRAPH_ROOTS_TABLE = "roots";
-export const GRAPH_STATEMENT_ROOTS_TABLE = "statement_roots";
+export const GRAPH_STATEMENT_BATCHES_TABLE = "statement_batches";
+export const GRAPH_BATCHES_TABLE = "batches";
 
 type PostgresConnectionSettings = {
   url?: string;
@@ -33,12 +33,23 @@ type SqliteConnectionSettings = {
   "project-path"?: string;
 };
 
+type DuckdbConnectionSettings = {
+  type: "duckdb";
+  "fide-path"?: string;
+  "project-path"?: string;
+};
+
 type PostgresGraphStoreSettings = {
   connection?: PostgresConnectionSettings & { type: "postgres" };
 };
 
 type SqliteGraphStoreSettings = {
   connection: SqliteConnectionSettings;
+  gitignore?: boolean;
+};
+
+type DuckdbGraphStoreSettings = {
+  connection: DuckdbConnectionSettings;
   gitignore?: boolean;
 };
 
@@ -53,7 +64,11 @@ export type FideSettings = {
   queryCatalogs?: Record<string, QueryCatalogSettings>;
 };
 
-export type GraphStoreSettings = PostgresGraphStoreSettings | SqliteGraphStoreSettings | FideJsonlGraphStoreSettings;
+export type GraphStoreSettings =
+  | PostgresGraphStoreSettings
+  | SqliteGraphStoreSettings
+  | DuckdbGraphStoreSettings
+  | FideJsonlGraphStoreSettings;
 
 export type ResolvedLocalGraphTarget = {
   type: "local";
@@ -82,6 +97,14 @@ export type ResolvedSqliteGraphStore = {
   gitignore: boolean | null;
 };
 
+export type ResolvedDuckdbGraphStore = {
+  type: "duckdb";
+  key: string | null;
+  configuredFromSettings: boolean;
+  file: string;
+  gitignore: boolean | null;
+};
+
 export type ResolvedFideJsonlGraphStore = {
   type: "fide-jsonl";
   key: string | null;
@@ -89,7 +112,11 @@ export type ResolvedFideJsonlGraphStore = {
   dir: string;
 };
 
-export type ResolvedGraphStore = ResolvedPostgresGraphStore | ResolvedSqliteGraphStore | ResolvedFideJsonlGraphStore;
+export type ResolvedGraphStore =
+  | ResolvedPostgresGraphStore
+  | ResolvedSqliteGraphStore
+  | ResolvedDuckdbGraphStore
+  | ResolvedFideJsonlGraphStore;
 export type ResolvedStoreTarget = ResolvedGraphStore;
 export type ResolvedGraphTarget = ResolvedLocalGraphTarget;
 
@@ -123,12 +150,12 @@ function readConfiguredGraphStores(root: string): Record<string, GraphStoreSetti
   return stores;
 }
 
-function getConfiguredStoreType(store: unknown): "postgres" | "sqlite" | "fide-jsonl" | null {
+function getConfiguredStoreType(store: unknown): "postgres" | "sqlite" | "duckdb" | "fide-jsonl" | null {
   if (!store || typeof store !== "object" || Array.isArray(store)) return null;
   const graphStore = store as { type?: unknown; connection?: unknown };
   if (graphStore.connection && typeof graphStore.connection === "object" && !Array.isArray(graphStore.connection)) {
     const connection = graphStore.connection as { type?: unknown };
-    if (connection.type === "postgres" || connection.type === "sqlite") {
+    if (connection.type === "postgres" || connection.type === "sqlite" || connection.type === "duckdb") {
       return connection.type;
     }
   }
@@ -148,6 +175,12 @@ function isSqliteGraphStoreSettings(
   store: GraphStoreSettings | null,
 ): store is SqliteGraphStoreSettings {
   return getConfiguredStoreType(store) === "sqlite";
+}
+
+function isDuckdbGraphStoreSettings(
+  store: GraphStoreSettings | null,
+): store is DuckdbGraphStoreSettings {
+  return getConfiguredStoreType(store) === "duckdb";
 }
 
 function isFideJsonlGraphStoreSettings(
@@ -196,6 +229,25 @@ export function validateGraphStoreConfig(key: string, store: GraphStoreSettings)
     const connectionType = (connection as { type?: unknown }).type;
     if (connectionType !== undefined && connectionType !== "sqlite") {
       throw new Error(`Graph "${key}" has an invalid sqlite connection.type in .fide/graphs/${key}/config.json.`);
+    }
+    const hasFidePath = typeof connection["fide-path"] === "string" && connection["fide-path"].trim().length > 0;
+    const hasProjectPath = typeof connection["project-path"] === "string" && connection["project-path"].trim().length > 0;
+    if (!hasFidePath && !hasProjectPath) {
+      throw new Error(`Graph "${key}" must include connection.fide-path or connection.project-path in .fide/graphs/${key}/config.json.`);
+    }
+    return;
+  }
+  if (storeType === "duckdb") {
+    if (!isDuckdbGraphStoreSettings(store)) {
+      throw new Error(`Graph "${key}" has an invalid duckdb configuration in .fide/graphs/${key}/config.json.`);
+    }
+    const connection = store.connection;
+    if (!connection || typeof connection !== "object" || Array.isArray(connection)) {
+      throw new Error(`Graph "${key}" must include connection.fide-path or connection.project-path in .fide/graphs/${key}/config.json.`);
+    }
+    const connectionType = (connection as { type?: unknown }).type;
+    if (connectionType !== undefined && connectionType !== "duckdb") {
+      throw new Error(`Graph "${key}" has an invalid duckdb connection.type in .fide/graphs/${key}/config.json.`);
     }
     const hasFidePath = typeof connection["fide-path"] === "string" && connection["fide-path"].trim().length > 0;
     const hasProjectPath = typeof connection["project-path"] === "string" && connection["project-path"].trim().length > 0;
@@ -383,6 +435,29 @@ function resolveSqliteStore(key: string): ResolvedSqliteGraphStore {
   };
 }
 
+function resolveDuckdbStore(key: string): ResolvedDuckdbGraphStore {
+  ensureFideEnvLoaded();
+  const configured = getConfiguredGraphStore(process.cwd(), key);
+  const duckdbStore = isDuckdbGraphStoreSettings(configured.store) ? configured.store : null;
+  if (!duckdbStore) {
+    throw new Error(`Store "${key}" is not a duckdb store.`);
+  }
+  const rawConnection = duckdbStore.connection["fide-path"] ?? duckdbStore.connection["project-path"];
+  if (!rawConnection) {
+    throw new Error(`Store "${key}" is missing duckdb connection.fide-path or connection.project-path.`);
+  }
+  const resolvedConnection = process.env[rawConnection] ?? rawConnection;
+  return {
+    type: "duckdb",
+    key: configured.key,
+    configuredFromSettings: true,
+    file: duckdbStore.connection["fide-path"]
+      ? resolvePathWithinFideDir(resolvedConnection)
+      : resolvePathFromProjectRoot(resolvedConnection),
+    gitignore: typeof duckdbStore.gitignore === "boolean" ? duckdbStore.gitignore : null,
+  };
+}
+
 function resolveFideJsonlStore(key: string): ResolvedFideJsonlGraphStore {
   const configured = getConfiguredGraphStore(process.cwd(), key);
   const jsonlStore = isFideJsonlGraphStoreSettings(configured.store) ? configured.store : null;
@@ -407,6 +482,7 @@ export function resolveStoreTarget(flags: Map<string, string | boolean>): Resolv
   const storeType = getConfiguredStoreType(configured.store);
   if (storeType === "postgres") return resolvePostgresStore(graph);
   if (storeType === "sqlite") return resolveSqliteStore(graph);
+  if (storeType === "duckdb") return resolveDuckdbStore(graph);
   if (storeType === "fide-jsonl") return resolveFideJsonlStore(graph);
   throw new Error(`Unsupported graph type for "${graph}".`);
 }

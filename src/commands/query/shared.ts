@@ -181,7 +181,7 @@ export function assertLocalQueryableStore(
   flags: Map<string, string | boolean>,
 ): Exclude<ReturnType<typeof resolveStoreTarget>, { type: "fide-jsonl" }> {
   if (target.type === "fide-jsonl") {
-    throw new Error("This command only supports sqlite and postgres graphs. Use `fide statements write` for local `.fide` statements or build a sqlite/postgres graph first.");
+    throw new Error("This command only supports sqlite, duckdb, and postgres graphs. Use `fide statements write` for local `.fide` statements or build a graph first.");
   }
 
   if (target.type === "postgres" && !target.databaseUrl) {

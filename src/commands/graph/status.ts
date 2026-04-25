@@ -10,8 +10,13 @@ import {
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { assertGraphKey } from "../../util/ids/selectors.js";
-import { createPgClient } from "../../lib/graph/clients/postgres.js";
-import { inspectSqliteGraph } from "../../lib/graph/clients/sqlite.js";
+import {
+  createPgClient,
+  createStatementGraphStorageSchema,
+  getStatementTableColumnNamesInOrder,
+  inspectDuckdbGraph,
+  inspectSqliteGraph,
+} from "@chris-test/graph";
 import { inspectFideJsonlStore } from "../../lib/project/fide-jsonl.js";
 import { listConfiguredStoreTargetKeys, resolveGraphTarget, resolveStoreTarget } from "../../lib/project/config/project-settings.js";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
@@ -43,7 +48,7 @@ export type GraphStatusOutput = {
   graphs: unknown[];
 };
 
-function nextCommands(key: string | null, graphStoreType?: "postgres" | "sqlite" | "fide-jsonl"): Record<string, string> | undefined {
+function nextCommands(key: string | null, graphStoreType?: "postgres" | "sqlite" | "duckdb" | "fide-jsonl"): Record<string, string> | undefined {
   if (!key) return undefined;
   if (graphStoreType === "fide-jsonl") {
     return {
@@ -99,6 +104,20 @@ async function inspectGraphStore(target: ReturnType<typeof resolveStoreTarget>) 
     };
   }
 
+  if (target.type === "duckdb") {
+    const inspection = await inspectDuckdbGraph(target.file);
+    return {
+      ok: true,
+      graphStoreType: "duckdb" as const,
+      key: target.key,
+      configured: true,
+      reachable: inspection.reachable,
+      file: target.file,
+      missing: inspection.missing,
+      error: inspection.error,
+    };
+  }
+
   if (!target.databaseUrl) {
     return {
       ok: true,
@@ -115,17 +134,9 @@ async function inspectGraphStore(target: ReturnType<typeof resolveStoreTarget>) 
   }
 
   const expectedReferenceIdentifierColumns = ["identifier_fingerprint", "reference_identifier"];
-  const expectedStatementsColumns = [
-    "statement_fingerprint",
-    "subject_type",
-    "subject_reference_type",
-    "subject_fingerprint",
-    "property_fingerprint",
-    "object_type",
-    "object_reference_type",
-    "object_fingerprint",
-    "created_at",
-  ];
+  const expectedStatementsColumns = getStatementTableColumnNamesInOrder(
+    createStatementGraphStorageSchema(),
+  );
   const expectedStatementConstraints = ["chk_subject_protocol_self_sourced", "chk_object_protocol_self_sourced"];
 
   const client = createPgClient(target.databaseUrl);

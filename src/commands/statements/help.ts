@@ -37,7 +37,7 @@ export function statementsHelp(): string {
         items: [
           "  - `statements write` writes canonical JSONL batches into the local project `.fide` directory.",
           "  - `statements draft` creates or updates a local markdown draft from the same statement batch.",
-          "  - `statements load` loads local canonical statement batches into an initialized graph and skips batches whose roots already exist; use `--replace-roots` to purge roots listed in `_meta.json` `sourceDraftRootPendingReplacement` (including multi-root replaces) and to drop graph batches with no `_meta.json` or `.jsonl` anymore.",
+          "  - `statements load` loads local canonical statement batches into an initialized graph and skips batches whose ids already exist; use `--replace-batches` to purge statement batches listed in `_meta.json` `sourceDraftRootPendingReplacement` (including multi-batch replaces) and to drop graph batches with no `_meta.json` or `.jsonl` anymore.",
           "  - `statements guide` shows the statement-shape guidance and allowed entity types agents need while authoring statements.",
           "  - These commands are local-only and do not target hosted workspace state directly.",
         ],

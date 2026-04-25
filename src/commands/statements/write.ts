@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { extname, relative, resolve, sep } from "node:path";
-import { parseMd } from "@chris-test/graph";
+import { listStatementsDayMetaPaths, parseMd } from "@chris-test/graph";
 import { getLocalFideWarnings } from "../../lib/project/warnings/local-warnings.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
@@ -12,7 +12,6 @@ import {
 import { printJson, readUtf8, writeUtf8 } from "../../util/command/io.js";
 import { ymdUtc } from "../../lib/project/path-date.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { listStatementsDayMetaPaths } from "../../lib/graph/etl/extract/statementsDayMeta.js";
 import { resolveLocalStatementsBatchOrExit } from "./shared.js";
 import { readJsonFile } from "../../lib/project/config/fide-dir.js";
 
@@ -80,8 +79,9 @@ type StatementsDayMetaEntry = {
   /** From draft frontmatter `description:` when writing with `--file`. */
   sourceDraftDescription?: string;
   /**
-   * Root hash(es) to purge on the next `fide statements load --replace-roots` after `--replace-draft`.
+   * Statement batch id(s) to purge on the next `fide statements load --replace-batches` after `--replace-draft`.
    * May be a single string or a list when several prior batches shared the same `sourceDraftPath`.
+   * (Field name remains `sourceDraftRootPendingReplacement` for on-disk compatibility.)
    */
   sourceDraftRootPendingReplacement?: string | string[] | null;
 };

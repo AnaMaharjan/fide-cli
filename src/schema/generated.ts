@@ -1089,10 +1089,10 @@ export const GENERATED_TYPE_SCHEMAS = {
         "statementsDir",
         "candidateFileCount",
         "loadedFileCount",
-        "skippedRootCount",
+        "skippedBatchCount",
         "statementCount",
-        "rootBatchCount",
-        "replaceRoots",
+        "batchChunkCount",
+        "replaceBatches",
         "warnings"
       ],
       "properties": {
@@ -1130,6 +1130,12 @@ export const GENERATED_TYPE_SCHEMAS = {
               "enum": [
                 "sqlite"
               ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "duckdb"
+              ]
             }
           ]
         },
@@ -1142,13 +1148,13 @@ export const GENERATED_TYPE_SCHEMAS = {
         "loadedFileCount": {
           "type": "number"
         },
-        "skippedRootCount": {
+        "skippedBatchCount": {
           "type": "number"
         },
         "statementCount": {
           "type": "number"
         },
-        "rootBatchCount": {
+        "batchChunkCount": {
           "type": "number"
         },
         "fromDate": {
@@ -1165,10 +1171,10 @@ export const GENERATED_TYPE_SCHEMAS = {
             }
           ]
         },
-        "replaceRoots": {
+        "replaceBatches": {
           "type": "boolean"
         },
-        "supersededRootsPurged": {
+        "supersededBatchesPurged": {
           "anyOf": [
             {
               "type": "number"
@@ -1182,7 +1188,7 @@ export const GENERATED_TYPE_SCHEMAS = {
             }
           ]
         },
-        "orphanedRootsPurged": {
+        "orphanedBatchesPurged": {
           "anyOf": [
             {
               "type": "number"

@@ -30,8 +30,7 @@
     "@chris-test/daemon": "workspace:0.0.0-alpha.0",
     "@chris-test/graph": "workspace:*",
     "@chris-test/workspace": "workspace:*",
-    "chokidar": "^5.0.0",
-    "postgres": "^3.4.7"
+    "chokidar": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
