@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { parseArgs } from "../../util/command/args.js";
+import { postDaemonMapsInstall } from "../../util/daemon/daemon-http.js";
 import { booleanKeysFromCommand, defineCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
@@ -17,7 +18,6 @@ import {
   resolveRegistryDependency,
   resolveRegistryTarget,
   validateMapPathConvention,
-  writeMapDocument,
   type InstalledMapSummary,
   type MapDocument,
   type RegistryItem,
@@ -73,6 +73,7 @@ async function installRegistryItem(
   fideDir: string,
   seen: Set<string>,
   installedByPath: Map<string, InstalledMapSummary>,
+  installFiles: { relativePath: string; content: string }[],
 ): Promise<void> {
   const resolvedSource = isRemoteSource(source) ? source : resolve(process.cwd(), source);
   if (seen.has(resolvedSource)) return;
@@ -80,7 +81,13 @@ async function installRegistryItem(
 
   const item = await loadRegistryItem(resolvedSource);
   for (const dependency of registryDependencies(item)) {
-    await installRegistryItem(resolveRegistryDependency(resolvedSource, dependency), fideDir, seen, installedByPath);
+    await installRegistryItem(
+      resolveRegistryDependency(resolvedSource, dependency),
+      fideDir,
+      seen,
+      installedByPath,
+      installFiles,
+    );
   }
 
   for (const file of registryFiles(item)) {
@@ -89,7 +96,12 @@ async function installRegistryItem(
     const parsed = parseJsonObject(file.content, String(file.target ?? path));
     const document = assertMapDocument(parsed, String(file.target ?? path));
     validateMapPathConvention(fideDir, path, document);
-    await writeMapDocument(path, document as MapDocument);
+    const content = `${JSON.stringify(document, null, 2)}\n`;
+    const rel = relative(fideDir, path).replace(/\\/g, "/");
+    if (!rel || rel.startsWith("..")) {
+      throw new Error(`Resolved map path is outside FIDE_DIR: ${path}`);
+    }
+    installFiles.push({ relativePath: rel, content });
     installedByPath.set(path, {
       mapKey: document.mapKey,
       kind,
@@ -114,7 +126,9 @@ export async function runMapsAdd(args: string[]): Promise<number> {
   const fideDir = resolveMapsFideDir();
   const seen = new Set<string>();
   const installedByPath = new Map<string, InstalledMapSummary>();
-  await installRegistryItem(source, fideDir, seen, installedByPath);
+  const installFiles: { relativePath: string; content: string }[] = [];
+  await installRegistryItem(source, fideDir, seen, installedByPath, installFiles);
+  await postDaemonMapsInstall(installFiles);
 
   const payload: MapsAddOutput = {
     scope: MAPS_SCOPE,

@@ -19,7 +19,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "node ./scripts/build.mjs",
+    "build": "node ./scripts/build.mjs && pnpm add --global .",
     "check-types": "tsc --noEmit",
     "check:scope-model": "pnpm run build && node ./scripts/check-scope-model.mjs",
     "generate:schema": "node ./scripts/generate-schema/command-type-schemas.mjs",

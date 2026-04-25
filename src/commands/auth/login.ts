@@ -34,7 +34,7 @@ export const authLoginCommand = defineCommand({
   },
   notes: [
     "Login opens the browser for agent authorization and stores returned machine auth locally.",
-    "Login writes machine auth into ~/.fide/accounts/<account_id>/settings.json and binds the current project in .fide/settings.json.",
+    "Login writes machine auth into ~/.fide/accounts/<account_id>/config.json and binds the current project in .fide/settings.json.",
     "API base URL resolution uses --api-base-url, then FIDE_API_BASE_URL, then the default API base URL.",
     "Other commands resolve auth from FIDE_ACCOUNT_ID or project .fide/settings.json.",
     "Workspace selection comes from project .fide/settings.json after login binds the project.",

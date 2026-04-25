@@ -17,7 +17,7 @@ export const mapsGetCommand = defineCommand({
   },
   examples: [
     "fide maps get blocks.person.social-profile.linkedin",
-    "fide maps get components.identity.named_entity",
+    "fide maps get components.identity.named-entity",
   ],
   notes: ["The map key determines the expected path under FIDE_DIR/maps."],
 });

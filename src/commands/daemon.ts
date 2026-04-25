@@ -1,6 +1,10 @@
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../util/command/args.js";
+import { runAuthLogin } from "./auth/login.js";
+import { readLocalProfileConfig } from "../util/auth/account-settings.js";
+import { resolveAuthSettings } from "../util/auth/auth-settings.js";
+import { daemonJsonHeaders } from "../util/daemon/daemon-http.js";
 import {
   booleanKeysFromCommand,
   defineCommand,
@@ -9,7 +13,7 @@ import {
 } from "../util/command/command-metadata.js";
 import { printJson } from "../util/command/io.js";
 import { formatPretty } from "../util/command/pretty.js";
-import { okResponse } from "../util/command/response.js";
+import { errorResponse, okResponse } from "../util/command/response.js";
 
 const DEFAULT_DAEMON_HOST = "127.0.0.1";
 const DEFAULT_DAEMON_PORT = 20225;
@@ -20,10 +24,17 @@ export const daemonStartCommand = defineCommand({
   command: "fide daemon start",
   outputType: "DaemonStartOutput",
   summary: "Start the local Fide daemon",
-  usage: ["fide daemon start [--foreground] [--remote-url <url>] [--host <host>] [--port <port>] [--pretty|-p]"],
-  paramOrder: ["foreground", "remote-url", "host", "port", "pretty"],
+  usage: [
+    "fide daemon start [--foreground] [--local] [--remote-url <url>] [--host <host>] [--port <port>] [--pretty|-p]",
+  ],
+  paramOrder: ["foreground", "local", "remote-url", "host", "port", "pretty"],
   params: {
     foreground: { kind: "boolean", description: "Run the daemon in the current terminal instead of detaching" },
+    local: {
+      kind: "boolean",
+      description:
+        "Local profile: do not require `fide login`. Optional remote token from ~/.fide/accounts/local/config.json.",
+    },
     "remote-url": { kind: "string", description: "Remote daemon websocket URL. Sets FIDE_DAEMON_REMOTE_URL.", valueLabel: "<url>" },
     host: { kind: "string", description: "Local daemon HTTP host. Defaults to FIDE_DAEMON_HOST or 127.0.0.1.", valueLabel: "<host>" },
     port: { kind: "string", description: "Local daemon HTTP port. Defaults to FIDE_DAEMON_PORT or 20225.", valueLabel: "<port>" },
@@ -57,13 +68,16 @@ export const daemonStopCommand = defineCommand({
 const DAEMON_STOP_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(daemonStopCommand));
 
 export type DaemonStartOutput = {
-  ok: true;
+  ok: boolean;
   scope: "daemon-start.v1";
   command: "fide daemon start";
   started: boolean;
   alreadyRunning: boolean;
   foreground: boolean;
   pid?: number;
+  daemonId?: string;
+  localWorkspaceId?: string | null;
+  fideDir?: string;
   host: string;
   port: number;
   localApiBaseUrl: string;
@@ -118,7 +132,7 @@ async function requestDaemonShutdown(host: string, port: number): Promise<boolea
     const res = await fetch(`http://${host}:${port}/shutdown`, {
       method: "POST",
       signal: controller.signal,
-      headers: { accept: "application/json" },
+      headers: daemonJsonHeaders(),
     });
     clearTimeout(timeout);
     return res.ok;
@@ -144,7 +158,14 @@ function resolveDaemonEntryPath(): string {
 }
 
 function printDaemonStartResult(useJson: boolean, payload: Omit<DaemonStartOutput, "ok" | "scope" | "command">): void {
-  const response = okResponse("daemon-start.v1", payload, { command: "fide daemon start" });
+  const response = payload.ready
+    ? okResponse("daemon-start.v1", payload, { command: "fide daemon start" })
+    : errorResponse(
+      "daemon-start.v1",
+      "daemon_not_ready",
+      payload,
+      { command: "fide daemon start" },
+    );
   if (useJson) {
     printJson(response);
     return;
@@ -160,13 +181,36 @@ function printDaemonStopResult(useJson: boolean, payload: Omit<DaemonStopOutput,
   console.log(formatPretty("daemon-stop.v1", response));
 }
 
-function buildDaemonEnv(flags: Map<string, string | boolean>, host: string, port: number): NodeJS.ProcessEnv {
-  return {
+async function buildDaemonEnv(
+  flags: Map<string, string | boolean>,
+  host: string,
+  port: number,
+): Promise<NodeJS.ProcessEnv> {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     FIDE_DAEMON_HOST: host,
     FIDE_DAEMON_PORT: String(port),
-    ...(getStringFlag(flags, "remote-url") ? { FIDE_DAEMON_REMOTE_URL: getStringFlag(flags, "remote-url") as string } : {}),
   };
+  if (getStringFlag(flags, "remote-url")) {
+    env.FIDE_DAEMON_REMOTE_URL = getStringFlag(flags, "remote-url") as string;
+  }
+  if (hasFlag(flags, "local")) {
+    const local = await readLocalProfileConfig();
+    if (local?.accessToken) {
+      env.FIDE_DAEMON_ACCESS_TOKEN = local.accessToken;
+    }
+  } else {
+    const auth = await resolveAuthSettings(flags);
+    if (!auth) {
+      throw new Error("Not logged in. Run `fide login` or use `fide daemon start --local`.");
+    }
+    env.FIDE_DAEMON_ACCESS_TOKEN = auth.accessToken;
+  }
+  const localTok = process.env.FIDE_LOCAL_CONTROL_TOKEN?.trim();
+  if (localTok) {
+    env.FIDE_LOCAL_CONTROL_TOKEN = localTok;
+  }
+  return env;
 }
 
 async function runDaemonStart(args: string[]): Promise<number> {
@@ -188,6 +232,12 @@ async function runDaemonStart(args: string[]): Promise<number> {
       alreadyRunning: true,
       foreground,
       pid: typeof existing.pid === "number" ? existing.pid : undefined,
+      daemonId: typeof existing.daemonId === "string" ? existing.daemonId : undefined,
+      localWorkspaceId:
+        typeof existing.localWorkspaceId === "string"
+          ? existing.localWorkspaceId
+          : null,
+      fideDir: typeof existing.fideDir === "string" ? existing.fideDir : undefined,
       host,
       port,
       localApiBaseUrl,
@@ -196,12 +246,38 @@ async function runDaemonStart(args: string[]): Promise<number> {
     return 0;
   }
 
+  let daemonEnv: NodeJS.ProcessEnv;
+  try {
+    daemonEnv = await buildDaemonEnv(flags, host, port);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      !useJson &&
+      !hasFlag(flags, "local") &&
+      message.includes("Not logged in")
+    ) {
+      const loginExit = await runAuthLogin([]);
+      if (loginExit === 0) {
+        daemonEnv = await buildDaemonEnv(flags, host, port);
+      } else {
+        return loginExit;
+      }
+    } else {
+    if (useJson) {
+      printJson({ ok: false, error: message, scope: "daemon-start.v1", command: "fide daemon start" });
+    } else {
+      console.error(message);
+    }
+    return 1;
+    }
+  }
+
   const daemonEntryPath = resolveDaemonEntryPath();
   const child = spawn(process.execPath, [daemonEntryPath], {
     cwd: process.cwd(),
     detached: !foreground,
     stdio: foreground ? "inherit" : "ignore",
-    env: buildDaemonEnv(flags, host, port),
+    env: daemonEnv,
   });
 
   if (foreground) {
@@ -221,6 +297,12 @@ async function runDaemonStart(args: string[]): Promise<number> {
     alreadyRunning: false,
     foreground: false,
     pid: typeof health?.pid === "number" ? health.pid : child.pid,
+    daemonId: typeof health?.daemonId === "string" ? health.daemonId : undefined,
+    localWorkspaceId:
+      typeof health?.localWorkspaceId === "string"
+        ? health.localWorkspaceId
+        : null,
+    fideDir: typeof health?.fideDir === "string" ? health.fideDir : undefined,
     host,
     port,
     localApiBaseUrl,

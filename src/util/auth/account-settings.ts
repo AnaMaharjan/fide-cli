@@ -36,14 +36,23 @@ export function resolveAccountDir(accountId: string): string {
   return join(resolveAccountsDir(), assertAccountId(accountId));
 }
 
+export function resolveAccountConfigPath(accountId: string): string {
+  return join(resolveAccountDir(assertAccountId(accountId)), "config.json");
+}
+
+/** @deprecated Use resolveAccountConfigPath — retained for grep compatibility. */
 export function resolveAccountSettingsPath(accountId: string): string {
-  return join(resolveAccountDir(accountId), "settings.json");
+  return resolveAccountConfigPath(accountId);
+}
+
+export function resolveLocalProfileConfigPath(): string {
+  return join(resolveAccountsDir(), "local", "config.json");
 }
 
 
 export async function readStoredAccountSettings(accountId: string): Promise<StoredAccountSettings | null> {
   try {
-    const raw = await readFile(resolveAccountSettingsPath(accountId), "utf8");
+    const raw = await readFile(resolveAccountConfigPath(accountId), "utf8");
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const accessToken = typeof parsed.accessToken === "string" && parsed.accessToken.trim().length > 0
       ? parsed.accessToken.trim()
@@ -63,7 +72,7 @@ export async function writeStoredAccountSettings(accountId: string, settings: St
     next.accessToken = settings.accessToken.trim();
   }
 
-  const path = resolveAccountSettingsPath(normalizedAccountId);
+  const path = resolveAccountConfigPath(normalizedAccountId);
   if (Object.keys(next).length === 0) {
     await rm(path, { force: true });
     return;
@@ -101,11 +110,41 @@ export async function resolveSelectedAccount(
 }
 
 export async function clearStoredAccountSettings(accountId: string): Promise<void> {
-  await rm(resolveAccountSettingsPath(assertAccountId(accountId)), { force: true });
+  await rm(resolveAccountConfigPath(assertAccountId(accountId)), { force: true });
 }
 
 export async function ensureAccountSettingsPathPermissions(accountId: string): Promise<void> {
-  await chmod(resolveAccountSettingsPath(accountId), 0o600);
+  await chmod(resolveAccountConfigPath(accountId), 0o600);
+}
+
+export async function readLocalProfileConfig(): Promise<StoredAccountSettings | null> {
+  try {
+    const raw = await readFile(resolveLocalProfileConfigPath(), "utf8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const accessToken = typeof parsed.accessToken === "string" && parsed.accessToken.trim().length > 0
+      ? parsed.accessToken.trim()
+      : null;
+    return {
+      ...(accessToken ? { accessToken } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function writeLocalProfileConfig(settings: StoredAccountSettings): Promise<void> {
+  const next: StoredAccountSettings = {};
+  if (typeof settings.accessToken === "string" && settings.accessToken.trim().length > 0) {
+    next.accessToken = settings.accessToken.trim();
+  }
+  const path = resolveLocalProfileConfigPath();
+  if (Object.keys(next).length === 0) {
+    await rm(path, { force: true });
+    return;
+  }
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  await chmod(path, 0o600);
 }
 
 export function getAccountNotFoundError(accountId: string): Error {

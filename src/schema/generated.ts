@@ -20,10 +20,7 @@ export const GENERATED_TYPE_SCHEMAS = {
       ],
       "properties": {
         "ok": {
-          "type": "boolean",
-          "enum": [
-            true
-          ]
+          "type": "boolean"
         },
         "scope": {
           "type": "string",
@@ -50,6 +47,30 @@ export const GENERATED_TYPE_SCHEMAS = {
           "anyOf": [
             {
               "type": "number"
+            }
+          ]
+        },
+        "daemonId": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "localWorkspaceId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fideDir": {
+          "anyOf": [
+            {
+              "type": "string"
             }
           ]
         },

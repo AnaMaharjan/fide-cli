@@ -2,7 +2,14 @@ import { parseArgs } from "../../util/command/args.js";
 import { booleanKeysFromCommand, defineCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { kindFromMapKey, MAPS_SCOPE, removeMapDocument, resolveMapKeyPath, resolveMapsFideDir, type MapKind } from "./shared.js";
+import { postDaemonMapsRemove } from "../../util/daemon/daemon-http.js";
+import {
+  kindFromMapKey,
+  MAPS_SCOPE,
+  resolveMapKeyPath,
+  resolveMapsFideDir,
+  type MapKind,
+} from "./shared.js";
 
 export const mapsRemoveCommand = defineCommand({
   surface: "maps.remove",
@@ -46,6 +53,7 @@ export async function runMapsRemove(args: string[]): Promise<number> {
 
   const fideDir = resolveMapsFideDir();
   const path = resolveMapKeyPath(fideDir, mapKey);
+  await postDaemonMapsRemove(mapKey);
   const payload: MapsRemoveOutput = {
     scope: MAPS_SCOPE,
     command: "fide maps remove",
@@ -53,7 +61,7 @@ export async function runMapsRemove(args: string[]): Promise<number> {
     mapKey,
     kind,
     path,
-    removed: await removeMapDocument(path),
+    removed: true,
   };
 
   if (useJson) {

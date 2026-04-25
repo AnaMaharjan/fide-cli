@@ -33,7 +33,7 @@ export function authCommandHelp(): string {
         items: [
           "  - Environment variables override stored account auth: FIDE_API_BASE_URL, FIDE_SYNC_BASE_URL, FIDE_ACCESS_TOKEN, and FIDE_ACCOUNT_ID.",
           "  - If FIDE_SYNC_BASE_URL is set, `fide start` uses it without needing --sync-url.",
-          "  - Machine auth lives under ~/.fide/accounts/<account_id>/settings.json.",
+          "  - Machine auth lives under ~/.fide/accounts/<account_id>/config.json.",
           "  - Commands resolve auth from FIDE_ACCOUNT_ID or project .fide/settings.json.",
           "  - Project .fide/settings.json stores account and workspace context, but never stores secrets.",
           "  - Login binds the current project to the returned workspace in `.fide/settings.json`.",
