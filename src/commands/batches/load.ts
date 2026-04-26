@@ -4,19 +4,15 @@ import {
   buildStatementsWithRoot,
   buildStatementsWithRootFromRecipe,
   classifyJsonStatementDocumentRows,
-  deleteStatementBatchByBatchFromDuckdb,
-  deleteStatementBatchByBatchFromPostgres,
   deleteStatementBatchByBatchFromSqlite,
-  loadStatementBatchToDuckdb,
-  loadStatementBatchToPostgres,
-  loadStatementBatchToSqlite,
   parseJsonStatementDocument,
   parseJsonStatementRecipeDocument,
   queryBatchRootByLocalWorkspacePath,
-  queryExistingBatches,
   transformStatementBatchToGraphRows,
+  upsertStatementBatchToSqlite,
   type StatementInput,
 } from "@chris-test/graph";
+import { refreshResolvedEntityProfiles } from "../../lib/graph/resolution/refresh-resolved-entity-profiles.js";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -41,7 +37,7 @@ type BatchLoadEntry = {
 export type BatchesLoadOutput = {
   command: "fide batches load";
   graphKey: string;
-  graphStoreType: "postgres" | "sqlite" | "duckdb";
+  graphStoreType: "sqlite";
   batchesPath: string;
   candidateFileCount: number;
   loadedFileCount: number;
@@ -49,6 +45,14 @@ export type BatchesLoadOutput = {
   replacedFileCount: number;
   statementCount: number;
   entries: BatchLoadEntry[];
+  resolvedAnchorsProjection?: {
+    evaluatedEdgeCount: number;
+    acceptedEdgeCount: number;
+    rejectedEdgeCount: number;
+    needsReviewEdgeCount: number;
+    evaluator: string;
+  };
+  resolvedAnchorsProjectionError?: string;
 };
 
 export const batchesLoadCommand = defineCommand({
@@ -78,8 +82,11 @@ export const batchesLoadCommand = defineCommand({
   },
   notes: [
     "Computes batch_root from statements and upserts metadata by local_workspace_path.",
-    "For replacements, previous rows for the same local_workspace_path are removed before insert.",
+    "For replacements where path points to an old batch_root, the old root is removed first.",
+    "When root matches, statement membership is updated incrementally (delta add/remove).",
     "createdAtUTC and updatedAtUTC from each .batch.json are treated as source-of-truth.",
+    "After load, resolved profile projection tables are refreshed from evaluated identity links.",
+    "Set `resolution.hook` in `.fide/graphs/<graph-key>/config.json` to customize sameAs evaluation decisions.",
   ],
 });
 
@@ -166,20 +173,20 @@ export async function runBatchesLoad(args: string[]): Promise<number> {
   }
 
   const target = resolveStoreTarget(new Map<string, string | boolean>([["graph", graphKey]]));
-  if (target.type === "fide-jsonl") {
-    throw new Error("`fide batches load` only supports sqlite, duckdb, and postgres graphs.");
+  if (target.type !== "sqlite") {
+    throw new Error("`fide batches load` supports sqlite graphs only.");
   }
-  const storeTarget = target.type === "sqlite"
-    ? { type: "sqlite" as const, file: target.file }
-    : target.type === "duckdb"
-      ? { type: "duckdb" as const, file: target.file }
-      : { type: "postgres" as const, databaseUrl: target.databaseUrl, schema: target.schema };
+  const storeTarget = { type: "sqlite" as const, key: null, file: target.file };
 
   const entries: BatchLoadEntry[] = [];
   let loadedFileCount = 0;
-  let updatedFileCount = 0;
+  const updatedFileCount = 0;
   let replacedFileCount = 0;
   let statementCount = 0;
+
+  const preparedRows = new Map<string, ReturnType<typeof transformStatementBatchToGraphRows>>();
+  const preparedStatementCounts = new Map<string, number>();
+  const preparedRoots = new Map<string, string>();
 
   for (const file of files) {
     const batchDoc = await readBatchJson(file);
@@ -187,51 +194,9 @@ export async function runBatchesLoad(args: string[]): Promise<number> {
       ? await buildStatementsWithRootFromRecipe(batchDoc.recipeRows, { normalizeReferenceIdentifier: true })
       : await buildStatementsWithRoot(batchDoc.statementInputs ?? [], { normalizeReferenceIdentifier: true });
     const batchRoot = built.root;
-
-    const existingByPath = await queryBatchRootByLocalWorkspacePath(storeTarget, file);
-    let replaced = false;
-    if (existingByPath) {
-      if (target.type === "sqlite") {
-        await deleteStatementBatchByBatchFromSqlite(target.file, existingByPath);
-      } else if (target.type === "duckdb") {
-        await deleteStatementBatchByBatchFromDuckdb(target.file, existingByPath);
-      } else {
-        if (!target.databaseUrl) {
-          throw new Error(
-            `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
-          );
-        }
-        await deleteStatementBatchByBatchFromPostgres({
-          databaseUrl: target.databaseUrl,
-          schema: target.schema,
-          batch: existingByPath,
-        });
-      }
-      replaced = true;
-    }
-
-    const existingByRoot = await queryExistingBatches(storeTarget, [batchRoot]);
-    if (existingByRoot.has(batchRoot)) {
-      if (target.type === "sqlite") {
-        await deleteStatementBatchByBatchFromSqlite(target.file, batchRoot);
-      } else if (target.type === "duckdb") {
-        await deleteStatementBatchByBatchFromDuckdb(target.file, batchRoot);
-      } else {
-        if (!target.databaseUrl) {
-          throw new Error(
-            `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
-          );
-        }
-        await deleteStatementBatchByBatchFromPostgres({
-          databaseUrl: target.databaseUrl,
-          schema: target.schema,
-          batch: batchRoot,
-        });
-      }
-      replaced = true;
-    }
-
-    const rows = transformStatementBatchToGraphRows({
+    preparedRoots.set(file, batchRoot);
+    preparedStatementCounts.set(file, built.statements.length);
+    preparedRows.set(file, transformStatementBatchToGraphRows({
       batch: batchRoot,
       localWorkspacePath: file,
       createdAtUtc: batchDoc.createdAtUtc,
@@ -239,39 +204,34 @@ export async function runBatchesLoad(args: string[]): Promise<number> {
       title: batchDoc.title,
       description: batchDoc.description,
       statements: built.statements,
-    });
-    if (target.type === "sqlite") {
-      const result = await loadStatementBatchToSqlite(target.file, rows);
-      if (result.insertedStatementBatch) {
-        loadedFileCount += 1;
-        statementCount += result.statementCount;
-      }
-    } else if (target.type === "duckdb") {
-      const result = await loadStatementBatchToDuckdb(target.file, rows);
-      if (result.insertedStatementBatch) {
-        loadedFileCount += 1;
-        statementCount += result.statementCount;
-      }
-    } else {
-      if (!target.databaseUrl) {
-        throw new Error(
-          `Missing postgres connection for graph "${graphKey}". Configure connection.url in .fide/graphs/${graphKey}/config.json or set the referenced env var.`,
-        );
-      }
-      const result = await loadStatementBatchToPostgres({
-        databaseUrl: target.databaseUrl,
-        schema: target.schema,
-        rows,
-      });
-      if (result.insertedStatementBatch) {
-        loadedFileCount += 1;
-        statementCount += result.statementCount;
-      }
+    }));
+  }
+
+  for (const file of files) {
+    const batchRoot = preparedRoots.get(file) ?? "";
+    const rows = preparedRows.get(file);
+    if (!rows) continue;
+    const existingByPath = await queryBatchRootByLocalWorkspacePath(storeTarget, file);
+    let replaced = false;
+    if (existingByPath && existingByPath !== batchRoot) {
+      await deleteStatementBatchByBatchFromSqlite(target.file, existingByPath);
+      replaced = true;
+    }
+
+    const result = await upsertStatementBatchToSqlite(target.file, rows);
+    if (result.insertedStatementBatch) {
+      loadedFileCount += 1;
+      statementCount += result.statementCount;
     }
     if (replaced) {
       replacedFileCount += 1;
     }
-    entries.push({ path: file, batchRoot, statementCount: built.statements.length, mode: replaced ? "replaced" : "inserted" });
+    entries.push({
+      path: file,
+      batchRoot,
+      statementCount: preparedStatementCounts.get(file) ?? 0,
+      mode: replaced ? "replaced" : "inserted",
+    });
   }
 
   const payload: BatchesLoadOutput = {
@@ -286,6 +246,15 @@ export async function runBatchesLoad(args: string[]): Promise<number> {
     statementCount,
     entries,
   };
+
+  try {
+    payload.resolvedAnchorsProjection = await refreshResolvedEntityProfiles({
+      graphKey,
+      target: storeTarget,
+    });
+  } catch (error) {
+    payload.resolvedAnchorsProjectionError = error instanceof Error ? error.message : String(error);
+  }
   if (shouldUseJsonOutput(parsed.flags)) {
     printJson(payload);
   } else {

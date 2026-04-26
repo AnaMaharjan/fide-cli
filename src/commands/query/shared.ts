@@ -192,30 +192,7 @@ export function assertLocalQueryableStore(
   flags: Map<string, string | boolean>,
 ): Exclude<ReturnType<typeof resolveStoreTarget>, { type: "fide-jsonl" }> {
   if (target.type === "fide-jsonl") {
-    throw new Error("This command only supports sqlite, duckdb, and postgres graphs. Use `fide batches write`/`fide batches load` for local batch workflows or build a graph first.");
-  }
-
-  if (target.type === "postgres" && !target.databaseUrl) {
-    const localTarget = resolveGraphTarget(flags);
-    const configuredConnection = target.databaseUrlEnv ?? null;
-    throw createCliStructuredError(
-      `Missing postgres connection for graph "${target.key ?? graphKey}". Configure graph.connection.url in its graph config or set the referenced env var.`,
-      {
-        hint: "For postgres graphs, graph.connection.url may be either a literal postgres URL or the name of an env var. The CLI could not resolve a database URL for this graph in the current process.",
-        details: {
-          graphKey,
-          graphType: target.type,
-          configuredConnection,
-          connectionResolution: configuredConnection ? "env-var-name" : "missing",
-          fideDir: `${localTarget.root}/.fide`,
-          configPath: resolveGraphConfigPath(graphKey, localTarget.root),
-          cwd: process.cwd(),
-        },
-        next: {
-          checkStatus: `fide graph status --graph-key ${graphKey}`,
-        },
-      },
-    );
+    throw new Error("This command supports sqlite graphs only. Use `fide batches write`/`fide batches load` for local batch workflows or build a sqlite graph first.");
   }
 
   return target;

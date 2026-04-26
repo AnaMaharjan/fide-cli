@@ -29,25 +29,9 @@ export const GENERATED_TYPE_SCHEMAS = {
           "type": "string"
         },
         "graphStoreType": {
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": [
-                "postgres"
-              ]
-            },
-            {
-              "type": "string",
-              "enum": [
-                "sqlite"
-              ]
-            },
-            {
-              "type": "string",
-              "enum": [
-                "duckdb"
-              ]
-            }
+          "type": "string",
+          "enum": [
+            "sqlite"
           ]
         },
         "batchesPath": {
@@ -112,6 +96,44 @@ export const GENERATED_TYPE_SCHEMAS = {
               }
             }
           }
+        },
+        "resolvedAnchorsProjection": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "evaluatedEdgeCount",
+                "acceptedEdgeCount",
+                "rejectedEdgeCount",
+                "needsReviewEdgeCount",
+                "evaluator"
+              ],
+              "properties": {
+                "evaluatedEdgeCount": {
+                  "type": "number"
+                },
+                "acceptedEdgeCount": {
+                  "type": "number"
+                },
+                "rejectedEdgeCount": {
+                  "type": "number"
+                },
+                "needsReviewEdgeCount": {
+                  "type": "number"
+                },
+                "evaluator": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "resolvedAnchorsProjectionError": {
+          "anyOf": [
+            {
+              "type": "string"
+            }
+          ]
         }
       }
     }
