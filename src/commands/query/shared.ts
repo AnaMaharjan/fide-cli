@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { readStdinUtf8 } from "../statements/shared.js";
 import { getStringFlag, hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import { booleanKeysFromCommand, mergeBooleanKeySets } from "../../util/command/command-metadata.js";
 import { readUtf8 } from "../../util/command/io.js";
@@ -12,6 +11,18 @@ import { assertGraphKey, assertQueryName } from "../../util/ids/selectors.js";
 export type GraphQueryScope = { targetScope: "local" };
 
 let querySqlParseBooleanKeysCache: ReadonlySet<string> | undefined;
+
+async function readStdinUtf8(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    if (typeof chunk === "string") {
+      chunks.push(Buffer.from(chunk));
+    } else {
+      chunks.push(chunk);
+    }
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
 
 function rejectDeprecatedFideDir(flags: Map<string, string | boolean>, command: string): void {
   if (!flags.has("fide-dir")) return;
@@ -181,7 +192,7 @@ export function assertLocalQueryableStore(
   flags: Map<string, string | boolean>,
 ): Exclude<ReturnType<typeof resolveStoreTarget>, { type: "fide-jsonl" }> {
   if (target.type === "fide-jsonl") {
-    throw new Error("This command only supports sqlite, duckdb, and postgres graphs. Use `fide statements write` for local `.fide` statements or build a graph first.");
+    throw new Error("This command only supports sqlite, duckdb, and postgres graphs. Use `fide batches write`/`fide batches load` for local batch workflows or build a graph first.");
   }
 
   if (target.type === "postgres" && !target.databaseUrl) {

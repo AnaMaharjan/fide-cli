@@ -36,7 +36,6 @@ function helpText(): string {
             "  fide daemon <command> [flags]",
             "  fide schema [--surface <surface>]",
             "  fide query <command> [flags]",
-            "  fide statements <command> [flags]",
             "  fide batches <command> [flags]",
             "  fide maps <command> [flags]",
           ],
@@ -58,7 +57,6 @@ function helpText(): string {
           items: [
             "  graph    Local graph work and hosted graph projection",
             "  query    Local query authoring and execution",
-            "  statements Local statement batch and draft authoring",
             "  batches  Map source data into statement batch JSON files",
             "  maps     Install and inspect local map blocks/components",
             "  workspace Workspace info",
@@ -79,7 +77,7 @@ function helpText(): string {
             "  FIDE_SYNC_BASE_URL=https://sync.fide.work fide start",
             "  fide whoami",
             "  fide plugin install owner/repo",
-            `  fide statements write '{"statements":[...]}'`,
+            "  fide batches load --graph-key local --batches .fide/batches",
             "  fide graph list",
             "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
             "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
@@ -183,10 +181,6 @@ export async function runCli(argv: string[]): Promise<number> {
       case "query": {
         const { runQueryCommand } = await import("./commands/query/index.js");
         return await runQueryCommand([command, ...rest].filter((value): value is string => Boolean(value)));
-      }
-      case "statements": {
-        const { runStatementsCommand } = await import("./commands/statements/index.js");
-        return await runStatementsCommand([command, ...rest].filter((value): value is string => Boolean(value)));
       }
       case "maps": {
         const { runMapsCommand } = await import("./commands/maps/index.js");

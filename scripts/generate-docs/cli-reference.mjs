@@ -45,8 +45,8 @@ const PAGE_GROUPS = [
     match: (slug) => slug === "query" || slug.startsWith("query-"),
   },
   {
-    title: "Statements",
-    match: (slug) => slug === "statements" || slug.startsWith("statements-"),
+    title: "Batches",
+    match: (slug) => slug === "batches" || slug.startsWith("batches-"),
   },
   {
     title: "Maps",

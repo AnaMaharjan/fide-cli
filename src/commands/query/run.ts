@@ -91,7 +91,7 @@ export const queryRunCommand = defineCommand({
     "File output format is inferred from the destination extension: `.json`, `.jsonl`, `.csv`, or `.sqlite`. Unknown or missing extensions default to JSON.",
     "When the destination ends in `.sqlite`, query rows are materialized into a table. Saved queries use the query file name as the table name.",
     "Use exactly one of `--to-fide-path` or `--to-project-path`.",
-    "Query run writes the query result shape as returned by the query. Statement-aware loading belongs to `fide statements load`.",
+    "Query run writes the query result shape as returned by the query. Batch-aware loading belongs to `fide batches load`.",
   ],
 });
 

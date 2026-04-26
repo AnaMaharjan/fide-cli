@@ -23,7 +23,7 @@ function scopeToTitle(scope: string): string {
 
 function statementsGuideNext(path = "/vocabulary"): Record<string, string> {
   return {
-    guideCommand: "fide statements guide",
+    guideCommand: "fide maps guide",
     docsCommand: `fide docs ${path}`,
   };
 }
@@ -106,8 +106,8 @@ function normalizeCliError(err: unknown, scope: string): CliErrorPayload {
         code: "validation_error",
         message: `Invalid entityType: ${value}`,
         hint: value === "Text"
-          ? "Use TextLiteral for plain text values. Run `fide statements guide` to inspect valid entity types."
-          : "Run `fide statements guide` to inspect valid entity types.",
+          ? "Use TextLiteral for plain text values. Run `fide maps guide` to inspect valid entity types."
+          : "Run `fide maps guide` to inspect valid entity types.",
       },
       next: statementsGuideNext(value === "Text" ? "/vocabulary/definitions/text-literal" : "/vocabulary"),
     };
@@ -122,7 +122,7 @@ function normalizeCliError(err: unknown, scope: string): CliErrorPayload {
       error: {
         code: "validation_error",
         message: `Invalid referenceType: ${value}`,
-        hint: "Run `fide statements guide` to inspect valid reference types.",
+        hint: "Run `fide maps guide` to inspect valid reference types.",
       },
       next: statementsGuideNext(value === "Text" ? "/vocabulary/definitions/text-literal" : "/vocabulary"),
     };

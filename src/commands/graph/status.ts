@@ -52,8 +52,8 @@ function nextCommands(key: string | null, graphStoreType?: "postgres" | "sqlite"
   if (!key) return undefined;
   if (graphStoreType === "fide-jsonl") {
     return {
-      writeHelpCommand: "fide statements write -h",
-      writeCommand: "fide statements write ...",
+      writeHelpCommand: "fide batches write -h",
+      writeCommand: "fide batches write ...",
     };
   }
   return {
@@ -250,8 +250,8 @@ async function getRuntimeStatusOverview() {
         statusCommand: `fide graph status --graph-key ${key}`,
         ...(("graphStoreType" in detailed && detailed.graphStoreType === "fide-jsonl")
           ? {
-              writeHelpCommand: "fide statements write -h",
-              writeCommand: "fide statements write ...",
+              writeHelpCommand: "fide batches write -h",
+              writeCommand: "fide batches write ...",
             }
           : {
               queryHelpCommand: "fide query run -h",
@@ -316,8 +316,8 @@ export async function runGraphStatus(args: string[] = []): Promise<number> {
   const local = {
     configured: true,
     next: {
-      writeHelpCommand: "fide statements write -h",
-      writeCommand: "fide statements write ...",
+      writeHelpCommand: "fide batches write -h",
+      writeCommand: "fide batches write ...",
     },
     root,
     connection: graphTarget.connection ?? root,

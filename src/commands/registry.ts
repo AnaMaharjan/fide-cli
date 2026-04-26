@@ -23,10 +23,6 @@ import { queryRunCommand } from "./query/run.js";
 import { querySaveCommand } from "./query/save.js";
 import { schemaCommand } from "./schema/command.js";
 import { startCommand } from "./start.js";
-import { statementsDraftCommand } from "./statements/draft.js";
-import { statementsGuideCommand } from "./statements/guide.js";
-import { statementsLoadCommand } from "./statements/load.js";
-import { statementsWriteCommand } from "./statements/write.js";
 import { statusCommand } from "./status.js";
 import { stopCommand } from "./stop.js";
 import { workspaceGetCommand } from "./workspace/get.js";
@@ -54,10 +50,6 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   querySaveCommand,
   batchesLoadCommand,
   batchesWriteCommand,
-  statementsWriteCommand,
-  statementsDraftCommand,
-  statementsLoadCommand,
-  statementsGuideCommand,
   mapsAddCommand,
   mapsGuideCommand,
   mapsListCommand,
