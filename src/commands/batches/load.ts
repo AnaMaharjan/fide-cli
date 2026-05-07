@@ -8,11 +8,12 @@ import {
   parseJsonStatementDocument,
   parseJsonStatementRecipeDocument,
   queryBatchRootByLocalWorkspacePath,
+  refreshResolvedEntityProfiles,
   transformStatementBatchToGraphRows,
   upsertStatementBatchToSqlite,
   type StatementInput,
 } from "@chris-test/graph";
-import { refreshResolvedEntityProfiles } from "../../lib/graph/resolution/refresh-resolved-entity-profiles.js";
+import { resolveFideContext } from "../../lib/project/config/fide-dir.js";
 import { hasFlag, parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -251,6 +252,7 @@ export async function runBatchesLoad(args: string[]): Promise<number> {
     payload.resolvedAnchorsProjection = await refreshResolvedEntityProfiles({
       graphKey,
       target: storeTarget,
+      fideDir: resolveFideContext(process.cwd()).fideDir,
     });
   } catch (error) {
     payload.resolvedAnchorsProjectionError = error instanceof Error ? error.message : String(error);
