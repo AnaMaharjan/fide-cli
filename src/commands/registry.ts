@@ -11,12 +11,12 @@ import { graphConnectCommand } from "./graph/connect.js";
 import { graphGetCommand } from "./graph/get.js";
 import { graphListCommand } from "./graph/list.js";
 import { graphStatusCommand } from "./graph/status.js";
-import { mapsAddCommand } from "./maps/add.js";
-import { mapsGuideCommand } from "./maps/guide.js";
-import { mapsGetCommand } from "./maps/get.js";
-import { mapsListCommand } from "./maps/list.js";
-import { mapsRemoveCommand } from "./maps/remove.js";
-import { mapsValidateCommand } from "./maps/validate.js";
+import { transformersAddCommand } from "./transformers/add.js";
+import { transformersGuideCommand } from "./transformers/guide.js";
+import { transformersGetCommand } from "./transformers/get.js";
+import { transformersListCommand } from "./transformers/list.js";
+import { transformersRemoveCommand } from "./transformers/remove.js";
+import { transformersValidateCommand } from "./transformers/validate.js";
 import { queryGetCommand } from "./query/get.js";
 import { queryListCommand } from "./query/list.js";
 import { queryRunCommand } from "./query/run.js";
@@ -50,12 +50,12 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   querySaveCommand,
   batchesLoadCommand,
   batchesWriteCommand,
-  mapsAddCommand,
-  mapsGuideCommand,
-  mapsListCommand,
-  mapsGetCommand,
-  mapsValidateCommand,
-  mapsRemoveCommand,
+  transformersAddCommand,
+  transformersGuideCommand,
+  transformersListCommand,
+  transformersGetCommand,
+  transformersValidateCommand,
+  transformersRemoveCommand,
   graphStatusCommand,
   graphListCommand,
   graphGetCommand,

@@ -1,44 +1,44 @@
 import { renderHelp } from "../../util/command/help/index.js";
-import { mapsAddCommand } from "./add.js";
-import { mapsGuideCommand } from "./guide.js";
-import { mapsGetCommand } from "./get.js";
-import { mapsListCommand } from "./list.js";
-import { mapsRemoveCommand } from "./remove.js";
-import { mapsValidateCommand } from "./validate.js";
+import { transformersAddCommand } from "./add.js";
+import { transformersGuideCommand } from "./guide.js";
+import { transformersGetCommand } from "./get.js";
+import { transformersListCommand } from "./list.js";
+import { transformersRemoveCommand } from "./remove.js";
+import { transformersValidateCommand } from "./validate.js";
 
-export function mapsCommandHelp(): string {
+export function transformersCommandHelp(): string {
   return renderHelp({
     sections: [
       {
         title: "Usage",
-        items: ["  fide maps <command> [flags]"],
+        items: ["  fide transformers <command> [flags]"],
       },
       {
         title: "Commands",
         items: [
-          `  add       ${mapsAddCommand.summary}`,
-          `  guide     ${mapsGuideCommand.summary}`,
-          `  list      ${mapsListCommand.summary}`,
-          `  get       ${mapsGetCommand.summary}`,
-          `  validate  ${mapsValidateCommand.summary}`,
-          `  remove    ${mapsRemoveCommand.summary}`,
+          `  add       ${transformersAddCommand.summary}`,
+          `  guide     ${transformersGuideCommand.summary}`,
+          `  list      ${transformersListCommand.summary}`,
+          `  get       ${transformersGetCommand.summary}`,
+          `  validate  ${transformersValidateCommand.summary}`,
+          `  remove    ${transformersRemoveCommand.summary}`,
         ],
       },
       {
         title: "Workflows",
         items: [
-          "  fide maps add http://localhost:2996/r/fide-map-block-linkedin-profile.json",
-          "  fide maps guide --entity Person",
-          "  fide maps list --kind block",
-          "  fide maps get blocks.person.social-profile.linkedin",
-          "  fide maps validate",
+          "  fide transformers add http://localhost:2996/r/fide-transformer-block-linkedin-profile.json",
+          "  fide transformers guide --entity Person",
+          "  fide transformers list --kind block",
+          "  fide transformers get blocks.person.social-profile.linkedin",
+          "  fide transformers validate",
         ],
       },
       {
         title: "Notes",
         items: [
-          "  - `fide maps add` installs shadcn-compatible registry items without shelling out to shadcn.",
-          "  - Installed files are restricted to the resolved FIDE_DIR/maps directory.",
+          "  - `fide transformers add` installs shadcn-compatible registry items without shelling out to shadcn.",
+          "  - Installed files are restricted to the resolved FIDE_DIR/transformers directory.",
           "  - JSON output is the default. Use --pretty or -p for human-readable output.",
         ],
       },

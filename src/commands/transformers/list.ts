@@ -2,38 +2,38 @@ import { parseArgs, getStringFlag } from "../../util/command/args.js";
 import { booleanKeysFromCommand, defineCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
-import { isMapKind, MAPS_SCOPE, readInstalledMapSummaries, resolveMapsFideDir, type InstalledMapSummary, type MapKind } from "./shared.js";
+import { isTransformerKind, TRANSFORMERS_SCOPE, readInstalledTransformerSummaries, resolveTransformersFideDir, type InstalledTransformerSummary, type TransformerKind } from "./shared.js";
 
-export const mapsListCommand = defineCommand({
-  surface: "maps.list",
-  command: "fide maps list",
-  outputType: "MapsListOutput",
-  summary: "List installed local Fide map blocks and components",
-  usage: ["fide maps list [--kind block|component] [--pretty|-p]"],
+export const transformersListCommand = defineCommand({
+  surface: "transformers.list",
+  command: "fide transformers list",
+  outputType: "TransformersListOutput",
+  summary: "List installed local Fide transformer blocks and components",
+  usage: ["fide transformers list [--kind block|component] [--pretty|-p]"],
   paramOrder: ["kind", "pretty"],
   params: {
-    kind: { kind: "string", enum: ["block", "component"], description: "Filter installed maps by kind", valueLabel: "<kind>" },
+    kind: { kind: "string", enum: ["block", "component"], description: "Filter installed transformers by kind", valueLabel: "<kind>" },
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
-  examples: ["fide maps list", "fide maps list --kind component"],
-  notes: ["Lists map JSON from the resolved FIDE_DIR/maps directory."],
+  examples: ["fide transformers list", "fide transformers list --kind component"],
+  notes: ["Lists transformer JSON from the resolved FIDE_DIR/transformers directory."],
 });
 
-const MAPS_LIST_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(mapsListCommand));
+const TRANSFORMERS_LIST_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(transformersListCommand));
 
-export type MapsListOutput = {
-  scope: typeof MAPS_SCOPE;
-  command: "fide maps list";
+export type TransformersListOutput = {
+  scope: typeof TRANSFORMERS_SCOPE;
+  command: "fide transformers list";
   fideDir: string;
-  kind: MapKind | null;
-  maps: InstalledMapSummary[];
+  kind: TransformerKind | null;
+  transformers: InstalledTransformerSummary[];
 };
 
-export async function runMapsList(args: string[]): Promise<number> {
-  const { flags, positionals } = parseArgs(args, { booleanKeys: MAPS_LIST_PARSE_KEYS });
+export async function runTransformersList(args: string[]): Promise<number> {
+  const { flags, positionals } = parseArgs(args, { booleanKeys: TRANSFORMERS_LIST_PARSE_KEYS });
   const useJson = !flags.has("pretty");
   if (flags.has("help")) {
-    console.log(renderCommandHelp(mapsListCommand));
+    console.log(renderCommandHelp(transformersListCommand));
     return 0;
   }
   if (positionals.length > 0) throw new Error(`Unexpected arguments: ${positionals.join(" ")}`);
@@ -42,23 +42,23 @@ export async function runMapsList(args: string[]): Promise<number> {
   if (flags.has("kind") && kindRaw === null) {
     throw new Error("Missing value for --kind. Expected block or component.");
   }
-  if (kindRaw !== null && !isMapKind(kindRaw)) {
+  if (kindRaw !== null && !isTransformerKind(kindRaw)) {
     throw new Error("Invalid --kind. Expected block or component.");
   }
 
-  const fideDir = resolveMapsFideDir();
-  const payload: MapsListOutput = {
-    scope: MAPS_SCOPE,
-    command: "fide maps list",
+  const fideDir = resolveTransformersFideDir();
+  const payload: TransformersListOutput = {
+    scope: TRANSFORMERS_SCOPE,
+    command: "fide transformers list",
     fideDir,
     kind: kindRaw,
-    maps: await readInstalledMapSummaries(fideDir, kindRaw ?? undefined),
+    transformers: await readInstalledTransformerSummaries(fideDir, kindRaw ?? undefined),
   };
 
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(formatPretty(MAPS_SCOPE, payload));
+    console.log(formatPretty(TRANSFORMERS_SCOPE, payload));
   }
   return 0;
 }

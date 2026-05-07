@@ -14,14 +14,14 @@ import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { errorResponse, okResponse } from "../../util/command/response.js";
 
-export const mapsGuideCommand = defineCommand({
-  surface: "maps.guide",
-  command: "fide maps guide",
-  outputType: "MapsGuideOutput",
+export const transformersGuideCommand = defineCommand({
+  surface: "transformers.guide",
+  command: "fide transformers guide",
+  outputType: "TransformersGuideOutput",
   summary: "Inspect statement guidance and allowed entity types",
   usage: [
-    "fide maps guide [--entity <EntityType>] [--pretty|-p]",
-    "fide maps guide <EntityType>",
+    "fide transformers guide [--entity <EntityType>] [--pretty|-p]",
+    "fide transformers guide <EntityType>",
   ],
   paramOrder: ["entity", "pretty"],
   params: {
@@ -29,18 +29,18 @@ export const mapsGuideCommand = defineCommand({
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
-    "fide maps guide",
-    "fide maps guide --entity NetworkResource",
-    "fide maps guide Person",
+    "fide transformers guide",
+    "fide transformers guide --entity NetworkResource",
+    "fide transformers guide Person",
   ],
 });
 
-const MAPS_GUIDE_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(mapsGuideCommand));
+const TRANSFORMERS_GUIDE_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(transformersGuideCommand));
 
-export type MapsGuideOutput = {
+export type TransformersGuideOutput = {
   ok: true;
   scope: "statements-guide.v1";
-  command: "fide maps guide";
+  command: "fide transformers guide";
   next?: Record<string, unknown>;
   layers: Record<string, string>;
   entities?: unknown[];
@@ -120,12 +120,12 @@ function rulesPayloadBase() {
   };
 }
 
-export async function runMapsGuide(args: string[] = []): Promise<number> {
-  const { flags, positionals } = parseArgs(args, { booleanKeys: MAPS_GUIDE_PARSE_KEYS });
+export async function runTransformersGuide(args: string[] = []): Promise<number> {
+  const { flags, positionals } = parseArgs(args, { booleanKeys: TRANSFORMERS_GUIDE_PARSE_KEYS });
   const useJson = shouldUseJsonOutput(flags);
 
   if (hasFlag(flags, "help") || hasFlag(flags, "-h")) {
-    console.log(renderCommandHelp(mapsGuideCommand));
+    console.log(renderCommandHelp(transformersGuideCommand));
     return 0;
   }
 
@@ -138,7 +138,7 @@ export async function runMapsGuide(args: string[] = []): Promise<number> {
     if (!parsed) {
       const payload = errorResponse("statements-guide.v1", `Unknown entity type: ${requestedEntityRaw}`, {
         validEntityTypes: entityNames,
-      }, { command: "fide maps guide" });
+      }, { command: "fide transformers guide" });
       printJson(payload);
       return 1;
     }
@@ -147,7 +147,7 @@ export async function runMapsGuide(args: string[] = []): Promise<number> {
       ...rulesPayloadBase(),
       entity: buildEntitySummary(parsed),
     }, {
-      command: "fide maps guide",
+      command: "fide transformers guide",
       next: {
         docsCommand: "fide docs <path>",
       },
@@ -165,7 +165,7 @@ export async function runMapsGuide(args: string[] = []): Promise<number> {
     ...rulesPayloadBase(),
     entities,
   }, {
-    command: "fide maps guide",
+    command: "fide transformers guide",
     next: {
       docsCommand: "fide docs <path>",
     },

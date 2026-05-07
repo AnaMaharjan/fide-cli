@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, relative, resolve, sep } from "node:path";
-import { loadStatementMapDoc, mapDataToStatements } from "@chris-test/graph";
+import { loadTransformerDoc, transformerDataToStatements } from "@chris-test/graph";
 import { parseArgs, shouldUseJsonOutput } from "../../util/command/args.js";
 import {
   booleanKeysFromCommand,
@@ -22,7 +22,7 @@ type BatchWriteEntry = {
 
 export type BatchesWriteOutput = {
   command: "fide batches write";
-  mapPath: string;
+  transformerPath: string;
   dataPath: string;
   outDir: string | null;
   written: BatchWriteEntry[];
@@ -32,14 +32,14 @@ export const batchesWriteCommand = defineCommand({
   surface: "batches.write",
   command: "fide batches write",
   outputType: "BatchesWriteOutput",
-  summary: "Map source JSON data into statement batch JSON files",
+  summary: "Transform source JSON data into statement batch JSON files",
   usage: [
-    "fide batches write --map <map.json> --data <file-or-dir>",
-    "fide batches write --map <map.json> --data <dir> --out <out-dir> [--pretty|-p]",
+    "fide batches write --transformer <transformer.json> --data <file-or-dir>",
+    "fide batches write --transformer <transformer.json> --data <dir> --out <out-dir> [--pretty|-p]",
   ],
-  paramOrder: ["map", "data", "out", "pretty"],
+  paramOrder: ["transformer", "data", "out", "pretty"],
   params: {
-    map: { kind: "string", required: true, valueLabel: "<map.json>", description: "Statement map JSON path" },
+    transformer: { kind: "string", required: true, valueLabel: "<transformer.json>", description: "Statement transformer JSON path" },
     data: {
       kind: "string",
       required: true,
@@ -54,7 +54,7 @@ export const batchesWriteCommand = defineCommand({
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   notes: [
-    "When --data is a directory, this command recursively maps all *.source.json files in that directory.",
+    "When --data is a directory, this command recursively transforms all *.source.json files in that directory.",
     "Default output path mirrors .fide/data/... into .fide/batches/... and writes .batch.json files.",
     "When --out is provided, output files are written under that directory with the same relative input names.",
   ],
@@ -137,9 +137,9 @@ export async function runBatchesWrite(args: string[]): Promise<number> {
     throw new Error(`Unexpected arguments: ${parsed.positionals.join(" ")}`);
   }
 
-  const mapFlag = parsed.flags.get("map");
-  if (typeof mapFlag !== "string" || mapFlag.length === 0) {
-    throw new Error("Missing required flag: --map <map.json>.");
+  const transformerFlag = parsed.flags.get("transformer");
+  if (typeof transformerFlag !== "string" || transformerFlag.length === 0) {
+    throw new Error("Missing required flag: --transformer <transformer.json>.");
   }
   const dataFlag = parsed.flags.get("data");
   if (typeof dataFlag !== "string" || dataFlag.length === 0) {
@@ -150,11 +150,11 @@ export async function runBatchesWrite(args: string[]): Promise<number> {
     throw new Error("Invalid --out: expected <out-dir>.");
   }
 
-  const mapPath = resolve(process.cwd(), mapFlag);
+  const transformerPath = resolve(process.cwd(), transformerFlag);
   const dataPath = resolve(process.cwd(), dataFlag);
   const outDir = typeof outFlag === "string" ? resolve(process.cwd(), outFlag) : null;
 
-  const mapDoc = await loadStatementMapDoc(mapPath);
+  const transformerDoc = await loadTransformerDoc(transformerPath);
   const dataStat = await stat(dataPath);
   const inputFiles = dataStat.isDirectory() ? await listSourceFiles(dataPath) : [dataPath];
   if (inputFiles.length === 0) {
@@ -164,7 +164,7 @@ export async function runBatchesWrite(args: string[]): Promise<number> {
   const written: BatchWriteEntry[] = [];
   for (const inputFile of inputFiles) {
     const data = await readJsonObject(inputFile);
-    const batch = mapDataToStatements(data, mapDoc);
+    const batch = transformerDataToStatements(data, transformerDoc);
     const outputPath = outputPathForInput({
       inputFile,
       dataPath,
@@ -182,7 +182,7 @@ export async function runBatchesWrite(args: string[]): Promise<number> {
 
   const payload: BatchesWriteOutput = {
     command: "fide batches write",
-    mapPath,
+    transformerPath,
     dataPath,
     outDir: outDir ?? null,
     written,

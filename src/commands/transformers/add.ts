@@ -1,57 +1,57 @@
 import { readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import { parseArgs } from "../../util/command/args.js";
-import { postDaemonMapsInstall } from "../../util/daemon/daemon-http.js";
+import { postDaemonTransformersInstall } from "../../util/daemon/daemon-http.js";
 import { booleanKeysFromCommand, defineCommand, mergeBooleanKeySets, renderCommandHelp } from "../../util/command/command-metadata.js";
 import { printJson } from "../../util/command/io.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import {
-  assertMapDocument,
+  assertTransformerDocument,
   assertRegistryFile,
   isRemoteSource,
-  MAPS_SCOPE,
+  TRANSFORMERS_SCOPE,
   parseJsonObject,
   parseRegistryItem,
   registryDependencies,
   registryFiles,
-  resolveMapsFideDir,
+  resolveTransformersFideDir,
   resolveRegistryDependency,
   resolveRegistryTarget,
-  validateMapPathConvention,
-  type InstalledMapSummary,
-  type MapDocument,
+  validateTransformerPathConvention,
+  type InstalledTransformerSummary,
+  type TransformerDocument,
   type RegistryItem,
 } from "./shared.js";
 
-export const mapsAddCommand = defineCommand({
-  surface: "maps.add",
-  command: "fide maps add",
-  outputType: "MapsAddOutput",
-  summary: "Install a Fide map block or component from a shadcn-compatible registry item",
-  usage: ["fide maps add <registry-item-url-or-file> [--pretty|-p]"],
+export const transformersAddCommand = defineCommand({
+  surface: "transformers.add",
+  command: "fide transformers add",
+  outputType: "TransformersAddOutput",
+  summary: "Install a Fide transformer block or component from a shadcn-compatible registry item",
+  usage: ["fide transformers add <registry-item-url-or-file> [--pretty|-p]"],
   paramOrder: ["pretty"],
   params: {
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
-    "fide maps add http://localhost:2996/r/fide-map-block-linkedin-profile.json",
-    "fide maps add apps/map-registry/public/r/fide-map-component-identity-named-entity.json",
+    "fide transformers add http://localhost:2996/r/fide-transformer-block-linkedin-profile.json",
+    "fide transformers add apps/transformer-registry/public/r/fide-transformer-component-identity-named-entity.json",
   ],
   notes: [
     "Only registry:item documents with registry:file entries are supported.",
-    "Registry file targets must be under ~/.fide/maps/blocks or ~/.fide/maps/components.",
+    "Registry file targets must be under ~/.fide/transformers/blocks or ~/.fide/transformers/components.",
     "~/.fide is resolved with FIDE_DIR and project .fide discovery, not the current project root.",
   ],
 });
 
-const MAPS_ADD_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(mapsAddCommand));
+const TRANSFORMERS_ADD_PARSE_KEYS = mergeBooleanKeySets(booleanKeysFromCommand(transformersAddCommand));
 
-export type MapsAddOutput = {
-  scope: typeof MAPS_SCOPE;
-  command: "fide maps add";
+export type TransformersAddOutput = {
+  scope: typeof TRANSFORMERS_SCOPE;
+  command: "fide transformers add";
   fideDir: string;
   source: string;
-  installed: InstalledMapSummary[];
+  installed: InstalledTransformerSummary[];
   dependencyCount: number;
 };
 
@@ -72,7 +72,7 @@ async function installRegistryItem(
   source: string,
   fideDir: string,
   seen: Set<string>,
-  installedByPath: Map<string, InstalledMapSummary>,
+  installedByPath: Map<string, InstalledTransformerSummary>,
   installFiles: { relativePath: string; content: string }[],
 ): Promise<void> {
   const resolvedSource = isRemoteSource(source) ? source : resolve(process.cwd(), source);
@@ -94,16 +94,16 @@ async function installRegistryItem(
     assertRegistryFile(file);
     const { path, kind } = resolveRegistryTarget(fideDir, file.target);
     const parsed = parseJsonObject(file.content, String(file.target ?? path));
-    const document = assertMapDocument(parsed, String(file.target ?? path));
-    validateMapPathConvention(fideDir, path, document);
+    const document = assertTransformerDocument(parsed, String(file.target ?? path));
+    validateTransformerPathConvention(fideDir, path, document);
     const content = `${JSON.stringify(document, null, 2)}\n`;
     const rel = relative(fideDir, path).replace(/\\/g, "/");
     if (!rel || rel.startsWith("..")) {
-      throw new Error(`Resolved map path is outside FIDE_DIR: ${path}`);
+      throw new Error(`Resolved transformer path is outside FIDE_DIR: ${path}`);
     }
     installFiles.push({ relativePath: rel, content });
     installedByPath.set(path, {
-      mapKey: document.mapKey,
+      transformerKey: document.transformerKey,
       kind,
       title: document.title,
       path,
@@ -111,11 +111,11 @@ async function installRegistryItem(
   }
 }
 
-export async function runMapsAdd(args: string[]): Promise<number> {
-  const { flags, positionals } = parseArgs(args, { booleanKeys: MAPS_ADD_PARSE_KEYS });
+export async function runTransformersAdd(args: string[]): Promise<number> {
+  const { flags, positionals } = parseArgs(args, { booleanKeys: TRANSFORMERS_ADD_PARSE_KEYS });
   const useJson = !flags.has("pretty");
   if (flags.has("help")) {
-    console.log(renderCommandHelp(mapsAddCommand));
+    console.log(renderCommandHelp(transformersAddCommand));
     return 0;
   }
 
@@ -123,26 +123,26 @@ export async function runMapsAdd(args: string[]): Promise<number> {
   if (!source) throw new Error("Missing registry item URL or file path.");
   if (positionals.length > 1) throw new Error(`Unexpected extra arguments: ${positionals.slice(1).join(" ")}`);
 
-  const fideDir = resolveMapsFideDir();
+  const fideDir = resolveTransformersFideDir();
   const seen = new Set<string>();
-  const installedByPath = new Map<string, InstalledMapSummary>();
+  const installedByPath = new Map<string, InstalledTransformerSummary>();
   const installFiles: { relativePath: string; content: string }[] = [];
   await installRegistryItem(source, fideDir, seen, installedByPath, installFiles);
-  await postDaemonMapsInstall(installFiles);
+  await postDaemonTransformersInstall(installFiles);
 
-  const payload: MapsAddOutput = {
-    scope: MAPS_SCOPE,
-    command: "fide maps add",
+  const payload: TransformersAddOutput = {
+    scope: TRANSFORMERS_SCOPE,
+    command: "fide transformers add",
     fideDir,
     source,
-    installed: [...installedByPath.values()].sort((a, b) => a.mapKey.localeCompare(b.mapKey)),
+    installed: [...installedByPath.values()].sort((a, b) => a.transformerKey.localeCompare(b.transformerKey)),
     dependencyCount: Math.max(0, seen.size - 1),
   };
 
   if (useJson) {
     printJson(payload);
   } else {
-    console.log(formatPretty(MAPS_SCOPE, payload));
+    console.log(formatPretty(TRANSFORMERS_SCOPE, payload));
   }
   return 0;
 }

@@ -34,29 +34,29 @@ export function daemonJsonHeaders(): Record<string, string> {
   return headers;
 }
 
-export async function postDaemonMapsInstall(
+export async function postDaemonTransformersInstall(
   files: { relativePath: string; content: string }[],
 ): Promise<void> {
-  const res = await fetch(`${resolveDaemonOrigin()}/maps/install`, {
+  const res = await fetch(`${resolveDaemonOrigin()}/transformers/install`, {
     method: "POST",
     headers: daemonJsonHeaders(),
     body: JSON.stringify({ files }),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Daemon maps/install failed (${res.status}): ${text || res.statusText}`);
+    throw new Error(`Daemon transformers/install failed (${res.status}): ${text || res.statusText}`);
   }
 }
 
-export async function postDaemonMapsRemove(mapKey: string): Promise<void> {
-  const res = await fetch(`${resolveDaemonOrigin()}/maps/remove`, {
+export async function postDaemonTransformersRemove(transformerKey: string): Promise<void> {
+  const res = await fetch(`${resolveDaemonOrigin()}/transformers/remove`, {
     method: "POST",
     headers: daemonJsonHeaders(),
-    body: JSON.stringify({ mapKey }),
+    body: JSON.stringify({ transformerKey }),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Daemon maps/remove failed (${res.status}): ${text || res.statusText}`);
+    throw new Error(`Daemon transformers/remove failed (${res.status}): ${text || res.statusText}`);
   }
 }
 
