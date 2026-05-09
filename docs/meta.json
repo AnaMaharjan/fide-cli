@@ -22,6 +22,8 @@
     "graph-get",
     "graph-list",
     "graph-status",
+    "--- World Model ---",
+    "world-model-connect",
     "--- Query ---",
     "query-get",
     "query-list",

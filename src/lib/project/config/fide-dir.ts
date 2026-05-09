@@ -156,8 +156,16 @@ export function resolveGraphsDir(root: string = process.cwd()): string {
   return resolve(resolveFideDir(root), "graphs");
 }
 
+export function resolveWorldModelsDir(root: string = process.cwd()): string {
+  return resolve(resolveFideDir(root), "world-models");
+}
+
 export function resolveGraphConfigPath(graphKey: string, root: string = process.cwd()): string {
   return resolve(resolveGraphsDir(root), graphKey, "config.json");
+}
+
+export function resolveWorldModelConfigPath(worldModelKey: string, root: string = process.cwd()): string {
+  return resolve(resolveWorldModelsDir(root), worldModelKey, "config.json");
 }
 
 export function readJsonFile<T>(path: string): T | null {

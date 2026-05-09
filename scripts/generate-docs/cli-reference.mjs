@@ -41,6 +41,10 @@ const PAGE_GROUPS = [
     match: (slug) => slug === "graph" || (slug.startsWith("graph-") && !slug.startsWith("graph-query-") && !slug.startsWith("graph-statements-")),
   },
   {
+    title: "World Model",
+    match: (slug) => slug === "world-model" || slug.startsWith("world-model-"),
+  },
+  {
     title: "Query",
     match: (slug) => slug === "query" || slug.startsWith("query-"),
   },

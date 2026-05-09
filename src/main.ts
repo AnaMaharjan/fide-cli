@@ -34,6 +34,7 @@ function helpText(): string {
             "  fide docs <path>",
             "  fide plugin install <source>",
             "  fide daemon <command> [flags]",
+            "  fide world-model <command> [flags]",
             "  fide schema [--surface <surface>]",
             "  fide query <command> [flags]",
             "  fide batches <command> [flags]",
@@ -56,6 +57,7 @@ function helpText(): string {
           title: "Groups",
           items: [
             "  graph    Local graph work and hosted graph projection",
+            "  world-model  Local world model connection definitions (snapshot sqlite wiring)",
             "  query    Local query authoring and execution",
             "  batches  Transform source data into statement batch JSON files",
             "  transformers     Install and inspect local transformer blocks/components",
@@ -80,6 +82,7 @@ function helpText(): string {
             "  fide batches load --graph-key local --batches .fide/batches",
             "  fide graph list",
             "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
+            "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world.sqlite\"}' --initialize",
             "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
             "  fide batches write --transformer .fide/transformers/blocks/person/social-profile/linkedin.json --data .fide/data/linkedin",
             "  fide transformers add http://localhost:2996/r/fide-transformer-block-linkedin-profile.json",
@@ -177,6 +180,10 @@ export async function runCli(argv: string[]): Promise<number> {
       case "graph": {
         const { runGraphCommand } = await import("./commands/graph/index.js");
         return await runGraphCommand(command, rest);
+      }
+      case "world-model": {
+        const { runWorldModelCommand } = await import("./commands/world-model/index.js");
+        return await runWorldModelCommand(command, rest);
       }
       case "query": {
         const { runQueryCommand } = await import("./commands/query/index.js");

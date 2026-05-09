@@ -11,6 +11,7 @@ import { graphConnectCommand } from "./graph/connect.js";
 import { graphGetCommand } from "./graph/get.js";
 import { graphListCommand } from "./graph/list.js";
 import { graphStatusCommand } from "./graph/status.js";
+import { worldModelConnectCommand } from "./world-model/connect.js";
 import { transformersAddCommand } from "./transformers/add.js";
 import { transformersGuideCommand } from "./transformers/guide.js";
 import { transformersGetCommand } from "./transformers/get.js";
@@ -60,6 +61,7 @@ export const ALL_COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
   graphListCommand,
   graphGetCommand,
   graphConnectCommand,
+  worldModelConnectCommand,
   schemaCommand,
 ] as const;
 

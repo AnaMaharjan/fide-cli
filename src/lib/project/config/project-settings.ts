@@ -177,6 +177,42 @@ export function validateGraphStoreConfig(key: string, store: GraphStoreSettings)
   throw new Error(`Graph "${key}" has an unsupported connection type in .fide/graphs/${key}/config.json.`);
 }
 
+/** Same validation as {@link validateGraphStoreConfig} with world-model config paths in error messages. */
+export function validateWorldModelStoreConfig(key: string, store: GraphStoreSettings): void {
+  const storeType = getConfiguredStoreType(store);
+  const pathHint = `.fide/world-models/${key}/config.json`;
+  if (storeType === "sqlite") {
+    if (!isSqliteGraphStoreSettings(store)) {
+      throw new Error(`World model "${key}" has an invalid sqlite configuration in ${pathHint}.`);
+    }
+    const connection = store.connection;
+    if (!connection || typeof connection !== "object" || Array.isArray(connection)) {
+      throw new Error(
+        `World model "${key}" must include connection.fide-path or connection.project-path in ${pathHint}.`,
+      );
+    }
+    const connectionType = (connection as { type?: unknown }).type;
+    if (connectionType !== undefined && connectionType !== "sqlite") {
+      throw new Error(`World model "${key}" has an invalid sqlite connection.type in ${pathHint}.`);
+    }
+    const hasFidePath = typeof connection["fide-path"] === "string" && connection["fide-path"].trim().length > 0;
+    const hasProjectPath = typeof connection["project-path"] === "string" && connection["project-path"].trim().length > 0;
+    if (!hasFidePath && !hasProjectPath) {
+      throw new Error(
+        `World model "${key}" must include connection.fide-path or connection.project-path in ${pathHint}.`,
+      );
+    }
+    return;
+  }
+  if (storeType === "fide-jsonl") {
+    if (typeof store.connection !== "string" || store.connection.trim().length === 0) {
+      throw new Error(`World model "${key}" must include connection in ${pathHint}.`);
+    }
+    return;
+  }
+  throw new Error(`World model "${key}" has an unsupported connection type in ${pathHint}.`);
+}
+
 export function validateGraphSettings(settings: FideSettings): void {
   const graphs = settings.graphs ?? {};
   for (const [key, store] of Object.entries(graphs)) {

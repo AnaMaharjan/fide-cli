@@ -1910,5 +1910,47 @@ export const GENERATED_TYPE_SCHEMAS = {
         }
       }
     }
+  },
+  "world-model.connect.output": {
+    "command": "fide schema --surface world-model.connect.output",
+    "format": "ts-type.v0",
+    "typeName": "WorldModelConnectOutput",
+    "source": "src/commands/world-model/connect.ts",
+    "schema": {
+      "type": "object",
+      "required": [
+        "ok",
+        "scope",
+        "command"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "world-model-connect-local.v1"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "enum": [
+            "fide world-model connect"
+          ]
+        },
+        "next": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    }
   }
 } as const;
