@@ -17,8 +17,8 @@ export function worldModelCommandHelp(): string {
       {
         title: "Workflows",
         items: [
-          "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world.sqlite\"}'",
-          "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world.sqlite\"}' --initialize",
+          "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world-model.sqlite\"}'",
+          "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world-model.sqlite\"}' --initialize",
         ],
       },
       {

@@ -1,4 +1,4 @@
-// fide world-model connect --world-model-key demo --connection '{"type":"sqlite","fide-path":"world-models/demo/world.sqlite"}' --initialize --initialize-options '{"dangerously_overwrite":true}'
+// fide world-model connect --world-model-key demo --connection '{"type":"sqlite","fide-path":"world-models/demo/world-model.sqlite"}' --initialize --initialize-options '{"dangerously_overwrite":true}'
 
 import { resolve } from "node:path";
 import { rm } from "node:fs/promises";
@@ -60,10 +60,10 @@ export const worldModelConnectCommand = defineCommand({
     pretty: { kind: "boolean", shorthand: "-p", description: "Human-readable output" },
   },
   examples: [
-    "fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world.sqlite\"}'",
-    "fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"project-path\":\"tmp/world-models/demo.sqlite\"}'",
-    "fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world.sqlite\"}' --initialize",
-    'fide world-model connect --world-model-key demo --connection \'{"type":"sqlite","fide-path":"world-models/demo/world.sqlite"}\' --initialize --initialize-options \'{"dangerously_overwrite":true}\'',
+    "fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world-model.sqlite\"}'",
+    "fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"project-path\":\"tmp/world-models/demo/world-model.sqlite\"}'",
+    "fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world-model.sqlite\"}' --initialize",
+    'fide world-model connect --world-model-key demo --connection \'{"type":"sqlite","fide-path":"world-models/demo/world-model.sqlite"}\' --initialize --initialize-options \'{"dangerously_overwrite":true}\'',
   ],
   values: [
     {
@@ -84,12 +84,12 @@ export const worldModelConnectCommand = defineCommand({
             {
               label: "fide-path",
               value: "string",
-              suggested: '"world-models/<world-model-key>/world.sqlite"',
+              suggested: '"world-models/<world-model-key>/world-model.sqlite"',
             },
             {
               label: "project-path",
               value: "string",
-              suggested: '"tmp/world-models/<world-model-key>.sqlite"',
+              suggested: '"tmp/world-models/<world-model-key>/world-model.sqlite"',
             },
           ],
         },
@@ -225,7 +225,7 @@ async function readWorldModelInput(args: string[]): Promise<{
     return {
       flags,
       worldModelKey: "__help__",
-      worldModel: { connection: { type: "sqlite", "fide-path": "world-models/demo/world.sqlite" } },
+      worldModel: { connection: { type: "sqlite", "fide-path": "world-models/demo/world-model.sqlite" } },
     };
   }
 

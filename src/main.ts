@@ -82,7 +82,7 @@ function helpText(): string {
             "  fide batches load --graph-key local --batches .fide/batches",
             "  fide graph list",
             "  fide graph connect --graph-key primary --connection '{\"type\":\"postgres\",\"url\":\"FIDE_GRAPH_DATABASE_URL\",\"schema\":\"fide_graph\"}'",
-            "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world.sqlite\"}' --initialize",
+            "  fide world-model connect --world-model-key demo --connection '{\"type\":\"sqlite\",\"fide-path\":\"world-models/demo/world-model.sqlite\"}' --initialize",
             "  fide query run --graph-key primary 'select * from statements limit 10' --to-fide-path results/rows.json",
             "  fide batches write --transformer .fide/transformers/blocks/person/social-profile/linkedin.json --data .fide/data/linkedin",
             "  fide transformers add http://localhost:2996/r/fide-transformer-block-linkedin-profile.json",
