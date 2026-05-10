@@ -13,7 +13,7 @@ import { printJson } from "../../util/command/io.js";
 import { assertWorldModelKey } from "../../util/ids/selectors.js";
 import { formatPretty } from "../../util/command/pretty.js";
 import { okResponse } from "../../util/command/response.js";
-import { initializeSqliteGraphStorage } from "@chris-test/graph";
+import { initializeSqliteWorldModelStorage } from "@chris-test/graph";
 import {
   readLocalProjectWorldModel,
   writeLocalProjectWorldModel,
@@ -103,7 +103,7 @@ export const worldModelConnectCommand = defineCommand({
     "`project-path` resolves relative to the project root and is stable regardless of where the command is launched.",
     "`--initialize-options` is only used when `--initialize` is present.",
     "If the world model key already exists, this command updates it in place.",
-    "Only sqlite connections are supported (same storage shape as graphs).",
+    "Only sqlite connections are supported; `--initialize` creates the core statement tables plus projection tables `identity_link_evaluations`, `resolved_entity_anchor_members`, and `resolved_entity_anchors` (no `batches` / `statement_batches`).",
     "Population from source graphs (`load` / `build`) is not part of `connect`; use follow-up tooling when ready.",
   ],
 });
@@ -319,9 +319,7 @@ export async function runWorldModelConnectCommand(args: string[]): Promise<numbe
       if (initializeOptions.dangerously_overwrite) {
         await rm(sqliteFile, { force: true });
       }
-      await initializeSqliteGraphStorage({
-        file: sqliteFile,
-      });
+      await initializeSqliteWorldModelStorage({ file: sqliteFile });
       initialized = { type: "sqlite", file: sqliteFile };
     } else {
       throw new Error("`fide world-model connect --initialize` supports sqlite only.");

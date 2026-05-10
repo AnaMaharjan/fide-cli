@@ -24,7 +24,7 @@ export function worldModelCommandHelp(): string {
       {
         title: "Notes",
         items: [
-          "  - `world-model connect` mirrors `graph connect`: it writes `.fide/world-models/<worldModelKey>/config.json` and optionally initializes an empty sqlite file.",
+          "  - `world-model connect` mirrors `graph connect`: it writes `.fide/world-models/<worldModelKey>/config.json` and optionally initializes sqlite (statements plus resolution projection tables; no batch tables).",
           "  - Filling the world model from source graphs is a separate concern (future `build` / `load`).",
         ],
       },
