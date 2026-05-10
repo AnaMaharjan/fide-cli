@@ -18,6 +18,8 @@ jobs:
       deployments: write
     uses: ChrisLally/lally-workflows/.github/workflows/npm-publish-release.yml@main
     with:
+      package_manager: pnpm
+      pnpm_version: "9"
       tag_prefix: "fide-cli-v"
       package_dir: "."
       install_working_directory: "."
